@@ -180,16 +180,6 @@ def batch_train(args, model, seqs, vocabulary, batch_size=5000,
 
 def embed_seqs(args, model, seqs, vocabulary,
                use_cache=False, verbose=True):
-    if 'esm' in args.model_name:
-        from fb_semantics import embed_seqs_fb
-        seqs_fb = [ seq for seq in seqs ]
-        return embed_seqs_fb(
-            model.model_, seqs_fb, model.repr_layers_, model.alphabet_,
-            use_cache=use_cache, verbose=verbose,
-        )
-
-    X_cat, lengths = featurize_seqs(seqs, vocabulary)
-
     if use_cache:
         mkdir_p('target/{}/embedding'.format(args.namespace))
         embed_fname = ('target/{}/embedding/{}_{}.npy'
@@ -199,10 +189,23 @@ def embed_seqs(args, model, seqs, vocabulary,
 
     if use_cache and os.path.exists(embed_fname):
         X_embed = np.load(embed_fname, allow_pickle=True)
+
+    elif 'esm' in args.model_name:
+        from fb_semantics import embed_seqs_fb
+        seqs_fb = sorted([ seq for seq in seqs ])
+        embedded = embed_seqs_fb(
+            model.model_, seqs_fb, model.repr_layers_, model.alphabet_,
+            use_cache=use_cache, verbose=verbose,
+        )
+        X_embed = np.array([
+            embedded[seq][0]['embedding'] for seq in seqs_fb
+        ])
+        np.save(embed_fname, X_embed)
+
     else:
+        X_cat, lengths = featurize_seqs(seqs, vocabulary)
         X_embed = model.transform(X_cat, lengths, embed_fname)
-        if use_cache:
-            np.save(embed_fname, X_embed)
+        np.save(embed_fname, X_embed)
 
     sorted_seqs = sorted(seqs)
     for seq_idx, seq in enumerate(sorted_seqs):
