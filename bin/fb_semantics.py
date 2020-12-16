@@ -168,7 +168,7 @@ def fb_semantics(model, repr_layers, alphabet, seq_to_mutate, escape_seqs,
     return seqs, np.array(probs), np.array(changes)
 
 if __name__ == '__main__':
-    name = 'esm1_t34_670M_UR50S'
+    name = 'esm1b_t33_650M_UR50S'
 
     model, alphabet = pretrained.load_model_and_alphabet(name)
     model.eval()

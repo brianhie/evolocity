@@ -84,6 +84,12 @@ def get_model(args, seq_len, vocab_size,
             'esm1_t34_670M_UR50S',
             repr_layer=[-1],
         )
+    elif args.model_name == 'esm1b':
+        from fb_model import FBModel
+        model = FBModel(
+            'esm1b_t33_650M_UR50S',
+            repr_layer=[-1],
+        )
     else:
         err_model(args.model_name)
 
