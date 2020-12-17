@@ -5,7 +5,7 @@ from esm import Alphabet, FastaBatchedDataset, ProteinBertModel, pretrained
 
 def predict_sequence_prob_fb(
         seq, alphabet, model, repr_layers,
-        batch_size=4096, verbose=False
+        batch_size=80000, verbose=False
 ):
     seqs = [ seq ]
     labels = [ 'seq0' ]
@@ -22,9 +22,51 @@ def predict_sequence_prob_fb(
             if torch.cuda.is_available():
                 toks = toks.to(device="cuda", non_blocking=True)
             out = model(toks, repr_layers=repr_layers, return_contacts=False)
-            logits = out["logits"].to(device="cpu")
+            lsoftmax = torch.nn.LogSoftmax(dim=1)
+            logits = lsoftmax(out["logits"]).to(device="cpu").numpy()
 
-    return logits.numpy()[0]
+    return logits[0]
+
+def predict_sequence_prob_mask_fb(
+        seq, alphabet, model, repr_layers,
+        batch_size=80000, verbose=False
+):
+    seqs = [
+        seq[:c_idx] + '0' + seq[c_idx + 1:] for c_idx in range(len(seq))
+    ]
+    labels = [
+        str(c_idx + 1) + c for c_idx, c in enumerate(seq)
+    ]
+
+    dataset = FastaBatchedDataset(labels, seqs)
+    batches = dataset.get_batch_indices(batch_size, extra_toks_per_seq=1)
+    data_loader = torch.utils.data.DataLoader(
+        dataset, collate_fn=alphabet.get_batch_converter(),
+        batch_sampler=batches
+    )
+
+    probs = []
+
+    seq_len = len(seq) + \
+              int('ESM' in model.model_version) + \
+              int('ESM-1b' in model.model_version)
+
+    with torch.no_grad():
+        for batch_idx, (labels, strs, toks) in enumerate(data_loader):
+            if torch.cuda.is_available():
+                toks = toks.to(device="cuda", non_blocking=True)
+            out = model(toks, repr_layers=repr_layers, return_contacts=False)
+            lsoftmax = torch.nn.LogSoftmax(dim=1)
+            logits = lsoftmax(out["logits"]).to(device="cpu").numpy()
+            #logits = out["logits"].to(device="cpu")
+            assert(logits.shape[1] == seq_len)
+            for i in range(logits.shape[0]):
+                probs.append(logits[i, len(probs) + 1, :])
+
+    assert(len(probs) == len(seq))
+    probs = [ np.zeros(len(probs[0])) ] + probs
+
+    return np.array(probs)
 
 def embed_seqs_fb(
         model, seqs, repr_layers, alphabet,
@@ -168,7 +210,8 @@ def fb_semantics(model, repr_layers, alphabet, seq_to_mutate, escape_seqs,
     return seqs, np.array(probs), np.array(changes)
 
 if __name__ == '__main__':
-    name = 'esm1b_t33_650M_UR50S'
+    name = 'esm1_t34_670M_UR50S'
+    #name = 'esm1b_t33_650M_UR50S'
 
     model, alphabet = pretrained.load_model_and_alphabet(name)
     model.eval()
@@ -192,6 +235,7 @@ if __name__ == '__main__':
         model, repr_layers, alphabet, seq_to_mutate, escape_seqs,
         comb_batch=2000, plot_namespace='flu_h1'
     )
+    exit()
 
     tprint('')
     tprint('Lee et al. 2019...')

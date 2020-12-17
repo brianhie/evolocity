@@ -206,12 +206,14 @@ def embed_seqs(args, model, seqs, vocabulary,
         X_embed = np.array([
             embedded[seq][0]['embedding'] for seq in seqs_fb
         ])
-        np.save(embed_fname, X_embed)
+        if use_cache and os.path.exists(embed_fname):
+            np.save(embed_fname, X_embed)
 
     else:
         X_cat, lengths = featurize_seqs(seqs, vocabulary)
         X_embed = model.transform(X_cat, lengths, embed_fname)
-        np.save(embed_fname, X_embed)
+        if use_cache and os.path.exists(embed_fname):
+            np.save(embed_fname, X_embed)
 
     sorted_seqs = sorted(seqs)
     for seq_idx, seq in enumerate(sorted_seqs):
@@ -245,7 +247,7 @@ def analyze_comb_fitness(
         vocabulary = {
             word: model.alphabet_.all_toks.index(word)
             for word in model.alphabet_.all_toks
-            if '<' in word
+            if '<' not in word
         }
 
     from copy import deepcopy
@@ -371,7 +373,7 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
         vocabulary = {
             word: model.alphabet_.all_toks.index(word)
             for word in model.alphabet_.all_toks
-            if '<' in word
+            if '<' not in word
         }
 
     y_pred = predict_sequence_prob(
@@ -420,6 +422,12 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
         args, model, { seq_to_mutate: [ {} ] }, vocabulary,
         use_cache=False, verbose=False
     )[seq_to_mutate][0]['embedding']
+
+    print(len(seq_to_mutate))
+    print(y_pred.shape)
+    print(vocabulary)
+    print(base_embedding.shape)
+    exit()
 
     if comb_batch is None:
         comb_batch = len(seqs)
@@ -482,7 +490,7 @@ def analyze_reinfection(
         vocabulary = {
             word: model.alphabet_.all_toks.index(word)
             for word in model.alphabet_.all_toks
-            if '<' in word
+            if '<' not in word
         }
 
     assert(len(mutants) == 1)
@@ -582,7 +590,7 @@ def null_combinatorial_fitness(
         vocabulary = {
             word: model.alphabet_.all_toks.index(word)
             for word in model.alphabet_.all_toks
-            if '<' in word
+            if '<' not in word
         }
 
     assert(len(mutants) == 1)

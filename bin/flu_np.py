@@ -28,6 +28,8 @@ def parse_args():
                         help='Test model')
     parser.add_argument('--embed', action='store_true',
                         help='Analyze embeddings')
+    parser.add_argument('--epistasis', action='store_true',
+                        help='Analyze epistasis')
     args = parser.parse_args()
     return args
 
@@ -280,6 +282,187 @@ def analyze_embedding(args, model, seqs, vocabulary):
 
     interpret_clusters(adata)
 
+def compute_mut_effects(args, vocabulary, model, nodes, steps,
+                        min_pos=None, max_pos=None, verbose=False):
+    if 'esm' in args.model_name:
+        vocabulary = {
+            word: model.alphabet_.all_toks.index(word)
+            for word in model.alphabet_.all_toks
+            if '<' not in word
+        }
+
+    steps_set = set(steps)
+
+    mut_effects = []
+
+    for node_idx, (node_name, node) in enumerate(nodes):
+        step_effects = {}
+        for step_idx, step in enumerate([ 'base' ] + steps):
+            if node_idx > 0 and step_idx > 0:
+                continue
+
+            if step == 'base':
+                seq_pred = node
+            else:
+                aa_orig = step[0]
+                aa_mut = step[-1]
+                pos = int(step[1:-1]) - 1
+                if node[pos] != aa_orig:
+                    continue
+                seq_pred = node[:pos] + aa_mut + node[pos+1:]
+
+            y_pred = predict_sequence_prob(
+                args, seq_pred, vocabulary, model, verbose=verbose
+            )
+
+            if min_pos is None:
+                min_pos = 0
+            if max_pos is None:
+                max_pos = len(seq_pred) - 1
+
+            if step == 'base':
+                word_pos_prob = {}
+
+            for i in range(min_pos, max_pos + 1):
+                for word in vocabulary:
+                    word_idx = vocabulary[word]
+                    prob = y_pred[i + 1, word_idx]
+
+                    orig_idx = vocabulary[seq_pred[i]]
+                    orig_prob = y_pred[i + 1, orig_idx]
+
+                    if 'esm' in args.model_name:
+                        logprob = prob
+                        orig_logprob = orig_prob
+                        if step == 'base':
+                            word_pos_prob[(word, i)] = prob
+                    else:
+                        logprob = np.log10(prob)
+                        orig_logprob = np.log10(orig_prob)
+                        if step == 'base':
+                            word_pos_prob[(word, i)] = np.log10(prob)
+
+                    ratio_mut = logprob - orig_logprob
+                    ratio_back = logprob - word_pos_prob[(word, i)]
+                    if seq_pred[i] == word:
+                        assert(ratio_mut == 0)
+
+                    mut_name = seq_pred[i] + str(i + 1) + word
+
+                    mut_effects.append([
+                        node_idx, node, node_name, step_idx, step,
+                        seq_pred[i], word, i, logprob, mut_name,
+                        ratio_mut, ratio_back, mut_name in steps_set
+                    ])
+
+    mut_effects = pd.DataFrame(mut_effects, columns=[
+        'node_idx', 'node', 'node_name', 'step_idx', 'step',
+        'orig_word', 'mut_word', 'mut_pos', 'mut_logprob', 'mut_name',
+        'ratio_mut', 'ratio_back', 'is_step'
+    ])
+
+    return mut_effects
+
+def epi_gong2013(args, model, seqs, vocabulary):
+    nodes, steps = [], []
+    for record in SeqIO.parse('data/influenza/np_nodes.fa', 'fasta'):
+        nodes.append((record.id, str(record.seq)))
+        if len(nodes) > 1:
+            for idx, (c1, c2) in enumerate(zip(nodes[-2][1], nodes[-1][1])):
+                if c1 != c2:
+                    steps.append(c1 + str(idx + 1) + c2)
+
+    mut_effects = compute_mut_effects(
+        args, vocabulary, model, nodes, steps,
+    )
+
+    # Plot single effects of mutants in 1968 strain.
+
+    df = mut_effects[
+        (mut_effects.node_idx == 0) & (mut_effects.step_idx == 0) &
+        (mut_effects.is_step)
+    ]
+    plt.figure(figsize=(10, 5),)
+    sns.barplot(data=df, x='mut_name', y='mut_logprob')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_1968_single_logprob.png'.format(args.namespace))
+    plt.close()
+    plt.figure(figsize=(10, 5))
+    sns.barplot(data=df, x='mut_name', y='ratio_mut')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_1968_single_ratio.png'.format(args.namespace))
+    plt.close()
+
+    # Plot distribution of effects of mutants in 1968 strain.
+
+    df = mut_effects[
+        (mut_effects.node_idx == 0) &
+        (mut_effects.orig_word == mut_effects.mut_word)
+    ]
+    plt.figure(figsize=(10, 5),)
+    sns.violinplot(data=df, x='step', y='mut_logprob')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_1968_dist_logprob.png'.format(args.namespace))
+    plt.close()
+    plt.figure(figsize=(10, 5))
+    sns.violinplot(data=df, x='step', y='ratio_back')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_1968_dist_ratio.png'.format(args.namespace))
+    plt.close()
+
+    # See if N334H rescues L259S.
+    df = mut_effects[
+        (mut_effects.node_idx == 0) &
+        ((mut_effects.step == 'base') | (mut_effects.step == 'N334H')) &
+        (mut_effects.mut_name == 'L259S')
+    ]
+    plt.figure()
+    sns.barplot(data=df, x='step', y='mut_logprob')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_rescue_259S_logprob.png'.format(args.namespace))
+    plt.close()
+    plt.figure()
+    sns.barplot(data=df, x='step', y='ratio_mut')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_rescue_259S_ratio.png'.format(args.namespace))
+    plt.close()
+
+    # Plot how probability of 259S changes across steps.
+    df = mut_effects[
+        (mut_effects.step_idx == 0) &
+        (mut_effects.mut_word == 'S') &
+        (mut_effects.mut_pos == 258)
+    ]
+    plt.figure(figsize=(10, 5),)
+    sns.barplot(data=df, x='node_name', y='mut_logprob')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_time_259S_logprob.png'.format(args.namespace))
+    plt.close()
+    plt.figure(figsize=(10, 5))
+    sns.barplot(data=df, x='node_name', y='ratio_mut')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_time_259S_ratio.png'.format(args.namespace))
+    plt.close()
+
+    # Plot how probability of 384G changes across steps.
+    df = mut_effects[
+        (mut_effects.step_idx == 0) &
+        (mut_effects.mut_word == 'G') &
+        (mut_effects.mut_pos == 383)
+    ]
+    plt.figure(figsize=(10, 5),)
+    sns.barplot(data=df, x='node_name', y='mut_logprob')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_time_384G_logprob.png'.format(args.namespace))
+    plt.close()
+    plt.figure(figsize=(10, 5))
+    sns.barplot(data=df, x='node_name', y='ratio_mut')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_time_384G_ratio.png'.format(args.namespace))
+    plt.close()
+
+
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -292,7 +475,9 @@ if __name__ == '__main__':
 
     model, seqs = setup(args)
 
-    if args.checkpoint is not None:
+    if 'esm' in args.model_name:
+        args.checkpoint = args.model_name
+    elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)
         tprint('Model summary:')
         tprint(model.model_.summary())
@@ -312,3 +497,9 @@ if __name__ == '__main__':
             raise ValueError('Embeddings not available for models: {}'
                              .format(', '.join(no_embed)))
         analyze_embedding(args, model, seqs, vocabulary)
+
+    if args.epistasis:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+        epi_gong2013(args, model, seqs, vocabulary)
