@@ -393,6 +393,20 @@ def epi_gong2013(args, model, seqs, vocabulary):
     plt.savefig('figures/{}_1968_single_ratio.png'.format(args.namespace))
     plt.close()
 
+
+    for node_name, _ in nodes[1:-1]:
+       df = mut_effects[
+           (mut_effects.node_name == node_name) &
+           (mut_effects.step_idx == 0) &
+           (mut_effects.is_step)
+       ]
+       plt.figure(figsize=(10, 5))
+       sns.barplot(data=df, x='mut_name', y='ratio_mut')
+       plt.xticks(rotation=45)
+       plt.savefig('figures/{}_{}_single_ratio.png'
+                   .format(args.namespace, node_name))
+       plt.close()
+
     # Plot distribution of effects of mutants in 1968 strain.
 
     df = mut_effects[
