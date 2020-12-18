@@ -296,11 +296,7 @@ def compute_mut_effects(args, vocabulary, model, nodes, steps,
     mut_effects = []
 
     for node_idx, (node_name, node) in enumerate(nodes):
-        step_effects = {}
         for step_idx, step in enumerate([ 'base' ] + steps):
-            if node_idx > 0 and step_idx > 0:
-                continue
-
             if step == 'base':
                 seq_pred = node
             else:
@@ -308,58 +304,38 @@ def compute_mut_effects(args, vocabulary, model, nodes, steps,
                 aa_mut = step[-1]
                 pos = int(step[1:-1]) - 1
                 if node[pos] != aa_orig:
-                    continue
+                    aa_orig, aa_mut = aa_mut, aa_orig
                 seq_pred = node[:pos] + aa_mut + node[pos+1:]
 
             y_pred = predict_sequence_prob(
                 args, seq_pred, vocabulary, model, verbose=verbose
             )
+            if 'esm' not in args.model_name:
+                y_pred = np.log10(y_pred)
 
             if min_pos is None:
                 min_pos = 0
             if max_pos is None:
                 max_pos = len(seq_pred) - 1
 
+            seq_probs = np.array([
+                y_pred[i + 1, vocabulary[seq_pred[i]]]
+                for i in range(min_pos, max_pos + 1)
+            ])
+            seq_prob = np.mean(seq_probs)
             if step == 'base':
-                word_pos_prob = {}
+                base_seq_probs = seq_probs
+                base_seq_prob = seq_prob
 
-            for i in range(min_pos, max_pos + 1):
-                for word in vocabulary:
-                    word_idx = vocabulary[word]
-                    prob = y_pred[i + 1, word_idx]
-
-                    orig_idx = vocabulary[seq_pred[i]]
-                    orig_prob = y_pred[i + 1, orig_idx]
-
-
-                    if 'esm' in args.model_name:
-                        logprob = prob
-                        orig_logprob = orig_prob
-                        if step == 'base':
-                            word_pos_prob[(word, i)] = prob
-                    else:
-                        logprob = np.log10(prob)
-                        orig_logprob = np.log10(orig_prob)
-                        if step == 'base':
-                            word_pos_prob[(word, i)] = np.log10(prob)
-
-                    ratio_mut = logprob - orig_logprob
-                    ratio_back = logprob - word_pos_prob[(word, i)]
-                    if seq_pred[i] == word:
-                        assert(ratio_mut == 0)
-
-                    mut_name = seq_pred[i] + str(i + 1) + word
-
-                    mut_effects.append([
-                        node_idx, node, node_name, step_idx, step,
-                        seq_pred[i], word, i, logprob, mut_name,
-                        ratio_mut, ratio_back, mut_name in steps_set
-                    ])
+            mut_effects.append([
+                node_idx, node, node_name, step_idx, step,
+                seq_prob, seq_prob - base_seq_prob,
+                (seq_probs - base_seq_probs).sum()
+            ])
 
     mut_effects = pd.DataFrame(mut_effects, columns=[
         'node_idx', 'node', 'node_name', 'step_idx', 'step',
-        'orig_word', 'mut_word', 'mut_pos', 'mut_logprob', 'mut_name',
-        'ratio_mut', 'ratio_back', 'is_step'
+        'mut_logprob', 'mut_ratio', 'mut_dist'
     ])
 
     return mut_effects
@@ -373,6 +349,11 @@ def epi_gong2013(args, model, seqs, vocabulary):
                 if c1 != c2:
                     steps.append(c1 + str(idx + 1) + c2)
 
+    node1968, seq1968 = nodes[0]
+    assert(seq1968[333] == 'N')
+    seqN334H = seq1968[:333] + 'H' + seq1968[334:]
+    nodes.append(('seqN334H', seqN334H))
+
     mut_effects = compute_mut_effects(
         args, vocabulary, model, nodes, steps,
     )
@@ -380,102 +361,58 @@ def epi_gong2013(args, model, seqs, vocabulary):
     # Plot single effects of mutants in 1968 strain.
 
     df = mut_effects[
-        (mut_effects.node_idx == 0) & (mut_effects.step_idx == 0) &
-        (mut_effects.is_step)
+        (mut_effects.node_idx == 0)
     ]
     plt.figure(figsize=(10, 5),)
-    sns.barplot(data=df, x='mut_name', y='mut_logprob')
+    sns.barplot(data=df, x='step', y='mut_logprob')
     plt.xticks(rotation=45)
     plt.savefig('figures/{}_1968_single_logprob.png'.format(args.namespace))
     plt.close()
     plt.figure(figsize=(10, 5))
-    sns.barplot(data=df, x='mut_name', y='ratio_mut')
+    sns.barplot(data=df, x='step', y='mut_ratio')
     plt.xticks(rotation=45)
     plt.savefig('figures/{}_1968_single_ratio.png'.format(args.namespace))
     plt.close()
+    plt.figure(figsize=(10, 5))
+    sns.barplot(data=df, x='step', y='mut_dist')
+    plt.xticks(rotation=45)
+    plt.savefig('figures/{}_1968_single_dist.png'.format(args.namespace))
+    plt.close()
 
 
-    for node_name, _ in nodes[1:-1]:
+    for node_name, _ in nodes[1:-2]:
        df = mut_effects[
-           (mut_effects.node_name == node_name) &
-           (mut_effects.step_idx == 0) &
-           (mut_effects.is_step)
+           (mut_effects.node_name == node_name)
        ]
        plt.figure(figsize=(10, 5))
-       sns.barplot(data=df, x='mut_name', y='ratio_mut')
+       sns.barplot(data=df, x='step', y='mut_ratio')
        plt.xticks(rotation=45)
        plt.savefig('figures/{}_{}_single_ratio.png'
                    .format(args.namespace, node_name))
        plt.close()
-
-    # Plot distribution of effects of mutants in 1968 strain.
-
-    df = mut_effects[
-        (mut_effects.node_idx == 0) &
-        (mut_effects.orig_word == mut_effects.mut_word)
-    ]
-    plt.figure(figsize=(10, 5),)
-    sns.violinplot(data=df, x='step', y='mut_logprob')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_1968_dist_logprob.png'.format(args.namespace))
-    plt.close()
-    plt.figure(figsize=(10, 5))
-    sns.violinplot(data=df, x='step', y='ratio_back')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_1968_dist_ratio.png'.format(args.namespace))
-    plt.close()
+       plt.figure(figsize=(10, 5))
+       sns.barplot(data=df, x='step', y='mut_dist')
+       plt.xticks(rotation=45)
+       plt.savefig('figures/{}_{}_single_dist.png'
+                   .format(args.namespace, node_name))
+       plt.close()
 
     # See if N334H rescues L259S.
     df = mut_effects[
-        (mut_effects.node_idx == 0) &
-        ((mut_effects.step == 'base') | (mut_effects.step == 'N334H')) &
-        (mut_effects.mut_name == 'L259S')
+        ((mut_effects.node_idx == 0) |
+         (mut_effects.node_name == 'seqN334H')) &
+        (mut_effects.step == 'L259S')
     ]
     plt.figure()
-    sns.barplot(data=df, x='step', y='mut_logprob')
+    sns.barplot(data=df, x='node_name', y='mut_logprob')
     plt.xticks(rotation=45)
     plt.savefig('figures/{}_rescue_259S_logprob.png'.format(args.namespace))
     plt.close()
     plt.figure()
-    sns.barplot(data=df, x='step', y='ratio_mut')
+    sns.barplot(data=df, x='node_name', y='mut_ratio')
     plt.xticks(rotation=45)
     plt.savefig('figures/{}_rescue_259S_ratio.png'.format(args.namespace))
     plt.close()
-
-    # Plot how probability of 259S changes across steps.
-    df = mut_effects[
-        (mut_effects.step_idx == 0) &
-        (mut_effects.mut_word == 'S') &
-        (mut_effects.mut_pos == 258)
-    ]
-    plt.figure(figsize=(10, 5),)
-    sns.barplot(data=df, x='node_name', y='mut_logprob')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_time_259S_logprob.png'.format(args.namespace))
-    plt.close()
-    plt.figure(figsize=(10, 5))
-    sns.barplot(data=df, x='node_name', y='ratio_mut')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_time_259S_ratio.png'.format(args.namespace))
-    plt.close()
-
-    # Plot how probability of 384G changes across steps.
-    df = mut_effects[
-        (mut_effects.step_idx == 0) &
-        (mut_effects.mut_word == 'G') &
-        (mut_effects.mut_pos == 383)
-    ]
-    plt.figure(figsize=(10, 5),)
-    sns.barplot(data=df, x='node_name', y='mut_logprob')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_time_384G_logprob.png'.format(args.namespace))
-    plt.close()
-    plt.figure(figsize=(10, 5))
-    sns.barplot(data=df, x='node_name', y='ratio_mut')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_time_384G_ratio.png'.format(args.namespace))
-    plt.close()
-
 
 
 if __name__ == '__main__':
