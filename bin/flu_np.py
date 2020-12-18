@@ -331,6 +331,7 @@ def compute_mut_effects(args, vocabulary, model, nodes, steps,
                     orig_idx = vocabulary[seq_pred[i]]
                     orig_prob = y_pred[i + 1, orig_idx]
 
+
                     if 'esm' in args.model_name:
                         logprob = prob
                         orig_logprob = orig_prob
