@@ -344,79 +344,71 @@ def compute_mut_effects(args, vocabulary, model, nodes, steps,
 
     return mut_effects
 
-def epi_gong2013(args, model, seqs, vocabulary):
-    nodes, steps = [], []
-    for record in SeqIO.parse('data/influenza/np_nodes.fa', 'fasta'):
-        nodes.append((record.id, str(record.seq)))
-        if len(nodes) > 1:
-            for idx, (c1, c2) in enumerate(zip(nodes[-2][1], nodes[-1][1])):
-                if c1 != c2:
-                    steps.append(c1 + str(idx + 1) + c2)
+def likelihood_compare(seq1, seq2, args, vocabulary, model,
+                       positions=None, verbose=False):
+    likelihoods = []
 
-    node1968, seq1968 = nodes[0]
-    assert(seq1968[333] == 'N')
-    seqN334H = seq1968[:333] + 'H' + seq1968[334:]
-    nodes.append(('seqN334H', seqN334H))
+    for seq_pred in [ seq1, seq2 ]:
+        y_pred = predict_sequence_prob(
+            args, seq_pred, vocabulary, model, verbose=verbose
+        )
+        if 'esm' not in args.model_name:
+            y_pred = np.log10(y_pred)
 
-    mut_effects = compute_mut_effects(
-        args, vocabulary, model, nodes, steps,
+        if positions is None:
+            positions = range(len(seq_pred))
+
+        seq_probs = np.array([
+            y_pred[i + 1, vocabulary[seq_pred[i]]]
+            for i in positions
+        ])
+        seq_prob = np.mean(seq_probs)
+        likelihoods.append(seq_prob)
+
+    return likelihoods[1] - likelihoods[0]
+
+def likelihood_full(seq1, seq2, args, vocabulary, model,
+                    min_pos=None, max_pos=None, verbose=False):
+    assert(len(seq1) == len(seq2))
+    if min_pos is None:
+        min_pos = 0
+    if max_pos is None:
+        max_pos = len(seq1) - 1
+    return likelihood_compare(
+        seq1, seq2, args, vocabulary, model,
+        positions=range(min_pos, max_pos + 1), verbose=verbose,
     )
 
-    # Plot single effects of mutants in 1968 strain.
-
-    df = mut_effects[
-        (mut_effects.node_idx == 0)
+def likelihood_muts(seq1, seq2, args, vocabulary, model,
+                    verbose=False):
+    assert(len(seq1) == len(seq2))
+    positions = [
+        pos for pos, (ch1, ch2) in enumerate(zip(seq1, seq2))
+        if ch1 != ch2
     ]
-    plt.figure(figsize=(10, 5),)
-    sns.barplot(data=df, x='step', y='mut_logprob')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_1968_single_logprob.png'.format(args.namespace))
-    plt.close()
-    plt.figure(figsize=(10, 5))
-    sns.barplot(data=df, x='step', y='mut_ratio')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_1968_single_ratio.png'.format(args.namespace))
-    plt.close()
-    plt.figure(figsize=(10, 5))
-    sns.barplot(data=df, x='step', y='mut_dist')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_1968_single_dist.png'.format(args.namespace))
-    plt.close()
+    print(positions)
+    return likelihood_compare(
+        seq1, seq2, args, vocabulary, model,
+        positions=positions, verbose=verbose,
+    )
 
-
-    for node_name, _ in nodes[1:-2]:
-       df = mut_effects[
-           (mut_effects.node_name == node_name)
-       ]
-       plt.figure(figsize=(10, 5))
-       sns.barplot(data=df, x='step', y='mut_ratio')
-       plt.xticks(rotation=45)
-       plt.savefig('figures/{}_{}_single_ratio.png'
-                   .format(args.namespace, node_name))
-       plt.close()
-       plt.figure(figsize=(10, 5))
-       sns.barplot(data=df, x='step', y='mut_dist')
-       plt.xticks(rotation=45)
-       plt.savefig('figures/{}_{}_single_dist.png'
-                   .format(args.namespace, node_name))
-       plt.close()
-
-    # See if N334H rescues L259S.
-    df = mut_effects[
-        ((mut_effects.node_idx == 0) |
-         (mut_effects.node_name == 'seqN334H')) &
-        (mut_effects.step == 'L259S')
+def epi_gong2013(args, model, seqs, vocabulary):
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse('data/influenza/np_nodes.fa', 'fasta')
     ]
-    plt.figure()
-    sns.barplot(data=df, x='node_name', y='mut_logprob')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_rescue_259S_logprob.png'.format(args.namespace))
-    plt.close()
-    plt.figure()
-    sns.barplot(data=df, x='node_name', y='mut_ratio')
-    plt.xticks(rotation=45)
-    plt.savefig('figures/{}_rescue_259S_ratio.png'.format(args.namespace))
-    plt.close()
+
+    data = []
+    for idx, (name, seq) in enumerate(nodes):
+        if idx > 0:
+            seq_prev = nodes[idx - 1][1]
+            score_full = likelihood_full(seq_prev, seq,
+                                         args, vocabulary, model,)
+            score_muts = likelihood_muts(seq_prev, seq,
+                                         args, vocabulary, model,)
+            data.append([ name, seq, score_full, score_muts ])
+            tprint('{}: {}, {}'.format(name, score_full, score_muts))
+            break
 
 
 if __name__ == '__main__':
