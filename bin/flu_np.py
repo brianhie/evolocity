@@ -43,8 +43,10 @@ def parse_phenotype(field):
         return 'unknown'
 
 def load_meta(meta_fnames):
-    with open('data/influenza/birds.txt') as f:
+    with open('data/influenza/np_birds.txt') as f:
         birds = set(f.read().lower().rstrip().split())
+    with open('data/influenza/np_mammals.txt') as f:
+        mammals = set(f.read().lower().rstrip().split())
 
     metas = {}
     for fname in meta_fnames:
@@ -76,7 +78,9 @@ def load_meta(meta_fnames):
                     date = dparse(date)
 
                 if host in birds:
-                    hosts = 'avian'
+                    host = 'avian'
+                elif host in mammals:
+                    host = 'other_mammal'
 
                 metas[accession] = {
                     'subtype': subtype,
@@ -188,7 +192,7 @@ def plot_umap(adata):
     sc.pl.umap(adata, color='subtype', save='_np_subtype.png')
     sc.pl.umap(adata, color='year', save='_np_year.png')
     sc.pl.umap(adata, color='host', save='_np_host.png')
-    sc.pl.umap(adata, color='resist_adamantane', save='_np_adamantane.png')
+    sc.pl.umap(adata, color='resist_admantane', save='_np_admantane.png')
     sc.pl.umap(adata, color='resist_oseltamivir', save='_np_oseltamivir.png')
     sc.pl.umap(adata, color='virulence', save='_np_virulence.png')
     sc.pl.umap(adata, color='transmission', save='_np_transmission.png')
