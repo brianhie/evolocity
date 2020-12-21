@@ -423,12 +423,6 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
         use_cache=False, verbose=False
     )[seq_to_mutate][0]['embedding']
 
-    print(len(seq_to_mutate))
-    print(y_pred.shape)
-    print(vocabulary)
-    print(base_embedding.shape)
-    exit()
-
     if comb_batch is None:
         comb_batch = len(seqs)
     n_batches = math.ceil(float(len(seqs)) / comb_batch)

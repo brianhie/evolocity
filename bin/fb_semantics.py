@@ -235,7 +235,6 @@ if __name__ == '__main__':
         model, repr_layers, alphabet, seq_to_mutate, escape_seqs,
         comb_batch=2000, plot_namespace='flu_h1'
     )
-    exit()
 
     tprint('')
     tprint('Lee et al. 2019...')
