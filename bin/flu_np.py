@@ -1,5 +1,8 @@
 from mutation import *
 
+from Bio import pairwise2
+from Bio.SubsMat import MatrixInfo as matlist
+
 np.random.seed(1)
 random.seed(1)
 
@@ -294,10 +297,10 @@ def analyze_embedding(args, model, seqs, vocabulary):
     interpret_clusters(adata)
 
 def likelihood_compare(seq1, seq2, args, vocabulary, model,
-                       positions=None, verbose=False):
+                       pos1=None, pos2=None, verbose=False):
     likelihoods = []
 
-    for seq_pred in [ seq1, seq2 ]:
+    for seq_pred, positions in zip([ seq1, seq2 ], [ pos1, pos2 ]):
         y_pred = predict_sequence_prob(
             args, seq_pred, vocabulary, model, verbose=verbose
         )
@@ -316,38 +319,45 @@ def likelihood_compare(seq1, seq2, args, vocabulary, model,
 
     return likelihoods[1] - likelihoods[0]
 
-def likelihood_full(seq1, seq2, args, vocabulary, model,
-                    min_pos=None, max_pos=None, verbose=False):
-    assert(len(seq1) == len(seq2))
-    if min_pos is None:
-        min_pos = 0
-    if max_pos is None:
-        max_pos = len(seq1) - 1
+def likelihood_full(seq1, seq2, args, vocabulary, model, verbose=False):
     return likelihood_compare(
-        seq1, seq2, args, vocabulary, model,
-        positions=range(min_pos, max_pos + 1), verbose=verbose,
+        seq1, seq2, args, vocabulary, model, verbose=verbose,
     )
 
 def likelihood_muts(seq1, seq2, args, vocabulary, model,
                     verbose=False):
-    assert(len(seq1) == len(seq2))
-    positions = [
-        pos for pos, (ch1, ch2) in enumerate(zip(seq1, seq2))
-        if ch1 != ch2
-    ]
+    # Best alignment based on BLOSUM62.
+    matrix = matlist.blosum62
+    alignment, score = None, 0
+    for a in pairwise2.align.globalds(seq1, seq2, matrix, -3, -.1):
+        if a[2] > score:
+            alignment = a
+            score = a[2]
+    a_seq1, a_seq2, _, _, _ = alignment
+
+    # Map alignment to original indices.
+    del1, sub1, del2, sub2 = [], [], [], []
+    for a_seq, other_seq, deletions, substitutions in zip(
+            [ a_seq1, a_seq2, ], [ a_seq2, a_seq1, ],
+            [ del1, del2 ], [ sub1, sub2, ]
+    ):
+        orig_idx = 0
+        for a_idx, ch in enumerate(a_seq):
+            if ch == '-':
+                continue
+            if other_seq[a_idx] == '-':
+                deletions.append(orig_idx)
+            elif other_seq[a_idx] != ch:
+                substitutions.append(orig_idx)
+            orig_idx += 1
+
+    # Substitution likelihood.
     return likelihood_compare(
         seq1, seq2, args, vocabulary, model,
-        positions=positions, verbose=verbose,
+        pos1=sub1, pos2=sub2, verbose=verbose,
     )
 
 def epi_gong2013(args, model, seqs, vocabulary):
-    if 'esm' in args.model_name:
-        vocabulary = {
-            word: model.alphabet_.all_toks.index(word)
-            for word in model.alphabet_.all_toks
-            if '<' not in word
-        }
-
     nodes = [
         (record.id, str(record.seq))
         for record in SeqIO.parse('data/influenza/np_nodes.fa', 'fasta')
@@ -401,6 +411,8 @@ def epi_gong2013(args, model, seqs, vocabulary):
     sc.pl.umap(adata, color='gong2013_step', save='_np_gong2013.png',
                edges=True,)
 
+    #evolocity_graph(adata)
+
 
 if __name__ == '__main__':
     args = parse_args()
@@ -415,6 +427,11 @@ if __name__ == '__main__':
     model, seqs = setup(args)
 
     if 'esm' in args.model_name:
+        vocabulary = {
+            word: model.alphabet_.all_toks.index(word)
+            for word in model.alphabet_.all_toks
+            if '<' not in word
+        }
         args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)
