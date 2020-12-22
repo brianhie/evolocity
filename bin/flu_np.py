@@ -62,7 +62,7 @@ def load_meta(meta_fnames):
                 date = fields[5]
                 country = fields[7]
                 host = fields[9].lower()
-                resist_admantane = parse_phenotype(fields[12])
+                resist_adamantane = parse_phenotype(fields[12])
                 resist_oseltamivir = parse_phenotype(fields[13])
                 virulence = parse_phenotype(fields[14])
                 transmission = parse_phenotype(fields[15])
@@ -88,7 +88,7 @@ def load_meta(meta_fnames):
                     'date': date,
                     'country': country,
                     'host': host,
-                    'resist_admantane': resist_admantane,
+                    'resist_adamantane': resist_adamantane,
                     'resist_oseltamivir': resist_oseltamivir,
                     'virulence': virulence,
                     'transmission': transmission,
@@ -190,9 +190,10 @@ def plot_umap(adata):
     sc.tl.umap(adata, min_dist=1.)
     sc.pl.umap(adata, color='louvain', save='_np_louvain.png')
     sc.pl.umap(adata, color='subtype', save='_np_subtype.png')
-    sc.pl.umap(adata, color='year', save='_np_year.png')
+    sc.pl.umap(adata, color='year', save='_np_year.png',
+               edges=True,)
     sc.pl.umap(adata, color='host', save='_np_host.png')
-    sc.pl.umap(adata, color='resist_admantane', save='_np_admantane.png')
+    sc.pl.umap(adata, color='resist_adamantane', save='_np_adamantane.png')
     sc.pl.umap(adata, color='resist_oseltamivir', save='_np_oseltamivir.png')
     sc.pl.umap(adata, color='virulence', save='_np_virulence.png')
     sc.pl.umap(adata, color='transmission', save='_np_transmission.png')
@@ -245,10 +246,7 @@ def populate_embedding(args, model, seqs, vocabulary,
 
     return seqs
 
-def analyze_embedding(args, model, seqs, vocabulary):
-    seqs = populate_embedding(args, model, seqs, vocabulary,
-                              use_cache=True)
-
+def seqs_to_anndata(seqs):
     X, obs = [], {}
     obs['n_seq'] = []
     obs['seq'] = []
@@ -270,6 +268,15 @@ def analyze_embedding(args, model, seqs, vocabulary):
     adata = AnnData(X)
     for key in obs:
         adata.obs[key] = obs[key]
+
+    return adata
+
+def analyze_embedding(args, model, seqs, vocabulary):
+    seqs = populate_embedding(args, model, seqs, vocabulary,
+                              use_cache=True)
+
+    adata = seqs_to_anndata(seqs)
+
     #adata = adata[
     #    np.logical_or.reduce((
     #        adata.obs['Host Species'] == 'human',
@@ -285,64 +292,6 @@ def analyze_embedding(args, model, seqs, vocabulary):
     plot_umap(adata)
 
     interpret_clusters(adata)
-
-def compute_mut_effects(args, vocabulary, model, nodes, steps,
-                        min_pos=None, max_pos=None, verbose=False):
-    if 'esm' in args.model_name:
-        vocabulary = {
-            word: model.alphabet_.all_toks.index(word)
-            for word in model.alphabet_.all_toks
-            if '<' not in word
-        }
-
-    steps_set = set(steps)
-
-    mut_effects = []
-
-    for node_idx, (node_name, node) in enumerate(nodes):
-        for step_idx, step in enumerate([ 'base' ] + steps):
-            if step == 'base':
-                seq_pred = node
-            else:
-                aa_orig = step[0]
-                aa_mut = step[-1]
-                pos = int(step[1:-1]) - 1
-                if node[pos] != aa_orig:
-                    aa_orig, aa_mut = aa_mut, aa_orig
-                seq_pred = node[:pos] + aa_mut + node[pos+1:]
-
-            y_pred = predict_sequence_prob(
-                args, seq_pred, vocabulary, model, verbose=verbose
-            )
-            if 'esm' not in args.model_name:
-                y_pred = np.log10(y_pred)
-
-            if min_pos is None:
-                min_pos = 0
-            if max_pos is None:
-                max_pos = len(seq_pred) - 1
-
-            seq_probs = np.array([
-                y_pred[i + 1, vocabulary[seq_pred[i]]]
-                for i in range(min_pos, max_pos + 1)
-            ])
-            seq_prob = np.mean(seq_probs)
-            if step == 'base':
-                base_seq_probs = seq_probs
-                base_seq_prob = seq_prob
-
-            mut_effects.append([
-                node_idx, node, node_name, step_idx, step,
-                seq_prob, seq_prob - base_seq_prob,
-                (seq_probs - base_seq_probs).sum()
-            ])
-
-    mut_effects = pd.DataFrame(mut_effects, columns=[
-        'node_idx', 'node', 'node_name', 'step_idx', 'step',
-        'mut_logprob', 'mut_ratio', 'mut_dist'
-    ])
-
-    return mut_effects
 
 def likelihood_compare(seq1, seq2, args, vocabulary, model,
                        positions=None, verbose=False):
@@ -386,13 +335,19 @@ def likelihood_muts(seq1, seq2, args, vocabulary, model,
         pos for pos, (ch1, ch2) in enumerate(zip(seq1, seq2))
         if ch1 != ch2
     ]
-    print(positions)
     return likelihood_compare(
         seq1, seq2, args, vocabulary, model,
         positions=positions, verbose=verbose,
     )
 
 def epi_gong2013(args, model, seqs, vocabulary):
+    if 'esm' in args.model_name:
+        vocabulary = {
+            word: model.alphabet_.all_toks.index(word)
+            for word in model.alphabet_.all_toks
+            if '<' not in word
+        }
+
     nodes = [
         (record.id, str(record.seq))
         for record in SeqIO.parse('data/influenza/np_nodes.fa', 'fasta')
@@ -408,7 +363,43 @@ def epi_gong2013(args, model, seqs, vocabulary):
                                          args, vocabulary, model,)
             data.append([ name, seq, score_full, score_muts ])
             tprint('{}: {}, {}'.format(name, score_full, score_muts))
-            break
+
+    df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts' ])
+
+    tprint('Sum of full scores: {}'.format(sum(df.full)))
+    tprint('Sum of local scores: {}'.format(sum(df.muts)))
+
+    seqs = populate_embedding(args, model, seqs, vocabulary,
+                              use_cache=True)
+
+    for seq in seqs:
+        for example_meta in seqs[seq]:
+            example_meta['gong2013_step'] = 0
+    for node_idx, (_, seq) in enumerate(nodes):
+        if seq in seqs:
+            for meta in seqs[seq]:
+                meta['gong2013_step'] = node_idx + 100
+        else:
+            meta = {}
+            for key in example_meta:
+                meta[key] = None
+            meta['embedding'] = embed_seqs(
+                args, model, { seq: [ {} ] }, vocabulary, verbose=False,
+            )[seq][0]['embedding'].mean(0)
+            meta['gong2013_step'] = node_idx + 100
+            seqs[seq] = [ meta ]
+
+    adata = seqs_to_anndata(seqs)
+
+    adata = adata[(adata.obs.host == 'human')]
+
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.tl.louvain(adata, resolution=1.)
+
+    sc.set_figure_params(dpi_save=500)
+    plot_umap(adata)
+    sc.pl.umap(adata, color='gong2013_step', save='_np_gong2013.png',
+               edges=True,)
 
 
 if __name__ == '__main__':
