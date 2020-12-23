@@ -1,7 +1,5 @@
 from mutation import *
-
-from Bio import pairwise2
-from Bio.SubsMat import MatrixInfo as matlist
+from evolocity_graph import *
 
 np.random.seed(1)
 random.seed(1)
@@ -296,67 +294,6 @@ def analyze_embedding(args, model, seqs, vocabulary):
 
     interpret_clusters(adata)
 
-def likelihood_compare(seq1, seq2, args, vocabulary, model,
-                       pos1=None, pos2=None, verbose=False):
-    likelihoods = []
-
-    for seq_pred, positions in zip([ seq1, seq2 ], [ pos1, pos2 ]):
-        y_pred = predict_sequence_prob(
-            args, seq_pred, vocabulary, model, verbose=verbose
-        )
-        if 'esm' not in args.model_name:
-            y_pred = np.log10(y_pred)
-
-        if positions is None:
-            positions = range(len(seq_pred))
-
-        seq_probs = np.array([
-            y_pred[i + 1, vocabulary[seq_pred[i]]]
-            for i in positions
-        ])
-        seq_prob = np.mean(seq_probs)
-        likelihoods.append(seq_prob)
-
-    return likelihoods[1] - likelihoods[0]
-
-def likelihood_full(seq1, seq2, args, vocabulary, model, verbose=False):
-    return likelihood_compare(
-        seq1, seq2, args, vocabulary, model, verbose=verbose,
-    )
-
-def likelihood_muts(seq1, seq2, args, vocabulary, model,
-                    verbose=False):
-    # Best alignment based on BLOSUM62.
-    matrix = matlist.blosum62
-    alignment, score = None, 0
-    for a in pairwise2.align.globalds(seq1, seq2, matrix, -3, -.1):
-        if a[2] > score:
-            alignment = a
-            score = a[2]
-    a_seq1, a_seq2, _, _, _ = alignment
-
-    # Map alignment to original indices.
-    del1, sub1, del2, sub2 = [], [], [], []
-    for a_seq, other_seq, deletions, substitutions in zip(
-            [ a_seq1, a_seq2, ], [ a_seq2, a_seq1, ],
-            [ del1, del2 ], [ sub1, sub2, ]
-    ):
-        orig_idx = 0
-        for a_idx, ch in enumerate(a_seq):
-            if ch == '-':
-                continue
-            if other_seq[a_idx] == '-':
-                deletions.append(orig_idx)
-            elif other_seq[a_idx] != ch:
-                substitutions.append(orig_idx)
-            orig_idx += 1
-
-    # Substitution likelihood.
-    return likelihood_compare(
-        seq1, seq2, args, vocabulary, model,
-        pos1=sub1, pos2=sub2, verbose=verbose,
-    )
-
 def epi_gong2013(args, model, seqs, vocabulary):
     nodes = [
         (record.id, str(record.seq))
@@ -404,6 +341,7 @@ def epi_gong2013(args, model, seqs, vocabulary):
     adata = adata[(adata.obs.host == 'human')]
 
     sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
@@ -411,7 +349,26 @@ def epi_gong2013(args, model, seqs, vocabulary):
     sc.pl.umap(adata, color='gong2013_step', save='_np_gong2013.png',
                edges=True,)
 
-    #evolocity_graph(adata)
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    velocity_graph(adata, args, vocabulary, model,
+                   n_recurse_neighbors=0,)
+    import scvelo as scv
+    scv.tl.velocity_embedding(adata, basis='umap', scale=10,
+                              self_transitions=True,
+                              use_negative_cosines=True,
+                              retain_scale=False,
+                              autoscale=True,)
+    scv.pl.velocity_embedding(
+        adata, basis='umap', color='year', save='_np_year_velo.png',
+    )
+    scv.pl.velocity_embedding_grid(
+        adata, basis='umap', min_mass=1, smooth=1,
+        color='year', save='_np_year_velogrid.png',
+    )
+    scv.pl.velocity_embedding_stream(
+        adata, basis='umap',  min_mass=1, smooth=1,
+        color='year', save='_np_year_velostream.png',
+    )
 
 
 if __name__ == '__main__':
@@ -427,11 +384,9 @@ if __name__ == '__main__':
     model, seqs = setup(args)
 
     if 'esm' in args.model_name:
-        vocabulary = {
-            word: model.alphabet_.all_toks.index(word)
-            for word in model.alphabet_.all_toks
-            if '<' not in word
-        }
+        vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
+                       for tok in model.alphabet_.tok_to_idx
+                       if '<' not in tok }
         args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)

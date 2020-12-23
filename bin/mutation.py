@@ -243,13 +243,6 @@ def analyze_comb_fitness(
         args, model, vocabulary, strain, wt_seq, seqs_fitness,
         comb_batch=None, prob_cutoff=0., beta=1., verbose=True,
 ):
-    if 'esm' in args.model_name:
-        vocabulary = {
-            word: model.alphabet_.all_toks.index(word)
-            for word in model.alphabet_.all_toks
-            if '<' not in word
-        }
-
     from copy import deepcopy
     seqs_fitness = { seq: seqs_fitness[(seq, strain_i)]
                      for seq, strain_i in seqs_fitness
@@ -369,13 +362,6 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
         if plot_namespace is None:
             plot_namespace = args.namespace
 
-    if 'esm' in args.model_name:
-        vocabulary = {
-            word: model.alphabet_.all_toks.index(word)
-            for word in model.alphabet_.all_toks
-            if '<' not in word
-        }
-
     y_pred = predict_sequence_prob(
         args, seq_to_mutate, vocabulary, model, verbose=verbose
     )
@@ -480,13 +466,6 @@ def analyze_reinfection(
         args, model, seqs, vocabulary, wt_seq, mutants,
         namespace='reinfection',
 ):
-    if 'esm' in args.model_name:
-        vocabulary = {
-            word: model.alphabet_.all_toks.index(word)
-            for word in model.alphabet_.all_toks
-            if '<' not in word
-        }
-
     assert(len(mutants) == 1)
     n_mutations = list(mutants.keys())[0]
 
@@ -580,12 +559,6 @@ def null_combinatorial_fitness(
 ):
     if namespace is None:
         namespace = args.namespace
-    if 'esm' in args.model_name:
-        vocabulary = {
-            word: model.alphabet_.all_toks.index(word)
-            for word in model.alphabet_.all_toks
-            if '<' not in word
-        }
 
     assert(len(mutants) == 1)
     n_mutations = list(mutants.keys())[0]

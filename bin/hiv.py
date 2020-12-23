@@ -261,11 +261,9 @@ if __name__ == '__main__':
     model, seqs = setup(args)
 
     if 'esm' in args.model_name:
-        vocabulary = {
-            word: model.alphabet_.all_toks.index(word)
-            for word in model.alphabet_.all_toks
-            if '<' not in word
-        }
+        vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
+                       for tok in model.alphabet_.tok_to_idx
+                       if '<' not in tok }
         args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)
