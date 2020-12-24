@@ -1,4 +1,5 @@
 from mutation import *
+from evolocity_graph import *
 
 np.random.seed(1)
 random.seed(1)
@@ -8,7 +9,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Flu sequence analysis')
     parser.add_argument('model_name', type=str,
                         help='Type of language model (e.g., hmm, lstm)')
-    parser.add_argument('--namespace', type=str, default='flu',
+    parser.add_argument('--namespace', type=str, default='flu_human',
                         help='Model namespace')
     parser.add_argument('--dim', type=int, default=512,
                         help='Embedding dimension')
@@ -32,6 +33,8 @@ def parse_args():
                         help='Analyze mutational semantic change')
     parser.add_argument('--combfit', action='store_true',
                         help='Analyze combinatorial fitness')
+    parser.add_argument('--evolocity', action='store_true',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -67,9 +70,12 @@ def process(fnames, meta_fnames):
                 continue
             if str(record.seq).count('X') > 10:
                 continue
+            accession = record.description.split('|')[0].split(':')[1]
+            if args.namespace == 'flu_human' and \
+               metas[accession]['Host Species'] != 'human':
+                continue
             if record.seq not in seqs:
                 seqs[record.seq] = []
-            accession = record.description.split('|')[0].split(':')[1]
             seqs[record.seq].append(metas[accession])
     return seqs
 
@@ -185,15 +191,13 @@ def plot_umap(adata, namespace='flu'):
     sc.pl.umap(adata, color='louvain',
                save='_{}_louvain.png'.format(namespace))
 
-def analyze_embedding(args, model, seqs, vocabulary):
-    seqs = embed_seqs(args, model, seqs, vocabulary, use_cache=True)
-
+def seqs_to_anndata(seqs):
     X, obs = [], {}
     obs['n_seq'] = []
     obs['seq'] = []
     for seq in seqs:
         meta = seqs[seq][0]
-        X.append(meta['embedding'].mean(0))
+        X.append(meta['embedding'])
         for key in meta:
             if key == 'embedding':
                 continue
@@ -209,6 +213,14 @@ def analyze_embedding(args, model, seqs, vocabulary):
     adata = AnnData(X)
     for key in obs:
         adata.obs[key] = obs[key]
+
+    return adata
+
+def analyze_embedding(args, model, seqs, vocabulary):
+    seqs = embed_seqs(args, model, seqs, vocabulary, use_cache=True)
+
+    adata = seqs_to_anndata(seqs)
+
     adata = adata[
         np.logical_or.reduce((
             adata.obs['Host Species'] == 'human',
@@ -230,6 +242,92 @@ def analyze_embedding(args, model, seqs, vocabulary):
     interpret_clusters(adata)
 
     seq_clusters(adata)
+
+def evo_ha(args, model, seqs, vocabulary):
+    ############################
+    ## Visualize HA landscape ##
+    ############################
+
+    seqs = embed_seqs(args, model, seqs, vocabulary, use_cache=True)
+
+    adata = seqs_to_anndata(seqs)
+
+    adata = adata[(adata.obs.host == 'human')]
+
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+
+    sc.tl.louvain(adata, resolution=1.)
+
+    sc.set_figure_params(dpi_save=500)
+    plot_umap(adata)
+
+    exit()
+
+    #####################################
+    ## Compute evolocity and visualize ##
+    #####################################
+
+    sc.pp.neighbors(adata, n_neighbors=10, use_rep='X')
+    velocity_graph(adata, args, vocabulary, model,
+                   n_recurse_neighbors=0,)
+
+    import scvelo as scv
+    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+                              self_transitions=True,
+                              use_negative_cosines=True,
+                              retain_scale=False,
+                              autoscale=True,)
+    scv.pl.velocity_embedding(
+        adata, basis='umap', color='year', save='_np_year_velo.png',
+    )
+
+    # Grid visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_grid(
+        adata, basis='umap', min_mass=4., smooth=1.,
+        arrow_size=1., arrow_length=3.,
+        color='year', show=False,
+    )
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    draw_gong_path(ax, adata)
+    plt.savefig('figures/scvelo__np_year_velogrid.png', dpi=500)
+    plt.close()
+
+    # Streamplot visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1.,
+        color='year', show=False,
+    )
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    draw_gong_path(ax, adata)
+    plt.savefig('figures/scvelo__np_year_velostream.png', dpi=500)
+    plt.close()
+
+    scv.tl.terminal_states(adata)
+    scv.pl.scatter(adata, color=['root_cells', 'end_points'],
+                   save='_np_origins.png', dpi=500)
+    nnan_idx = (np.isfinite(adata.obs['year']) &
+                np.isfinite(adata.obs['root_cells']) &
+                np.isfinite(adata.obs['end_points']))
+    tprint('Root-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['root_cells'][nnan_idx],
+                                 adata.obs['year'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Root-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['root_cells'][nnan_idx],
+                                adata.obs['year'][nnan_idx])))
+    tprint('End-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['end_points'][nnan_idx],
+                                 adata.obs['year'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('End-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['end_points'][nnan_idx],
+                                adata.obs['year'][nnan_idx])))
 
 if __name__ == '__main__':
     args = parse_args()
@@ -304,3 +402,9 @@ if __name__ == '__main__':
             analyze_comb_fitness(args, model, vocabulary,
                                  strain, wt_seqs[strain], seqs_fitness,
                                  prob_cutoff=0., beta=1.)
+
+    if args.evolocity:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+        evo_ha(args, model, seqs, vocabulary)

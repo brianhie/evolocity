@@ -95,7 +95,7 @@ def test(args, model, seqs, vocabulary):
 
     plt.figure()
     ax = scv.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=4., smooth=1.,
+        adata, basis='umap', min_mass=4., smooth=1.5,
         arrow_size=1., arrow_length=3.,
         color='year', show=False, #save='_np_year_velogrid.png',
     )
@@ -107,8 +107,8 @@ def test(args, model, seqs, vocabulary):
 
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1.,
-        color='year', show=False, #figsize=(4, 5),
+        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        color='year', show=False,
     )
     sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -119,7 +119,8 @@ def test(args, model, seqs, vocabulary):
     plt.close()
 
     scv.tl.terminal_states(adata)
-    scv.pl.scatter(adata, color=['root_cells', 'end_points'], cmap='magma',
+    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
+                   cmap=plt.cm.get_cmap('magma').reversed(),
                    save='_np_origins.png', dpi=500)
     nnan_idx = (np.isfinite(adata.obs['year']) &
                 np.isfinite(adata.obs['root_cells']) &

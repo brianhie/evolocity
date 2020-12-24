@@ -29,8 +29,8 @@ def parse_args():
                         help='Test model')
     parser.add_argument('--embed', action='store_true',
                         help='Analyze embeddings')
-    parser.add_argument('--epistasis', action='store_true',
-                        help='Analyze epistasis')
+    parser.add_argument('--evolocity', action='store_true',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -387,7 +387,6 @@ def epi_gong2013(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    sc.pp.neighbors(adata, n_neighbors=10, use_rep='X')
     velocity_graph(adata, args, vocabulary, model,
                    n_recurse_neighbors=0,)
 
@@ -497,7 +496,7 @@ if __name__ == '__main__':
                              .format(', '.join(no_embed)))
         analyze_embedding(args, model, seqs, vocabulary)
 
-    if args.epistasis:
+    if args.evolocity:
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
