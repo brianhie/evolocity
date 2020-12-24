@@ -389,7 +389,7 @@ def epi_gong2013(args, model, seqs, vocabulary):
 
     sc.pp.neighbors(adata, n_neighbors=10, use_rep='X')
     velocity_graph(adata, args, vocabulary, model,
-                   scale_dist=True, n_recurse_neighbors=0,)
+                   n_recurse_neighbors=0,)
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -427,6 +427,27 @@ def epi_gong2013(args, model, seqs, vocabulary):
     draw_gong_path(ax, adata)
     plt.savefig('figures/scvelo__np_year_velostream.png', dpi=500)
     plt.close()
+
+    scv.tl.terminal_states(adata)
+    scv.pl.scatter(adata, color=['root_cells', 'end_points'],
+                   save='_np_origins.png', dpi=500)
+    nnan_idx = (np.isfinite(adata.obs['year']) &
+                np.isfinite(adata.obs['root_cells']) &
+                np.isfinite(adata.obs['end_points']))
+    tprint('Root-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['root_cells'][nnan_idx],
+                                 adata.obs['year'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Root-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['root_cells'][nnan_idx],
+                                adata.obs['year'][nnan_idx])))
+    tprint('End-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['end_points'][nnan_idx],
+                                 adata.obs['year'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('End-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['end_points'][nnan_idx],
+                                adata.obs['year'][nnan_idx])))
 
     exit()
 

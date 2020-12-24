@@ -118,6 +118,27 @@ def test(args, model, seqs, vocabulary):
     plt.savefig('figures/scvelo__np_year_velostream.png', dpi=500)
     plt.close()
 
+    scv.tl.terminal_states(adata)
+    scv.pl.scatter(adata, color=['root_cells', 'end_points'], cmap='magma',
+                   save='_np_origins.png', dpi=500)
+    nnan_idx = (np.isfinite(adata.obs['year']) &
+                np.isfinite(adata.obs['root_cells']) &
+                np.isfinite(adata.obs['end_points']))
+    tprint('Root-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['root_cells'][nnan_idx],
+                                 adata.obs['year'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Root-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['root_cells'][nnan_idx],
+                                adata.obs['year'][nnan_idx])))
+    tprint('End-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['end_points'][nnan_idx],
+                                 adata.obs['year'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('End-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['end_points'][nnan_idx],
+                                adata.obs['year'][nnan_idx])))
+
 if __name__ == '__main__':
     args = parse_args()
 
