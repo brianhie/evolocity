@@ -294,11 +294,36 @@ def analyze_embedding(args, model, seqs, vocabulary):
 
     interpret_clusters(adata)
 
+def draw_gong_path(ax, adata):
+    gong_adata = adata[adata.obs['gong2013_step'].astype(float) > 0]
+    gong_sort_idx = np.argsort(gong_adata.obs['gong2013_step'])
+    gong_c = gong_adata.obs['gong2013_step'][gong_sort_idx]
+    gong_x = gong_adata.obsm['X_umap'][gong_sort_idx, 0]
+    gong_y = gong_adata.obsm['X_umap'][gong_sort_idx, 1]
+
+    for idx, (x, y) in enumerate(zip(gong_x, gong_y)):
+        if idx < len(gong_x) - 1:
+            dx, dy = gong_x[idx + 1] - x, gong_y[idx + 1] - y
+            ax.arrow(x, y, dx, dy, width=0.001, head_width=0.,
+                     length_includes_head=True,
+                     color='#888888', zorder=5)
+
+    ax.scatter(gong_x, gong_y, s=15, c=gong_c, cmap='Greys',
+               edgecolors='black', linewidths=0.5, zorder=10)
+
 def epi_gong2013(args, model, seqs, vocabulary):
+    ###############
+    ## Load data ##
+    ###############
+
     nodes = [
         (record.id, str(record.seq))
         for record in SeqIO.parse('data/influenza/np_nodes.fa', 'fasta')
     ]
+
+    ######################################
+    ## See how local likelihoods change ##
+    ######################################
 
     data = []
     for idx, (name, seq) in enumerate(nodes):
@@ -308,13 +333,22 @@ def epi_gong2013(args, model, seqs, vocabulary):
                                          args, vocabulary, model,)
             score_muts = likelihood_muts(seq_prev, seq,
                                          args, vocabulary, model,)
-            data.append([ name, seq, score_full, score_muts ])
-            tprint('{}: {}, {}'.format(name, score_full, score_muts))
+            score_self = likelihood_self(seq_prev, seq,
+                                         args, vocabulary, model,)
+            data.append([ name, seq,
+                          score_full, score_muts, score_self ])
+            tprint('{}: {}, {}, {}'.format(name, score_full,
+                                           score_muts, score_self))
 
-    df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts' ])
-
+    df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
+                                      'self_score' ])
     tprint('Sum of full scores: {}'.format(sum(df.full)))
     tprint('Sum of local scores: {}'.format(sum(df.muts)))
+    tprint('Sum of self scores: {}'.format(sum(df.self_score)))
+
+    ############################
+    ## Visualize NP landscape ##
+    ############################
 
     seqs = populate_embedding(args, model, seqs, vocabulary,
                               use_cache=True)
@@ -349,11 +383,16 @@ def epi_gong2013(args, model, seqs, vocabulary):
     sc.pl.umap(adata, color='gong2013_step', save='_np_gong2013.png',
                edges=True,)
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    #####################################
+    ## Compute evolocity and visualize ##
+    #####################################
+
+    sc.pp.neighbors(adata, n_neighbors=10, use_rep='X')
     velocity_graph(adata, args, vocabulary, model,
-                   n_recurse_neighbors=0,)
+                   scale_dist=True, n_recurse_neighbors=0,)
+
     import scvelo as scv
-    scv.tl.velocity_embedding(adata, basis='umap', scale=10,
+    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
                               use_negative_cosines=True,
                               retain_scale=False,
@@ -361,15 +400,43 @@ def epi_gong2013(args, model, seqs, vocabulary):
     scv.pl.velocity_embedding(
         adata, basis='umap', color='year', save='_np_year_velo.png',
     )
-    scv.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=1, smooth=1,
-        color='year', save='_np_year_velogrid.png',
-    )
-    scv.pl.velocity_embedding_stream(
-        adata, basis='umap',  min_mass=1, smooth=1,
-        color='year', save='_np_year_velostream.png',
-    )
 
+    # Grid visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_grid(
+        adata, basis='umap', min_mass=4., smooth=1.,
+        arrow_size=1., arrow_length=3.,
+        color='year', show=False,
+    )
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    draw_gong_path(ax, adata)
+    plt.savefig('figures/scvelo__np_year_velogrid.png', dpi=500)
+    plt.close()
+
+    # Streamplot visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1.,
+        color='year', show=False,
+    )
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    draw_gong_path(ax, adata)
+    plt.savefig('figures/scvelo__np_year_velostream.png', dpi=500)
+    plt.close()
+
+    exit()
+
+    from scipy.sparse import save_npz
+    save_npz('target/np_knn40_vgraph.npz',
+             adata.uns["velocity_graph"],)
+    save_npz('target/np_knn40_vgraph_neg.npz',
+             adata.uns["velocity_graph_neg"],)
+    np.save('target/np_knn40_vself_transition.npy',
+            adata.obs["velocity_self_transition"],)
 
 if __name__ == '__main__':
     args = parse_args()

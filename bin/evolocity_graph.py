@@ -94,7 +94,7 @@ def likelihood_compare(seq1, seq2, args, vocabulary, model,
                 args, seq_pred, vocabulary, model, verbose=verbose
             )
             if 'esm' not in args.model_name:
-                y_pred = np.log10(y_pred)
+                y_pred = np.log(y_pred)
 
             seq_probs = np.array([
                 y_pred[i + 1, vocabulary[seq_pred[i]]]
@@ -114,11 +114,7 @@ def likelihood_full(seq1, seq2, args, vocabulary, model,
 
 def likelihood_muts(seq1, seq2, args, vocabulary, model,
                     seq_cache={}, verbose=False):
-    ## Align based on BLOSUM62.
-    #matrix = matlist.blosum62
-    #alignment =pairwise2.align.globalds(
-    #    seq1, seq2, matrix, -3, -.1, one_alignment_only=True
-    #)[0]
+    # Align, prefer matches to gaps.
     alignment =pairwise2.align.globalms(
         seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
     )[0]
@@ -147,6 +143,55 @@ def likelihood_muts(seq1, seq2, args, vocabulary, model,
         pos1=sub1, pos2=sub2, seq_cache=seq_cache, verbose=verbose,
     )
 
+def likelihood_self(seq1, seq2, args, vocabulary, model,
+                    seq_cache={}, verbose=False):
+    # Align, prefer matches to gaps.
+    alignment =pairwise2.align.globalms(
+        seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
+    )[0]
+    a_seq1, a_seq2, _, _, _ = alignment
+
+    # See how mutating to `seq2' changes probability.
+
+    likelihood_change = []
+
+    for a_seq, other_seq in zip([ a_seq1, a_seq2 ],
+                                [ a_seq2, a_seq1 ]):
+        if a_seq in seq_cache:
+            y_pred = seq_cache[a_seq]
+        else:
+            y_pred = predict_sequence_prob(
+                args, a_seq, vocabulary, model, verbose=verbose
+            )
+            if 'esm' not in args.model_name:
+                y_pred = np.log(y_pred)
+
+        orig_idx, scores = 0, []
+        for a_idx, ch in enumerate(a_seq):
+            if ch == '-':
+                continue
+            if other_seq[a_idx] == '-':
+                # TODO: ADD DELETION LIKELIHOODS.
+                pass
+            elif other_seq[a_idx] != ch:
+                ch_idx = vocabulary[ch] if ch in vocabulary else (
+                    model.alphabet_.unk_idx if 'esm' in args.model_name
+                    else vocabulary['X']
+                )
+                o_idx = vocabulary[other_seq[a_idx]] \
+                    if other_seq[a_idx] in vocabulary else (
+                    model.alphabet_.unk_idx
+                    if 'esm' in args.model_name else vocabulary['X']
+                )
+                prob_wt = y_pred[a_idx + 1, ch_idx]
+                prob_mut = y_pred[a_idx + 1, o_idx]
+                scores.append(prob_wt - prob_mut)
+            orig_idx += 1
+
+        likelihood_change.append(np.mean(scores))
+
+    return likelihood_change[1] - likelihood_change[0]
+
 def vals_to_csr(vals, rows, cols, shape, split_negative=False):
     graph = coo_matrix((vals, (rows, cols)), shape=shape)
 
@@ -170,6 +215,8 @@ class VelocityGraph:
             self,
             adata,
             seqs,
+            score='effects',
+            scale_dist=False,
             vkey="velocity",
             n_recurse_neighbors=None,
             random_neighbors_at_max=None,
@@ -180,6 +227,10 @@ class VelocityGraph:
 
         self.seqs = seqs
         self.seq_probs = {}
+
+        self.score = score
+
+        self.scale_dist = scale_dist
 
         self.n_recurse_neighbors = n_recurse_neighbors
         if self.n_recurse_neighbors is None:
@@ -219,13 +270,17 @@ class VelocityGraph:
             y_pred = predict_sequence_prob(
                 args, seq, vocabulary, model, verbose=self.verbose
             )
-            self.seq_probs[seq] = np.array([
-                y_pred[i + 1, vocabulary[seq[i]]]
-                if seq[i] in vocabulary else
-                (model.alphabet_.unk_idx
-                 if 'esm' in args.model_name else vocabulary['X'])
-                for i in range(len(seq))
-            ])
+
+            if self.score == 'other':
+                self.seq_probs[seq] = np.array([
+                    y_pred[i + 1, vocabulary[seq[i]]]
+                    if seq[i] in vocabulary else
+                    (model.alphabet_.unk_idx
+                     if 'esm' in args.model_name else vocabulary['X'])
+                    for i in range(len(seq))
+                ])
+            else:
+                self.seq_probs[seq] = y_pred
 
         if self.verbose:
             sys.stdout.flush()
@@ -244,13 +299,23 @@ class VelocityGraph:
                 self.indices, i, self.n_recurse_neighbors, self.max_neighs
             )
 
+            if self.score == 'other':
+                score_fn = likelihood_muts
+            else:
+                score_fn = likelihood_self
+
             val = np.array([
-                likelihood_muts(
+                score_fn(
                     self.seqs[i], self.seqs[j],
                     args, vocabulary, model,
                     seq_cache=self.seq_probs, verbose=self.verbose,
                 ) for j in neighs_idx
             ])
+
+            if self.scale_dist:
+                dist = self.adata.X[neighs_idx] - self.adata.X[i, None]
+                dist = np.sqrt((dist ** 2).sum(1))
+                val *= self.scale_dist * dist
 
             vals.extend(val)
             rows.extend(np.ones(len(neighs_idx)) * i)
@@ -272,6 +337,8 @@ class VelocityGraph:
 def velocity_graph(
         adata,
         args, vocabulary, model,
+        score='other',
+        scale_dist=False,
         seqs=None,
         vkey="velocity",
         n_recurse_neighbors=0,
@@ -289,9 +356,16 @@ def velocity_graph(
         raise ValueError('Number of sequences should correspond to '
                          'number of observations.')
 
+    valid_scores = { 'self', 'other' }
+    if score not in valid_scores:
+        raise ValueError('Score must be one of {}'
+                         .format(', '.join(valid_scores)))
+
     vgraph = VelocityGraph(
         adata,
         seqs,
+        score=score,
+        scale_dist=scale_dist,
         vkey=vkey,
         n_recurse_neighbors=n_recurse_neighbors,
         random_neighbors_at_max=random_neighbors_at_max,
