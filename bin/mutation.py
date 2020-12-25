@@ -222,6 +222,54 @@ def embed_seqs(args, model, seqs, vocabulary,
 
     return seqs
 
+def populate_embedding(args, model, seqs, vocabulary,
+                       use_cache=False, namespace=None):
+    if namespace is None:
+        namespace = args.namespace
+
+    if use_cache:
+        mkdir_p('target/{}/embedding'.format(namespace))
+        embed_prefix = ('target/{}/embedding/{}_{}'
+                        .format(namespace, args.model_name, args.dim))
+
+    sorted_seqs = np.array([ str(s) for s in sorted(seqs.keys()) ])
+    batch_size = 3000
+    n_batches = math.ceil(len(sorted_seqs) / float(batch_size))
+    for batchi in range(n_batches):
+        # Identify the batch.
+        start = batchi * batch_size
+        end = (batchi + 1) * batch_size
+        sorted_seqs_batch = sorted_seqs[start:end]
+        seqs_batch = { seq: seqs[seq] for seq in sorted_seqs_batch }
+
+        # Load from cache if available.
+        if use_cache:
+            embed_fname = embed_prefix + '.{}.npy'.format(batchi)
+            if os.path.exists(embed_fname):
+                X_embed = np.load(embed_fname, allow_pickle=True)
+                if X_embed.shape[0] == len(sorted_seqs_batch):
+                    for seq_idx, seq in enumerate(sorted_seqs_batch):
+                        for meta in seqs[seq]:
+                            meta['embedding'] = X_embed[seq_idx]
+                    continue
+
+        # Embed the sequences.
+        seqs_batch = embed_seqs(args, model, seqs_batch, vocabulary,
+                                use_cache=False)
+        if use_cache:
+            X_embed = []
+        for seq in sorted_seqs_batch:
+            for meta in seqs[seq]:
+                meta['embedding'] = seqs_batch[seq][0]['embedding'].mean(0)
+            if use_cache:
+                X_embed.append(seqs[seq][0]['embedding'].ravel())
+        del seqs_batch
+
+        if use_cache:
+            np.save(embed_fname, np.array(X_embed))
+
+    return seqs
+
 def predict_sequence_prob(args, seq_of_interest, vocabulary, model,
                           verbose=False):
     if 'esm' in args.model_name:

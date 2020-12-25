@@ -28,7 +28,7 @@ def draw_gong_path(ax, adata):
                      length_includes_head=True,
                      color='#888888', zorder=5)
 
-    ax.scatter(gong_x, gong_y, s=15, c=gong_c, cmap='Greys',
+    ax.scatter(gong_x, gong_y, s=15, c=gong_c, cmap='Oranges',
                edgecolors='black', linewidths=0.5, zorder=10)
 
 def test(args, model, seqs, vocabulary):
@@ -95,9 +95,9 @@ def test(args, model, seqs, vocabulary):
 
     plt.figure()
     ax = scv.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=4., smooth=1.5,
+        adata, basis='umap', min_mass=4., smooth=1.2,
         arrow_size=1., arrow_length=3.,
-        color='year', show=False, #save='_np_year_velogrid.png',
+        color='year', show=False,
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
