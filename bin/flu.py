@@ -261,20 +261,15 @@ def evo_h1(args, model, seqs, vocabulary):
 
     sc.tl.louvain(adata, resolution=1.)
 
-    #adata = adata[(adata.obs['louvain'] == '3') |
-    #              (adata.obs['louvain'] == '9') |
-    #              (adata.obs['louvain'] == '13')]
-
     sc.set_figure_params(dpi_save=500)
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
     sc.tl.umap(adata, min_dist=1.)
-    #plot_umap(adata)
+    plot_umap(adata)
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/h1_knn40'
+    cache_prefix = 'target/h1_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -288,7 +283,7 @@ def evo_h1(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -340,6 +335,115 @@ def evo_h1(args, model, seqs, vocabulary):
     scv.pl.scatter(adata, color=['root_cells', 'end_points'],
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save='_h1_origins.png', dpi=500)
+    nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
+                np.isfinite(adata.obs['root_cells']) &
+                np.isfinite(adata.obs['end_points']))
+    tprint('Root-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['root_cells'][nnan_idx],
+                                 adata.obs['Collection Date'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Root-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['root_cells'][nnan_idx],
+                                adata.obs['Collection Date'][nnan_idx])))
+    tprint('End-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['end_points'][nnan_idx],
+                                 adata.obs['Collection Date'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('End-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['end_points'][nnan_idx],
+                                adata.obs['Collection Date'][nnan_idx])))
+
+def evo_h3(args, model, seqs, vocabulary):
+    ############################
+    ## Visualize HA landscape ##
+    ############################
+
+    seqs = populate_embedding(args, model, seqs, vocabulary,
+                              use_cache=True)
+
+    adata = seqs_to_anndata(seqs)
+
+    adata = adata[(adata.obs['Host Species'] == 'human') &
+                  (adata.obs['Subtype'] == 'H3')]
+
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+
+    sc.tl.louvain(adata, resolution=1.)
+
+    sc.set_figure_params(dpi_save=500)
+    sc.tl.umap(adata, min_dist=1.)
+    plot_umap(adata)
+
+    #####################################
+    ## Compute evolocity and visualize ##
+    #####################################
+
+    cache_prefix = 'target/h3_knn30'
+    try:
+        from scipy.sparse import load_npz
+        adata.uns["velocity_graph"] = load_npz(
+            '{}_vgraph.npz'.format(cache_prefix)
+        )
+        adata.uns["velocity_graph_neg"] = load_npz(
+            '{}_vgraph_neg.npz'.format(cache_prefix)
+        )
+        adata.obs["velocity_self_transition"] = np.load(
+            '{}_vself_transition.npy'.format(cache_prefix)
+        )
+        adata.layers["velocity"] = np.zeros(adata.X.shape)
+    except:
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        velocity_graph(adata, args, vocabulary, model,
+                       n_recurse_neighbors=0,)
+        from scipy.sparse import save_npz
+        save_npz('{}_vgraph.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph"],)
+        save_npz('{}_vgraph_neg.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph_neg"],)
+        np.save('{}_vself_transition.npy'.format(cache_prefix),
+                adata.obs["velocity_self_transition"],)
+
+    import scvelo as scv
+    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+                              self_transitions=True,
+                              use_negative_cosines=True,
+                              retain_scale=False,
+                              autoscale=True,)
+    scv.pl.velocity_embedding(
+        adata, basis='umap', color='Collection Date',
+        save='_h3_year_velo.png',
+    )
+
+    # Grid visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_grid(
+        adata, basis='umap', min_mass=1., smooth=1.,
+        arrow_size=1., arrow_length=3.,
+        color='Collection Date', show=False,
+    )
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig('figures/scvelo__h3_year_velogrid.png', dpi=500)
+    plt.close()
+
+    # Streamplot visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1.,# linewidth=0.7,
+        color='Collection Date', show=False,
+    )
+    #sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    #sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig('figures/scvelo__h3_year_velostream.png', dpi=500)
+    plt.close()
+    #exit()
+
+    scv.tl.terminal_states(adata)
+    scv.pl.scatter(adata, color=['root_cells', 'end_points'],
+                   cmap=plt.cm.get_cmap('magma').reversed(),
+                   save='_h3_origins.png', dpi=500)
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
                 np.isfinite(adata.obs['root_cells']) &
                 np.isfinite(adata.obs['end_points']))
@@ -436,4 +540,6 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
+        evo_h3(args, model, seqs, vocabulary)
+        exit()
         evo_h1(args, model, seqs, vocabulary)
