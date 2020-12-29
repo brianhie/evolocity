@@ -1,11 +1,14 @@
-from scvelo.preprocessing.neighbors import neighbors, verify_neighbors
-from scvelo.preprocessing.neighbors import get_neighs, get_n_neighs
-
-from scipy.sparse import coo_matrix, issparse
-
 from Bio import pairwise2
 from Bio.SubsMat import MatrixInfo as matlist
-
+from scanpy.tools._dpt import DPT
+from scipy.sparse import coo_matrix, issparse, spdiags, linalg
+import scvelo as scv
+import scvelo.plotting.utils as scvu
+from scvelo.preprocessing.moments import get_connectivities
+from scvelo.preprocessing.neighbors import neighbors, verify_neighbors
+from scvelo.preprocessing.neighbors import get_neighs, get_n_neighs
+from scvelo.tools.utils import groups_to_bool, scale, strings_to_categoricals
+from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 
 from mutation import predict_sequence_prob
@@ -24,7 +27,7 @@ def norm(A):
     if issparse(A):
         return np.sqrt(A.multiply(A).sum(1).A1)
     else:
-        return np.sqrt(np.einsum("ij, ij -> i", A, A)
+        return np.sqrt(np.einsum('ij, ij -> i', A, A)
                        if A.ndim > 1 else np.sum(A * A))
 
 def get_iterative_indices(
@@ -46,7 +49,7 @@ def get_iterative_indices(
         indices = np.random.choice(indices, max_neighs, replace=False)
     return indices
 
-def get_indices(dist, n_neighbors=None, mode_neighbors="distances"):
+def get_indices(dist, n_neighbors=None, mode_neighbors='distances'):
     from scvelo.preprocessing.neighbors import compute_connectivities_umap
 
     D = dist.copy()
@@ -67,9 +70,9 @@ def get_indices(dist, n_neighbors=None, mode_neighbors="distances"):
     D.eliminate_zeros()
 
     D.data -= 1e-6
-    if mode_neighbors == "distances":
+    if mode_neighbors == 'distances':
         indices = D.indices.reshape((-1, n_neighbors))
-    elif mode_neighbors == "connectivities":
+    elif mode_neighbors == 'connectivities':
         knn_indices = D.indices.reshape((-1, n_neighbors))
         knn_distances = D.data.reshape((-1, n_neighbors))
         _, conn = compute_connectivities_umap(
@@ -217,10 +220,10 @@ class VelocityGraph:
             seqs,
             score='effects',
             scale_dist=False,
-            vkey="velocity",
+            vkey='velocity',
             n_recurse_neighbors=None,
             random_neighbors_at_max=None,
-            mode_neighbors="distances",
+            mode_neighbors='distances',
             verbose=False,
     ):
         self.adata = adata
@@ -234,24 +237,24 @@ class VelocityGraph:
 
         self.n_recurse_neighbors = n_recurse_neighbors
         if self.n_recurse_neighbors is None:
-            if mode_neighbors == "connectivities":
+            if mode_neighbors == 'connectivities':
                 self.n_recurse_neighbors = 1
             else:
                 self.n_recurse_neighbors = 2
 
-        if np.min((get_neighs(adata, "distances") > 0).sum(1).A1) == 0:
+        if np.min((get_neighs(adata, 'distances') > 0).sum(1).A1) == 0:
             raise ValueError(
-                "Your neighbor graph seems to be corrupted. "
-                "Consider recomputing via scanpy.pp.neighbors."
+                'Your neighbor graph seems to be corrupted. '
+                'Consider recomputing via scanpy.pp.neighbors.'
             )
         self.indices = get_indices(
-            dist=get_neighs(adata, "distances"),
+            dist=get_neighs(adata, 'distances'),
             mode_neighbors=mode_neighbors,
         )[0]
 
         self.max_neighs = random_neighbors_at_max
 
-        gkey, gkey_ = f"{vkey}_graph", f"{vkey}_graph_neg"
+        gkey, gkey_ = f'{vkey}_graph', f'{vkey}_graph_neg'
         self.graph = adata.uns[gkey] if gkey in adata.uns.keys() else []
         self.graph_neg = adata.uns[gkey_] if gkey_ in adata.uns.keys() else []
 
@@ -340,10 +343,10 @@ def velocity_graph(
         score='other',
         scale_dist=False,
         seqs=None,
-        vkey="velocity",
+        vkey='velocity',
         n_recurse_neighbors=0,
         random_neighbors_at_max=None,
-        mode_neighbors="distances",
+        mode_neighbors='distances',
         copy=False,
         verbose=True,
 ):
@@ -374,17 +377,445 @@ def velocity_graph(
     )
 
     if verbose:
-        tprint("Computing likelihoods...")
+        tprint('Computing likelihoods...')
     vgraph.compute_likelihoods(args, vocabulary, model)
 
     if verbose:
-        tprint("Computing velocity graph...")
+        tprint('Computing velocity graph...')
     vgraph.compute_gradients(args, vocabulary, model)
 
-    adata.uns[f"{vkey}_graph"] = vgraph.graph
-    adata.uns[f"{vkey}_graph_neg"] = vgraph.graph_neg
-    adata.obs[f"{vkey}_self_transition"] = vgraph.self_prob
+    adata.uns[f'{vkey}_graph'] = vgraph.graph
+    adata.uns[f'{vkey}_graph_neg'] = vgraph.graph_neg
+    adata.obs[f'{vkey}_self_transition'] = vgraph.self_prob
 
     adata.layers[vkey] = np.zeros(adata.X.shape)
 
     return adata if copy else None
+
+
+class VPT(DPT):
+    def set_iroots(self, root=None):
+        if (
+            isinstance(root, str)
+            and root in self._adata.obs.keys()
+            and self._adata.obs[root].max() != 0
+        ):
+            #self.iroots = get_connectivities(self._adata).dot(self._adata.obs[root])
+            self.iroots = np.array(self._adata.obs[root])
+            self.iroots = scale(self.iroots)
+            self.iroots = np.argwhere(
+                self.iroots >= self.iroots.max()
+            ).ravel()
+        elif isinstance(root, str) and root in self._adata.obs_names:
+            self.iroots = [ self._adata.obs_names.get_loc(root) ]
+        elif isinstance(root, (int, np.integer)) and root < self._adata.n_obs:
+            self.iroots = [ root ]
+        else:
+            self.iroots = [ None ]
+
+    def compute_transitions(self, density_normalize=True):
+        T = self._connectivities
+        if density_normalize:
+            q = np.asarray(T.sum(axis=0))
+            q += q == 0
+            Q = (
+                spdiags(1.0 / q, 0, T.shape[0], T.shape[0])
+                if issparse(T)
+                else np.diag(1.0 / q)
+            )
+            K = Q.dot(T).dot(Q)
+        else:
+            K = T
+        z = np.sqrt(np.asarray(K.sum(axis=0)))
+        Z = (
+            spdiags(1.0 / z, 0, K.shape[0], K.shape[0])
+            if issparse(K)
+            else np.diag(1.0 / z)
+        )
+        self._transitions_sym = Z.dot(K).dot(Z)
+
+    def compute_eigen(self, n_comps=10, sym=None, sort='decrease'):
+        if self._transitions_sym is None:
+            raise ValueError('Run `.compute_transitions` first.')
+        n_comps = min(self._transitions_sym.shape[0] - 1, n_comps)
+        evals, evecs = linalg.eigsh(self._transitions_sym, k=n_comps, which='LM')
+        self._eigen_values = evals[::-1]
+        self._eigen_basis = evecs[:, ::-1]
+
+    def compute_pseudotime(self, inverse=False):
+        if self.iroot is not None:
+            self._set_pseudotime()
+            self.pseudotime = 1 - self.pseudotime if inverse else self.pseudotime
+            self.pseudotime[~np.isfinite(self.pseudotime)] = np.nan
+        else:
+            self.pseudotime = np.empty(self._adata.n_obs)
+            self.pseudotime[:] = np.nan
+
+def velocity_pseudotime(
+        adata,
+        vkey='velocity',
+        groupby=None,
+        groups=None,
+        root_key=None,
+        end_key=None,
+        n_dcs=10,
+        use_velocity_graph=True,
+        save_diffmap=None,
+        return_model=None,
+        **kwargs,
+):
+    strings_to_categoricals(adata)
+    if root_key is None and 'root_cells' in adata.obs.keys():
+        root0 = adata.obs['root_cells'][0]
+        if not np.isnan(root0) and not isinstance(root0, str):
+            root_key = 'root_cells'
+    if end_key is None and 'end_points' in adata.obs.keys():
+        end0 = adata.obs['end_points'][0]
+        if not np.isnan(end0) and not isinstance(end0, str):
+            end_key = 'end_points'
+
+    groupby = (
+        'cell_fate' if groupby is None and 'cell_fate' in adata.obs.keys()
+        else groupby
+    )
+    categories = (
+        adata.obs[groupby].cat.categories
+        if groupby is not None and groups is None
+        else [None]
+    )
+    for cat in categories:
+        groups = cat if cat is not None else groups
+        if (
+            root_key is None
+            or root_key in adata.obs.keys()
+            and np.max(adata.obs[root_key]) == np.min(adata.obs[root_key])
+        ):
+            scv.tl.terminal_states(adata, vkey, groupby, groups)
+            root_key, end_key = 'root_cells', 'end_points'
+        cell_subset = groups_to_bool(adata, groups=groups, groupby=groupby)
+        data = adata.copy() if cell_subset is None else adata[cell_subset].copy()
+        if 'allow_kendall_tau_shift' not in kwargs:
+            kwargs['allow_kendall_tau_shift'] = True
+        vpt = VPT(data, n_dcs=n_dcs, **kwargs)
+
+        if use_velocity_graph:
+            T = data.uns[f'{vkey}_graph'] - data.uns[f'{vkey}_graph_neg']
+            vpt._connectivities = T + T.T
+
+        vpt.compute_transitions()
+        vpt.compute_eigen(n_comps=n_dcs)
+
+        vpt.set_iroots(root_key)
+        pseudotimes = []
+        for iroot in vpt.iroots:
+            if iroot is None:
+                continue
+            vpt.iroot = iroot
+            vpt.compute_pseudotime()
+            pseudotimes.append(scale(vpt.pseudotime))
+
+        if end_key is not None:
+            vpt.set_iroots(end_key)
+            for iroot in vpt.iroots:
+                if iroot is None:
+                    continue
+                vpt.iroot = iroot
+                vpt.compute_pseudotime(inverse=True)
+                pseudotimes.append(scale(vpt.pseudotime))
+
+        vpt.pseudotime = np.nan_to_num(np.vstack(pseudotimes)).mean(0)
+        vpt.pseudotime = scale(vpt.pseudotime)
+
+        if 'n_branchings' in kwargs and kwargs['n_branchings'] > 0:
+            vpt.branchings_segments()
+        else:
+            vpt.indices = vpt.pseudotime.argsort()
+
+        if f'{vkey}_pseudotime' not in adata.obs.keys():
+            pseudotime = np.empty(adata.n_obs)
+            pseudotime[:] = np.nan
+        else:
+            pseudotime = adata.obs[f'{vkey}_pseudotime'].values
+        pseudotime[cell_subset] = vpt.pseudotime
+        adata.obs[f'{vkey}_pseudotime'] = np.array(pseudotime, dtype=np.float64)
+
+        if save_diffmap:
+            diffmap = np.empty(shape=(adata.n_obs, n_dcs))
+            diffmap[:] = np.nan
+            diffmap[cell_subset] = vpt.eigen_basis
+            adata.obsm[f'X_diffmap_{groups}'] = diffmap
+
+    return vpt if return_model else None
+
+def quiver_autoscale(X_emb, V_emb):
+    import matplotlib.pyplot as pl
+
+    scale_factor = np.abs(X_emb).max()  # just so that it handles very large values
+    fig, ax = pl.subplots()
+    Q = ax.quiver(
+        X_emb[:, 0] / scale_factor,
+        X_emb[:, 1] / scale_factor,
+        V_emb[:, 0],
+        V_emb[:, 1],
+        angles='xy',
+        scale_units='xy',
+        scale=None,
+    )
+    Q._init()
+    fig.clf()
+    pl.close(fig)
+    return Q.scale / scale_factor
+
+def compute_velocity_on_grid(
+        X_emb,
+        V_emb,
+        density=None,
+        smooth=None,
+        n_neighbors=None,
+        min_mass=None,
+        autoscale=True,
+        adjust_for_stream=False,
+        cutoff_perc=None,
+        return_mesh=False,
+):
+    # remove invalid cells
+    idx_valid = np.isfinite(X_emb.sum(1) + V_emb.sum(1))
+    X_emb = X_emb[idx_valid]
+    V_emb = V_emb[idx_valid]
+
+    # prepare grid
+    n_obs, n_dim = X_emb.shape
+    density = 1 if density is None else density
+    smooth = 0.5 if smooth is None else smooth
+
+    grs = []
+    for dim_i in range(n_dim):
+        m, M = np.min(X_emb[:, dim_i]), np.max(X_emb[:, dim_i])
+        m = m - 0.01 * np.abs(M - m)
+        M = M + 0.01 * np.abs(M - m)
+        gr = np.linspace(m, M, int(50 * density))
+        grs.append(gr)
+
+    meshes_tuple = np.meshgrid(*grs)
+    X_grid = np.vstack([i.flat for i in meshes_tuple]).T
+
+    # estimate grid velocities
+    if n_neighbors is None:
+        n_neighbors = int(n_obs / 50)
+    nn = NearestNeighbors(n_neighbors=n_neighbors, n_jobs=-1)
+    nn.fit(X_emb)
+    dists, neighs = nn.kneighbors(X_grid)
+
+    scale = np.mean([(g[1] - g[0]) for g in grs]) * smooth
+    weight = ss.norm.pdf(x=dists, scale=scale)
+    p_mass = weight.sum(1)
+
+    V_grid = (V_emb[neighs] * weight[:, :, None]).sum(1)
+    V_grid /= np.maximum(1, p_mass)[:, None]
+    if min_mass is None:
+        min_mass = 1
+
+    if adjust_for_stream:
+        X_grid = np.stack([np.unique(X_grid[:, 0]), np.unique(X_grid[:, 1])])
+        ns = int(np.sqrt(len(V_grid[:, 0])))
+        V_grid = V_grid.T.reshape(2, ns, ns)
+
+        mass = np.sqrt((V_grid ** 2).sum(0))
+        min_mass = 10 ** (min_mass - 6)  # default min_mass = 1e-5
+        min_mass = np.clip(min_mass, None, np.max(mass) * 0.9)
+        cutoff = mass.reshape(V_grid[0].shape) < min_mass
+
+        if cutoff_perc is None:
+            cutoff_perc = 5
+        length = np.sum(np.mean(np.abs(V_emb[neighs]), axis=1), axis=1).T
+        length = length.reshape(ns, ns)
+        cutoff |= length < np.percentile(length, cutoff_perc)
+
+        V_grid[0][cutoff] = np.nan
+    else:
+        min_mass *= np.percentile(p_mass, 99) / 100
+        X_grid, V_grid = X_grid[p_mass > min_mass], V_grid[p_mass > min_mass]
+
+        if autoscale:
+            V_grid /= 3 * quiver_autoscale(X_grid, V_grid)
+
+    if return_mesh:
+        return X_grid, meshes_tuple, V_grid
+
+    return X_grid, V_grid
+
+def plot_pseudofitness(
+        adata,
+        pfkey='pseudofitness',
+        fill=True,
+        levels=10,
+        basis=None,
+        vkey='velocity',
+        density=None,
+        smooth=None,
+        pf_smooth=None,
+        min_mass=None,
+        arrow_size=None,
+        arrow_length=None,
+        arrow_color=None,
+        scale=None,
+        autoscale=True,
+        n_neighbors=None,
+        recompute=None,
+        X=None,
+        V=None,
+        X_grid=None,
+        V_grid=None,
+        PF_grid=None,
+        color=None,
+        layer=None,
+        color_map=None,
+        colorbar=True,
+        palette=None,
+        size=None,
+        alpha=0.5,
+        vmin=None,
+        vmax=None,
+        perc=None,
+        sort_order=True,
+        groups=None,
+        components=None,
+        projection='2d',
+        legend_loc='none',
+        legend_fontsize=None,
+        legend_fontweight=None,
+        xlabel=None,
+        ylabel=None,
+        title=None,
+        fontsize=None,
+        figsize=None,
+        dpi=None,
+        frameon=None,
+        show=None,
+        save=None,
+        ax=None,
+        ncols=None,
+        **kwargs,
+):
+    if pfkey not in adata.obs:
+        velocity_pseudotime(
+            adata,
+            vkey=vkey,
+            groups=groups,
+            use_velocity_graph=True,
+        )
+        adata.obs[pfkey] = adata.obs[f'{vkey}_pseudotime']
+
+    smooth = 0.5 if smooth is None else smooth
+    pf_smooth = smooth if pf_smooth is None else pf_smooth
+
+    basis = scvu.default_basis(adata, **kwargs) \
+            if basis is None \
+            else scvu.get_basis(adata, basis)
+    if vkey == 'all':
+        lkeys = list(adata.layers.keys())
+        vkey = [key for key in lkeys if 'velocity' in key and '_u' not in key]
+    color, color_map = kwargs.pop('c', color), kwargs.pop('cmap', color_map)
+    colors = scvu.make_unique_list(color, allow_array=True)
+    layers, vkeys = (scvu.make_unique_list(layer),
+                     scvu.make_unique_list(vkey))
+
+    if V is None:
+        for key in vkeys:
+            if recompute or scvu.velocity_embedding_changed(
+                    adata, basis=basis, vkey=key
+            ):
+                scv.pl.velocity_embedding(adata, basis=basis, vkey=key)
+
+    color, layer, vkey = colors[0], layers[0], vkeys[0]
+    color = scvu.default_color(adata) if color is None else color
+
+    _adata = (
+        adata[scvu.groups_to_bool(adata, groups, groupby=color)]
+        if groups is not None and color in adata.obs.keys()
+        else adata
+    )
+    comps, obsm = scvu.get_components(components, basis), _adata.obsm
+    X_emb = np.array(obsm[f'X_{basis}'][:, comps]) \
+            if X is None else X[:, :2]
+    V_emb = np.array(obsm[f'{vkey}_{basis}'][:, comps]) \
+            if V is None else V[:, :2]
+    if X_grid is None or V_grid is None:
+        X_grid, V_grid = compute_velocity_on_grid(
+            X_emb=X_emb,
+            V_emb=V_emb,
+            density=density,
+            autoscale=autoscale,
+            smooth=smooth,
+            n_neighbors=n_neighbors,
+            min_mass=min_mass,
+        )
+
+    contour_kwargs = {
+        'levels': levels,
+        'vmin': vmin,
+        'vmax': vmax,
+        'alpha': alpha,
+        'legend_fontsize': legend_fontsize,
+        'legend_fontweight': legend_fontweight,
+        'palette': palette,
+        'cmap': color_map,
+        'xlabel': xlabel,
+        'ylabel': ylabel,
+        'colorbar': colorbar,
+        'dpi': dpi,
+    }
+
+    ax, show = scvu.get_ax(ax, show, figsize, dpi)
+    hl, hw, hal = scvu.default_arrow(arrow_size)
+    if arrow_length is not None:
+        scale = 1 / arrow_length
+    if scale is None:
+        scale = 1
+    if arrow_color is None:
+        arrow_color = 'grey'
+    quiver_kwargs = {'angles': 'xy', 'scale_units': 'xy', 'edgecolors': 'k'}
+    quiver_kwargs.update({'scale': scale, 'width': 0.001, 'headlength': hl / 2})
+    quiver_kwargs.update({'headwidth': hw / 2, 'headaxislength': hal / 2})
+    quiver_kwargs.update({'color': arrow_color, 'linewidth': 0.2, 'zorder': 3})
+
+    for arg in list(kwargs):
+        if arg in quiver_kwargs:
+            quiver_kwargs.update({arg: kwargs[arg]})
+        else:
+            scatter_kwargs.update({arg: kwargs[arg]})
+
+    ax.quiver(
+        X_grid[:, 0], X_grid[:, 1], V_grid[:, 0], V_grid[:, 1], **quiver_kwargs
+    )
+
+    if PF_grid is None:
+        _, mesh, PF_grid = compute_velocity_on_grid(
+            X_emb=X_emb,
+            V_emb=np.array(adata.obs[pfkey]).reshape(-1, 1),
+            density=density,
+            autoscale=False,
+            smooth=pf_smooth,
+            n_neighbors=n_neighbors,
+            min_mass=0,
+            return_mesh=True,
+        )
+        PF_grid = PF_grid.reshape(mesh[0].shape)
+
+    if fill:
+        contour_fn = ax.contourf
+    else:
+        contour_fn = ax.contour
+
+    contour = contour_fn(mesh[0], mesh[1], PF_grid, zorder=1,
+                         **contour_kwargs)
+
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    #cbar = plt.colorbar(contour)
+    #cbar.ax.set_ylabel(pfkey)
+
+    scvu.savefig_or_show(dpi=dpi, save=save, show=show)
+    if show is False:
+        return ax

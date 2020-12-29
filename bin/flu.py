@@ -323,34 +323,31 @@ def evo_h1(args, model, seqs, vocabulary):
         adata, basis='umap', min_mass=4., smooth=1., linewidth=0.7,
         color='Collection Date', show=False,
     )
-    #sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
-    #sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     plt.savefig('figures/scvelo__h1_year_velostream.png', dpi=500)
     plt.close()
-    #exit()
 
-    scv.tl.terminal_states(adata)
-    scv.pl.scatter(adata, color=['root_cells', 'end_points'],
+    plot_pseudofitness(
+        adata, basis='umap', min_mass=1., smooth=1., levels=100,
+        arrow_size=1., arrow_length=3., cmap='coolwarm',
+        c='#aaaaaa', show=False,
+        save='_h1_pseudofitness.png', dpi=500
+    )
+
+    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save='_h1_origins.png', dpi=500)
+
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
-                np.isfinite(adata.obs['root_cells']) &
-                np.isfinite(adata.obs['end_points']))
-    tprint('Root-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['root_cells'][nnan_idx],
+                np.isfinite(adata.obs['pseudofitness']))
+    tprint('Pseudofitness-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
                                  adata.obs['Collection Date'][nnan_idx],
                                  nan_policy='omit')))
-    tprint('Root-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['root_cells'][nnan_idx],
-                                adata.obs['Collection Date'][nnan_idx])))
-    tprint('End-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['end_points'][nnan_idx],
-                                 adata.obs['Collection Date'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('End-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['end_points'][nnan_idx],
+    tprint('Pseudofitness-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
                                 adata.obs['Collection Date'][nnan_idx])))
 
 def evo_h3(args, model, seqs, vocabulary):
@@ -366,7 +363,7 @@ def evo_h3(args, model, seqs, vocabulary):
     adata = adata[(adata.obs['Host Species'] == 'human') &
                   (adata.obs['Subtype'] == 'H3')]
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -378,7 +375,7 @@ def evo_h3(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/h3_knn30'
+    cache_prefix = 'target/h3_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -392,8 +389,9 @@ def evo_h3(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
+                       score='self',
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
@@ -432,34 +430,31 @@ def evo_h3(args, model, seqs, vocabulary):
         adata, basis='umap', min_mass=4., smooth=1.,# linewidth=0.7,
         color='Collection Date', show=False,
     )
-    #sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
-    #sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     plt.savefig('figures/scvelo__h3_year_velostream.png', dpi=500)
     plt.close()
-    #exit()
 
-    scv.tl.terminal_states(adata)
-    scv.pl.scatter(adata, color=['root_cells', 'end_points'],
+    plot_pseudofitness(
+        adata, basis='umap', min_mass=1., smooth=1., levels=100,
+        arrow_size=1., arrow_length=3., cmap='coolwarm',
+        c='#aaaaaa', show=False,
+        save='_h3_pseudofitness.png', dpi=500
+    )
+
+    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save='_h3_origins.png', dpi=500)
+
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
-                np.isfinite(adata.obs['root_cells']) &
-                np.isfinite(adata.obs['end_points']))
-    tprint('Root-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['root_cells'][nnan_idx],
+                np.isfinite(adata.obs['pseudofitness']))
+    tprint('Pseudofitness-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
                                  adata.obs['Collection Date'][nnan_idx],
                                  nan_policy='omit')))
-    tprint('Root-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['root_cells'][nnan_idx],
-                                adata.obs['Collection Date'][nnan_idx])))
-    tprint('End-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['end_points'][nnan_idx],
-                                 adata.obs['Collection Date'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('End-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['end_points'][nnan_idx],
+    tprint('Pseudofitness-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
                                 adata.obs['Collection Date'][nnan_idx])))
 
 if __name__ == '__main__':
@@ -540,6 +535,5 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        evo_h3(args, model, seqs, vocabulary)
-        exit()
         evo_h1(args, model, seqs, vocabulary)
+        evo_h3(args, model, seqs, vocabulary)

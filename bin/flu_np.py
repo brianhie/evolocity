@@ -339,8 +339,29 @@ def epi_gong2013(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    velocity_graph(adata, args, vocabulary, model,
-                   n_recurse_neighbors=0,)
+    cache_prefix = 'target/np_knn40'
+    try:
+        from scipy.sparse import load_npz
+        adata.uns["velocity_graph"] = load_npz(
+            '{}_vgraph.npz'.format(cache_prefix)
+        )
+        adata.uns["velocity_graph_neg"] = load_npz(
+            '{}_vgraph_neg.npz'.format(cache_prefix)
+        )
+        adata.obs["velocity_self_transition"] = np.load(
+            '{}_vself_transition.npy'.format(cache_prefix)
+        )
+        adata.layers["velocity"] = np.zeros(adata.X.shape)
+    except:
+        velocity_graph(adata, args, vocabulary, model,
+                       n_recurse_neighbors=0,)
+        from scipy.sparse import save_npz
+        save_npz('{}_vgraph.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph"],)
+        save_npz('{}_vgraph_neg.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph_neg"],)
+        np.save('{}_vself_transition.npy'.format(cache_prefix),
+                adata.obs["velocity_self_transition"],)
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -379,36 +400,28 @@ def epi_gong2013(args, model, seqs, vocabulary):
     plt.savefig('figures/scvelo__np_year_velostream.png', dpi=500)
     plt.close()
 
-    scv.tl.terminal_states(adata)
-    scv.pl.scatter(adata, color=['root_cells', 'end_points'],
+
+    plot_pseudofitness(
+        adata, basis='umap', min_mass=4., smooth=1., pf_smooth=2., levels=100,
+        arrow_size=1., arrow_length=3., cmap='coolwarm',
+        c='#aaaaaa', show=False,
+        save='_np_pseudofitness.png', dpi=500
+    )
+
+    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
+                   cmap=plt.cm.get_cmap('magma').reversed(),
                    save='_np_origins.png', dpi=500)
+
     nnan_idx = (np.isfinite(adata.obs['year']) &
-                np.isfinite(adata.obs['root_cells']) &
-                np.isfinite(adata.obs['end_points']))
-    tprint('Root-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['root_cells'][nnan_idx],
+                np.isfinite(adata.obs['pseudofitness']))
+    tprint('Pseudofitness-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
                                  adata.obs['year'][nnan_idx],
                                  nan_policy='omit')))
-    tprint('Root-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['root_cells'][nnan_idx],
-                                adata.obs['year'][nnan_idx])))
-    tprint('End-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['end_points'][nnan_idx],
-                                 adata.obs['year'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('End-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['end_points'][nnan_idx],
+    tprint('Pseudofitness-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
                                 adata.obs['year'][nnan_idx])))
 
-    exit()
-
-    from scipy.sparse import save_npz
-    save_npz('target/np_knn40_vgraph.npz',
-             adata.uns["velocity_graph"],)
-    save_npz('target/np_knn40_vgraph_neg.npz',
-             adata.uns["velocity_graph_neg"],)
-    np.save('target/np_knn40_vself_transition.npy',
-            adata.obs["velocity_self_transition"],)
 
 if __name__ == '__main__':
     args = parse_args()
