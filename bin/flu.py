@@ -269,7 +269,7 @@ def evo_h1(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/h1_knn30'
+    cache_prefix = 'target/ev_cache/h1_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -389,7 +389,6 @@ def evo_h3(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        score='self',
                        n_recurse_neighbors=0,)
@@ -437,7 +436,7 @@ def evo_h3(args, model, seqs, vocabulary):
     plt.close()
 
     plot_pseudofitness(
-        adata, basis='umap', min_mass=1., smooth=1., levels=100,
+        adata, basis='umap', min_mass=1., smooth=0.7, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         save='_h3_pseudofitness.png', dpi=500

@@ -339,7 +339,7 @@ def epi_gong2013(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/np_knn40'
+    cache_prefix = 'target/ev_cache/np_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(

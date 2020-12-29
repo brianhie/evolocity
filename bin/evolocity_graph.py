@@ -674,6 +674,7 @@ def plot_pseudofitness(
         palette=None,
         size=None,
         alpha=0.5,
+        offset=1,
         vmin=None,
         vmax=None,
         perc=None,
@@ -751,6 +752,9 @@ def plot_pseudofitness(
             min_mass=min_mass,
         )
 
+    if vmin is None:
+        vmin = adata.obs[pfkey].min()
+
     contour_kwargs = {
         'levels': levels,
         'vmin': vmin,
@@ -789,10 +793,14 @@ def plot_pseudofitness(
         X_grid[:, 0], X_grid[:, 1], V_grid[:, 0], V_grid[:, 1], **quiver_kwargs
     )
 
+    PF_emb = np.array(adata.obs[pfkey]).reshape(-1, 1)
+    if offset is not None:
+        PF_emb += offset
+
     if PF_grid is None:
         _, mesh, PF_grid = compute_velocity_on_grid(
             X_emb=X_emb,
-            V_emb=np.array(adata.obs[pfkey]).reshape(-1, 1),
+            V_emb=PF_emb,
             density=density,
             autoscale=False,
             smooth=pf_smooth,

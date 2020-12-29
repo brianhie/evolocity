@@ -118,12 +118,17 @@ def test(args, model, seqs, vocabulary):
     plt.savefig('figures/scvelo__np_year_velostream.png', dpi=500)
     plt.close()
 
-    plot_pseudofitness(
-        adata, basis='umap', min_mass=4., smooth=1., levels=100,
+    plt.figure()
+    ax = plot_pseudofitness(
+        adata, basis='umap', min_mass=4., smooth=1., pf_smooth=1.5, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        save='_np_pseudofitness.png', dpi=500
+        #save='_np_pseudofitness.png', dpi=500
     )
+    plt.tight_layout(pad=1.1)
+    draw_gong_path(ax, adata)
+    plt.savefig('figures/scvelo__np_pseudofitness.png', dpi=500)
+    plt.close()
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),

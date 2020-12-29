@@ -32,6 +32,8 @@ def parse_args():
                         help='Analyze mutational semantic change')
     parser.add_argument('--combfit', action='store_true',
                         help='Analyze combinatorial fitness')
+    parser.add_argument('--evolocity', action='store_true',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -263,3 +265,26 @@ if __name__ == '__main__':
             analyze_comb_fitness(args, model, vocabulary,
                                  strain, wt_seqs[strain], seqs_fitness,
                                  prob_cutoff=0., beta=1.)
+
+    if args.evolocity:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+        no_embed = { 'hmm' }
+        if args.model_name in no_embed:
+            raise ValueError('Embeddings not available for models: {}'
+                             .format(', '.join(no_embed)))
+
+        seqs = populate_embedding(args, model, seqs, vocabulary,
+                                  use_cache=True)
+        for seq in seqs:
+            for meta in seqs[seq]:
+                meta['corpus'] = 'original'
+                meta['status'] = 'NA'
+
+        from transfound import *
+        seqs_tf = load_keele2008()
+        seqs_tf = embed_seqs(args, model, seqs_tf, vocabulary,
+                             use_cache=True, namespace='env_tf_keele2008')
+
+        embed_trans_found(seqs, seqs_tf)
