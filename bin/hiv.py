@@ -1,4 +1,5 @@
 from mutation import *
+from evolocity_graph import *
 
 np.random.seed(1)
 random.seed(1)
@@ -235,11 +236,16 @@ def evo_keele2008(args, model, seqs, vocabulary):
     )
     for seq in seqs_keele:
         if seq in seqs:
+            for meta in seqs[seq]:
+                for key in seqs_keele[seq][0]:
+                    meta[key] = seqs_keele[seq][0][key]
             seqs[seq] += seqs_keele[seq]
         else:
             seqs[seq] = seqs_keele[seq]
 
     adata = seqs_to_anndata(seqs)
+
+    adata = adata[adata.obs.subtype == 'B']
 
     sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
@@ -249,6 +255,87 @@ def evo_keele2008(args, model, seqs, vocabulary):
     sc.tl.umap(adata, min_dist=1.)
     plot_umap_keele2008(adata)
 
+    cache_prefix = 'target/ev_cache/env_knn10'
+    try:
+        from scipy.sparse import load_npz
+        adata.uns["velocity_graph"] = load_npz(
+            '{}_vgraph.npz'.format(cache_prefix)
+        )
+        adata.uns["velocity_graph_neg"] = load_npz(
+            '{}_vgraph_neg.npz'.format(cache_prefix)
+        )
+        adata.obs["velocity_self_transition"] = np.load(
+            '{}_vself_transition.npy'.format(cache_prefix)
+        )
+        adata.layers["velocity"] = np.zeros(adata.X.shape)
+    except:
+        sc.pp.neighbors(adata, n_neighbors=10, use_rep='X')
+        velocity_graph(adata, args, vocabulary, model,
+                       n_recurse_neighbors=0,)
+        from scipy.sparse import save_npz
+        save_npz('{}_vgraph.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph"],)
+        save_npz('{}_vgraph_neg.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph_neg"],)
+        np.save('{}_vself_transition.npy'.format(cache_prefix),
+                adata.obs["velocity_self_transition"],)
+    exit()
+
+    import scvelo as scv
+    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+                              self_transitions=True,
+                              use_negative_cosines=True,
+                              retain_scale=False,
+                              autoscale=True,)
+    scv.pl.velocity_embedding(
+        adata, basis='umap', color='Collection Date',
+        save='_h1_year_velo.png',
+    )
+
+    # Grid visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_grid(
+        adata, basis='umap', min_mass=1., smooth=1.,
+        arrow_size=1., arrow_length=3.,
+        color='Collection Date', show=False,
+    )
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig('figures/scvelo__h1_year_velogrid.png', dpi=500)
+    plt.close()
+
+    # Streamplot visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1., linewidth=0.7,
+        color='Collection Date', show=False,
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig('figures/scvelo__h1_year_velostream.png', dpi=500)
+    plt.close()
+
+    plot_pseudofitness(
+        adata, basis='umap', min_mass=1., smooth=1., levels=100,
+        arrow_size=1., arrow_length=3., cmap='coolwarm',
+        c='#aaaaaa', show=False,
+        save='_h1_pseudofitness.png', dpi=500
+    )
+
+    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
+                   cmap=plt.cm.get_cmap('magma').reversed(),
+                   save='_h1_origins.png', dpi=500)
+
+    nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
+                np.isfinite(adata.obs['pseudofitness']))
+    tprint('Pseudofitness-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
+                                 adata.obs['Collection Date'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Pseudofitness-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
+                                adata.obs['Collection Date'][nnan_idx])))
 if __name__ == '__main__':
     args = parse_args()
 
