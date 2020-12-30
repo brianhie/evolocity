@@ -185,7 +185,10 @@ def batch_train(args, model, seqs, vocabulary, batch_size=5000,
               '{}-01.hdf5'.format(fname_prefix))
 
 def embed_seqs(args, model, seqs, vocabulary,
-               use_cache=False, verbose=True):
+               use_cache=False, verbose=True, namespace=None):
+    if namespace is None:
+        namespace = args.namespace
+
     if use_cache:
         mkdir_p('target/{}/embedding'.format(args.namespace))
         embed_fname = ('target/{}/embedding/{}_{}.npy'

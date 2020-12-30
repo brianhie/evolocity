@@ -168,23 +168,21 @@ def plot_umap(adata):
     sc.pl.umap(adata, color='louvain', save='_hiv_louvain.png')
     sc.pl.umap(adata, color='subtype', save='_hiv_subtype.png')
 
-def analyze_embedding(args, model, seqs, vocabulary):
-    seqs = populate_embedding(args, model, seqs, vocabulary,
-                              use_cache=True)
+def seqs_to_anndata(seqs):
+    keys = set([ key for seq in seqs for meta in seqs[seq] for key in meta ])
 
     X, obs = [], {}
     obs['n_seq'] = []
     obs['seq'] = []
     for seq in seqs:
-        meta = seqs[seq][0]
-        X.append(meta['embedding'])
-        for key in meta:
+        X.append(seqs[seq][0]['embedding'])
+        for key in keys:
             if key == 'embedding':
                 continue
             if key not in obs:
                 obs[key] = []
             obs[key].append(Counter([
-                meta[key] for meta in seqs[seq]
+                meta[key] if key in meta else None for meta in seqs[seq]
             ]).most_common(1)[0][0])
         obs['n_seq'].append(len(seqs[seq]))
         obs['seq'].append(str(seq))
@@ -194,6 +192,14 @@ def analyze_embedding(args, model, seqs, vocabulary):
     for key in obs:
         adata.obs[key] = obs[key]
 
+    return adata
+
+def analyze_embedding(args, model, seqs, vocabulary):
+    seqs = populate_embedding(args, model, seqs, vocabulary,
+                              use_cache=True)
+
+    adata = seqs_to_anndata(seqs)
+
     sc.pp.neighbors(adata, n_neighbors=200, use_rep='X')
     sc.tl.louvain(adata, resolution=1.)
 
@@ -201,6 +207,47 @@ def analyze_embedding(args, model, seqs, vocabulary):
     plot_umap(adata)
 
     interpret_clusters(adata)
+
+def plot_umap_keele2008(adata):
+    sc.pl.umap(adata, color='corpus', save='_hiv_corpus.png')
+    sc.pl.umap(adata, color='subtype', save='_hiv_subtype.png')
+    sc.pl.umap(adata, color='status', save='_hiv_status.png')
+    sc.pl.umap(adata, color='patient_code', save='_hiv_patient.png')
+    sc.pl.umap(adata, color='louvain', save='_hiv_louvain.png')
+
+def evo_keele2008(args, model, seqs, vocabulary):
+    #############################
+    ## Visualize Env landscape ##
+    #############################
+
+    seqs = populate_embedding(
+        args, model, seqs, vocabulary, use_cache=True, namespace='hiv'
+    )
+    for seq in seqs:
+        for meta in seqs[seq]:
+            meta['corpus'] = 'lanl'
+
+    from transfound import load_keele2008
+    seqs_keele = load_keele2008()
+    seqs_keele = populate_embedding(
+        args, model, seqs_keele, vocabulary,
+        use_cache=True, namespace='env_tf_keele2008'
+    )
+    for seq in seqs_keele:
+        if seq in seqs:
+            seqs[seq] += seqs_keele[seq]
+        else:
+            seqs[seq] = seqs_keele[seq]
+
+    adata = seqs_to_anndata(seqs)
+
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+
+    sc.tl.louvain(adata, resolution=1.)
+
+    sc.set_figure_params(dpi_save=500)
+    sc.tl.umap(adata, min_dist=1.)
+    plot_umap_keele2008(adata)
 
 if __name__ == '__main__':
     args = parse_args()
@@ -275,16 +322,4 @@ if __name__ == '__main__':
             raise ValueError('Embeddings not available for models: {}'
                              .format(', '.join(no_embed)))
 
-        seqs = populate_embedding(args, model, seqs, vocabulary,
-                                  use_cache=True)
-        for seq in seqs:
-            for meta in seqs[seq]:
-                meta['corpus'] = 'original'
-                meta['status'] = 'NA'
-
-        from transfound import *
-        seqs_tf = load_keele2008()
-        seqs_tf = embed_seqs(args, model, seqs_tf, vocabulary,
-                             use_cache=True, namespace='env_tf_keele2008')
-
-        embed_trans_found(seqs, seqs_tf)
+        evo_keele2008(args, model, seqs, vocabulary)
