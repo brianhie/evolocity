@@ -454,6 +454,7 @@ class VPT(DPT):
 def velocity_pseudotime(
         adata,
         vkey='velocity',
+        rank_transform=False,
         groupby=None,
         groups=None,
         root_key=None,
@@ -524,6 +525,8 @@ def velocity_pseudotime(
                 pseudotimes.append(scale(vpt.pseudotime))
 
         vpt.pseudotime = np.nan_to_num(np.vstack(pseudotimes)).mean(0)
+        if rank_transform:
+            vpt.pseudotime = ss.rankdata(vpt.pseudotime)
         vpt.pseudotime = scale(vpt.pseudotime)
 
         if 'n_branchings' in kwargs and kwargs['n_branchings'] > 0:
@@ -647,6 +650,7 @@ def compute_velocity_on_grid(
 def plot_pseudofitness(
         adata,
         pfkey='pseudofitness',
+        rank_transform=False,
         fill=True,
         levels=10,
         basis=None,
@@ -703,6 +707,7 @@ def plot_pseudofitness(
             adata,
             vkey=vkey,
             groups=groups,
+            rank_transform=rank_transform,
             use_velocity_graph=True,
         )
         adata.obs[pfkey] = adata.obs[f'{vkey}_pseudotime']

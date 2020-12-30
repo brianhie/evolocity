@@ -17,7 +17,7 @@ def load_keele2008():
                     if key == 'sample_date':
                         date = dparse(val)
                         meta[key] = str(date)
-                        meta['year'] = str(date.year)
+                        meta['year'] = int(date.year)
                     else:
                         meta[key] = val
                     line = f.readline()
