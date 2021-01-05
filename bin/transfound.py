@@ -29,6 +29,7 @@ def load_keele2008():
                     meta['status'] = meta['patient_health_status']
                 else:
                     assert(False)
+                meta['accession'] = 'keele{}'.format(len(seqs))
 
             if '/product="envelope glycoprotein"' in line:
                 f.readline()
