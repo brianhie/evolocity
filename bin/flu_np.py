@@ -188,7 +188,6 @@ def interpret_clusters(adata):
            .format(np.mean(largest_pct_subtype)))
 
 def plot_umap(adata):
-    sc.tl.umap(adata, min_dist=1.)
     sc.pl.umap(adata, color='louvain', save='_np_louvain.png')
     sc.pl.umap(adata, color='subtype', save='_np_subtype.png')
     sc.pl.umap(adata, color='year', save='_np_year.png',
@@ -331,6 +330,7 @@ def epi_gong2013(args, model, seqs, vocabulary):
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
+    sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata)
     sc.pl.umap(adata, color='gong2013_step', save='_np_gong2013.png',
                edges=True,)

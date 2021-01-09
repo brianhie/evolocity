@@ -6,10 +6,10 @@ random.seed(1)
 
 def parse_args():
     import argparse
-    parser = argparse.ArgumentParser(description='Cytochrome c sequence analysis')
+    parser = argparse.ArgumentParser(description='Globin sequence analysis')
     parser.add_argument('model_name', type=str,
                         help='Type of language model (e.g., hmm, lstm)')
-    parser.add_argument('--namespace', type=str, default='cyc',
+    parser.add_argument('--namespace', type=str, default='glo',
                         help='Model namespace')
     parser.add_argument('--dim', type=int, default=512,
                         help='Embedding dimension')
@@ -119,17 +119,17 @@ def split_seqs(seqs, split_method='random'):
     raise NotImplementedError('split_seqs not implemented')
 
 def setup(args):
-    fnames = [ 'data/cyc/uniprot_cyc.fasta' ]
+    fnames = [ 'data/glo/uniprot_globin.fa' ]
 
     seqs = process(fnames)
 
-    #seq_lens = [ len(seq) for seq in seqs ]
-    #plt.figure()
-    #plt.hist(seq_lens, bins=5000)
+    seq_lens = [ len(seq) for seq in seqs ]
+    plt.figure()
+    plt.hist(seq_lens, bins=150)
     #plt.xlim([ 90, 140 ])
-    #plt.savefig('figures/cyc_seq_len.png', dpi=300)
-    #plt.close()
-    #exit()
+    plt.savefig('figures/glo_seq_len.png', dpi=300)
+    plt.close()
+    exit()
 
     seq_len = max([ len(seq) for seq in seqs ]) + 2
     vocab_size = len(AAs) + 2
