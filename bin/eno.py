@@ -6,10 +6,10 @@ random.seed(1)
 
 def parse_args():
     import argparse
-    parser = argparse.ArgumentParser(description='Globin sequence analysis')
+    parser = argparse.ArgumentParser(description='Enolase sequence analysis')
     parser.add_argument('model_name', type=str,
                         help='Type of language model (e.g., hmm, lstm)')
-    parser.add_argument('--namespace', type=str, default='glo',
+    parser.add_argument('--namespace', type=str, default='eno',
                         help='Model namespace')
     parser.add_argument('--dim', type=int, default=512,
                         help='Embedding dimension')
@@ -37,6 +37,8 @@ def load_taxonomy():
         'data/cyc/taxonomy_archaea.tab.gz',
         'data/cyc/taxonomy_bacteria.tab.gz',
         'data/cyc/taxonomy_eukaryota.tab.gz',
+        'data/cyc/taxonomy_unclassified.tab.gz',
+        'data/cyc/taxonomy_viruses.tab.gz',
     ]
 
     import gzip
@@ -56,66 +58,70 @@ def load_taxonomy():
     return taxonomy
 
 def parse_meta(record, taxonomy):
-    if 'GN=' in record:
-        (_, accession, gene_id, species, species_id,
-         gene_symbol, pe, sv) = record.split('|')
-    else:
-        (_, accession, gene_id, species, species_id,
-         pe, sv) = record.split('|')
-        gene_symbol = None
+    try:
+        if 'GN=' in record:
+            (_, accession, gene_id, name, species, species_id,
+             gene_symbol, pe, sv) = record.split('|')
+        else:
+            (_, accession, gene_id, name, species, species_id,
+             pe, sv) = record.split('|')
+            gene_symbol = None
+    except:
+        print(record)
+        exit()
 
     tax_id = species_id[3:]
     lineage = taxonomy[tax_id]
 
+    tax_kingdom = None
     tax_group = None
     if 'Archaea' in lineage:
         tax_group = 'archaea'
+        tax_kingdom = 'archaea'
     if 'Bacteria' in lineage:
         tax_group = 'bacteria'
+        tax_kingdom = 'bacteria'
     if 'Eukaryota' in lineage:
         tax_group = 'eukaryota'
+        tax_kingdom = 'eukaryota'
     if 'Fungi' in lineage:
         tax_group = 'fungi'
+        tax_kingdom = 'eukaryota'
     if 'Viridiplantae' in lineage:
         tax_group = 'viridiplantae'
+        tax_kingdom = 'eukaryota'
     if 'Arthropoda' in lineage:
         tax_group = 'arthropoda'
+        tax_kingdom = 'eukaryota'
     if 'Chordata' in lineage:
         tax_group = 'chordata'
+        tax_kingdom = 'eukaryota'
     if 'Mammalia' in lineage:
         tax_group = 'mammalia'
+        tax_kingdom = 'eukaryota'
     if 'Primate' in lineage:
         tax_group = 'primate'
+        tax_kingdom = 'eukaryota'
+    if 'unclassified sequences;' in lineage:
+        tax_group = 'unclassified'
+        tax_kingdom = 'bacteria'
+    if 'metagenomes;' in lineage:
+        tax_group = 'metagenome'
+        tax_kingdom = 'bacteria'
+    if 'Viruses' in lineage:
+        tax_group = 'virus'
+        tax_kingdom = 'virus'
     assert(tax_group is not None)
-
-    gene_id = gene_id.lower()
-    globin_type = 'other/unlabeled'
-    if '_myoglobin' in gene_id:
-        globin_type = 'myoglobin'
-    if '_neuroglobin' in gene_id:
-        globin_type = 'neuroglobin'
-    if 'hemoglobin_subunit_alpha' in gene_id or \
-       'hemoglobin_alpha' in gene_id or \
-       'hba' in gene_id:
-        globin_type = 'hemoglobin_alpha'
-    elif 'hemoglobin_subunit_beta' in gene_id or \
-       'hemoglobin_beta' in gene_id or \
-       'beta' in gene_id:
-        globin_type = 'hemoglobin_beta'
-    elif ('_hemoglobin' in gene_id or '_haemoglobin' in gene_id) and \
-         (tax_group == 'eukaryota' or tax_group == 'fungi' or
-          tax_group == 'arthropoda'):
-        globin_type = 'hemoglobin_monomeric'
-
 
     return {
         'accession': accession,
         'gene_id': gene_id,
+        'name': name,
         'species': species[3:],
         'tax_id': tax_id,
         'tax_group': tax_group,
+        'tax_kingdom': tax_kingdom,
         'lineage': lineage,
-        'globin_type': globin_type,
         'gene_symbol': gene_symbol[3:] if gene_symbol is not None else None,
         'pe': pe[3:],
         'sv': sv[3:],
@@ -127,30 +133,28 @@ def process(fnames):
     seqs = {}
     for fname in fnames:
         for record in SeqIO.parse(fname, 'fasta'):
-            if len(record.seq) < 135 or len(record.seq) > 155:
+            if len(record.seq) < 412 or len(record.seq) > 448:
                 continue
             meta = parse_meta(record.id, taxonomy)
-            if 'Eukaryota' not in meta['lineage']:
-                continue
             if record.seq not in seqs:
                 seqs[record.seq] = []
             meta['seq_len'] = len(record.seq)
             seqs[record.seq].append(meta)
-
     return seqs
 
 def split_seqs(seqs, split_method='random'):
     raise NotImplementedError('split_seqs not implemented')
 
 def setup(args):
-    fnames = [ 'data/glo/uniprot_globin.fa' ]
+    fnames = [ 'data/eno/uniprot_eno.fa' ]
 
     seqs = process(fnames)
 
     #seq_lens = [ len(seq) for seq in seqs ]
     #plt.figure()
-    #plt.hist(seq_lens, bins=150)
-    #plt.savefig('figures/glo_seq_len.png', dpi=300)
+    #plt.hist(seq_lens, bins=500)
+    #plt.xlim([ 360, 370 ])
+    #plt.savefig('figures/eno_seq_len.png', dpi=300)
     #plt.close()
     #exit()
 
@@ -161,11 +165,9 @@ def setup(args):
 
     return model, seqs
 
-def plot_umap(adata, namespace='glo'):
+def plot_umap(adata, namespace='eno'):
     sc.pl.umap(adata, color='tax_group', edges=True,
                save='_{}_taxonomy.png'.format(namespace))
-    sc.pl.umap(adata, color='globin_type', edges=True,
-               save='_{}_glotype.png'.format(namespace))
     sc.pl.umap(adata, color='louvain', edges=True,
                save='_{}_louvain.png'.format(namespace))
     sc.pl.umap(adata, color='seq_len', edges=True,
@@ -196,7 +198,7 @@ def seqs_to_anndata(seqs):
 
     return adata
 
-def evo_globin(args, model, seqs, vocabulary):
+def evo_enolase(args, model, seqs, vocabulary):
     ######################################
     ## Visualize Cytochrome C landscape ##
     ######################################
@@ -206,22 +208,25 @@ def evo_globin(args, model, seqs, vocabulary):
 
     adata = seqs_to_anndata(seqs)
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+
+    #print('\n'.join([
+    #    x + '\t' + y
+    #    for x, y in zip(adata[adata.obs.louvain == '22'].obs['name'],
+    #                    adata[adata.obs.louvain == '22'].obs['tax_group'])
+    #]))
 
     sc.tl.louvain(adata, resolution=1.)
 
-    #print('\n'.join([ x for x in adata[adata.obs.louvain == '15'].obs['gene_id'] ]))
-    #exit()
-
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.8)
+    sc.tl.umap(adata, min_dist=0.3)
     plot_umap(adata)
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/glo_knn40'
+    cache_prefix = 'target/ev_cache/eno_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -235,7 +240,7 @@ def evo_globin(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -254,7 +259,7 @@ def evo_globin(args, model, seqs, vocabulary):
                               autoscale=True,)
     scv.pl.velocity_embedding(
         adata, basis='umap', color='tax_group',
-        save='_glo_taxonomy_velo.png',
+        save='_eno_taxonomy_velo.png',
     )
 
     # Grid visualization.
@@ -266,76 +271,44 @@ def evo_globin(args, model, seqs, vocabulary):
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__glo_taxonomy_velogrid.png', dpi=500)
+    plt.savefig('figures/scvelo__eno_taxonomy_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=2., smooth=1.1, linewidth=1.,
-        color='tax_group', show=False,
+        adata, basis='umap', min_mass=3.2, smooth=1., linewidth=1.,
+        color='tax_kingdom', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__glo_taxonomy_velostream.png', dpi=500)
+    plt.savefig('figures/scvelo__eno_taxonomy_velostream.png', dpi=500)
     plt.close()
 
     plot_pseudofitness(
-        adata, basis='umap', smooth=0.6, levels=100,
+        adata, basis='umap', min_mass=1., smooth=0.5, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         rank_transform=True,
-        save='_glo_pseudofitness.png', dpi=500
+        save='_eno_pseudofitness.png', dpi=500
     )
-
-    adata.obs['root_cells'][adata.obs['root_cells'] < 1] = 0.
-    adata.obs['end_points'][adata.obs['end_points'] < 1] = 0.
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
-                   save='_glo_origins.png', dpi=500)
+                   save='_eno_origins.png', dpi=500)
 
     plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_group', y='pseudofitness',
+    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudofitness',
                    order=[
+                       'archaea',
+                       'bacteria',
                        'eukaryota',
-                       'fungi',
-                       'viridiplantae',
-                       'arthropoda',
-                       'chordata',
-                       'mammalia',
-                       'primate',
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig('figures/glo_taxonomy_pseudofitness.png', dpi=500)
+    plt.savefig('figures/eno_taxonomy_pseudofitness.png', dpi=500)
     plt.close()
-
-    plt.figure()
-    sns.violinplot(data=adata.obs, x='globin_type', y='pseudofitness',
-                   order=[
-                       'neuroglobin',
-                       'myoglobin',
-                       #'hemoglobin_monomeric',
-                       'hemoglobin_alpha',
-                       'hemoglobin_beta',
-                   ])
-    plt.xticks(rotation=60)
-    plt.tight_layout()
-    plt.savefig('figures/glo_type_pseudofitness.png', dpi=500)
-    plt.close()
-    exit()
-
-    nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
-                                 adata.obs['Collection Date'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('Pseudofitness-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
-                                adata.obs['Collection Date'][nnan_idx])))
 
 if __name__ == '__main__':
     args = parse_args()
@@ -366,4 +339,4 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        evo_globin(args, model, seqs, vocabulary)
+        evo_enolase(args, model, seqs, vocabulary)

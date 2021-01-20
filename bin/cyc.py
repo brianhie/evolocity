@@ -109,10 +109,15 @@ def process(fnames):
         for record in SeqIO.parse(fname, 'fasta'):
             if len(record.seq) < 100 or len(record.seq) > 115:
                 continue
+            meta = parse_meta(record.id, taxonomy)
+            if 'Eukaryota' not in meta['lineage']:
+                continue
+            if 'CYC6' in meta['gene_id'] or 'c6' in meta['name']:
+                continue
             if record.seq not in seqs:
                 seqs[record.seq] = []
-            seqs[record.seq].append(parse_meta(record.id, taxonomy))
-            seqs[record.seq][-1]['seq_len'] = len(record.seq)
+            meta['seq_len'] = len(record.seq)
+            seqs[record.seq].append(meta)
     return seqs
 
 def split_seqs(seqs, split_method='random'):
@@ -181,9 +186,11 @@ def evo_cyc(args, model, seqs, vocabulary):
 
     adata = seqs_to_anndata(seqs)
 
-    sc.pp.neighbors(adata, n_neighbors=8, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
+    #print('\n'.join([ x for x in adata[adata.obs.louvain == '4'].obs['gene_id'] ]))
+    #exit()
 
     sc.set_figure_params(dpi_save=500)
     sc.tl.umap(adata, min_dist=1.)
@@ -193,7 +200,7 @@ def evo_cyc(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/cyc_knn8'
+    cache_prefix = 'target/ev_cache/cyc_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -207,7 +214,7 @@ def evo_cyc(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=8, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -253,10 +260,28 @@ def evo_cyc(args, model, seqs, vocabulary):
     plt.savefig('figures/scvelo__cyc_taxonomy_velostream.png', dpi=500)
     plt.close()
 
+    ax = plot_path(
+        adata,
+        source_idx=list(adata.obs['gene_id']).index('CYC_HUMAN'),
+        target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
+    )
+    ax = plot_path(
+        adata,
+        source_idx=list(adata.obs['gene_id']).index('CYC_APIME'),
+        target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
+        ax=ax,
+    )
+    ax = plot_path(
+        adata,
+        source_idx=list(adata.obs['gene_id']).index('CYC_MAIZE'),
+        target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
+        ax=ax,
+    )
+
     plot_pseudofitness(
-        adata, basis='umap', min_mass=1., smooth=0.5, levels=100,
+        adata, basis='umap', min_mass=1., smooth=0.6, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
-        c='#aaaaaa', show=False,
+        c='#aaaaaa', show=False, ax=ax,
         rank_transform=True,
         save='_cyc_pseudofitness.png', dpi=500
     )
@@ -268,7 +293,6 @@ def evo_cyc(args, model, seqs, vocabulary):
     plt.figure()
     sns.violinplot(data=adata.obs, x='tax_group', y='pseudofitness',
                    order=[
-                       'bacteria',
                        'eukaryota',
                        'fungi',
                        'viridiplantae',

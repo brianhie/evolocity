@@ -118,7 +118,7 @@ def likelihood_full(seq1, seq2, args, vocabulary, model,
 def likelihood_muts(seq1, seq2, args, vocabulary, model,
                     seq_cache={}, verbose=False):
     # Align, prefer matches to gaps.
-    alignment =pairwise2.align.globalms(
+    alignment = pairwise2.align.globalms(
         seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
     )[0]
     a_seq1, a_seq2, _, _, _ = alignment
@@ -635,7 +635,7 @@ def compute_velocity_on_grid(
         cutoff |= length < np.percentile(length, cutoff_perc)
 
         V_grid[0][cutoff] = np.nan
-    else:
+    elif min_mass:
         min_mass *= np.percentile(p_mass, 99) / 100
         X_grid, V_grid = X_grid[p_mass > min_mass], V_grid[p_mass > min_mass]
 
@@ -810,7 +810,7 @@ def plot_pseudofitness(
             autoscale=False,
             smooth=pf_smooth,
             n_neighbors=n_neighbors,
-            min_mass=0,
+            min_mass=0.,
             return_mesh=True,
         )
         PF_grid = PF_grid.reshape(mesh[0].shape)
@@ -832,3 +832,82 @@ def plot_pseudofitness(
     scvu.savefig_or_show(dpi=dpi, save=save, show=show)
     if show is False:
         return ax
+
+
+def shortest_path(
+        adata,
+        source_idx,
+        target_idx,
+        vkey='velocity',
+):
+    if np.min((get_neighs(adata, 'distances') > 0).sum(1).A1) == 0:
+        raise ValueError(
+            'Your neighbor graph seems to be corrupted. '
+            'Consider recomputing via scanpy.pp.neighbors.'
+        )
+
+    if f'{vkey}_graph' not in adata.uns:
+        raise ValueError(
+            'Must run velocity_graph() first.'
+        )
+
+    T = adata.uns[f'{vkey}_graph'] - adata.uns[f'{vkey}_graph_neg']
+
+    import networkx as nx
+
+    G = nx.convert_matrix.from_scipy_sparse_matrix(T)
+
+    path = nx.algorithms.shortest_paths.generic.shortest_path(
+        G, source=source_idx, target=target_idx,
+    )
+
+    return path
+
+
+def plot_path(
+        adata,
+        path=None,
+        source_idx=None,
+        target_idx=None,
+        basis='umap',
+        vkey='velocity',
+        ax=None,
+        color='white',
+        cmap=None,
+        size=15,
+        edgecolor='black',
+        linecolor='#888888',
+        linewidth=0.001,
+):
+    if path is None and (source_idx is None or target_idx is None):
+        raise ValueError(
+            'Must provide path indices or source and target indices.'
+        )
+
+    if path is None:
+        path = shortest_path(adata, source_idx, target_idx, vkey=vkey)
+
+    if ax is None:
+        plt.figure()
+        ax = plt.gca()
+
+    if f'X_{basis}' not in adata.obsm:
+        raise ValueError(
+            f'Basis {basis} not found in AnnData.'
+        )
+
+    basis_x = np.array(adata.obsm[f'X_{basis}'][path, 0]).ravel()
+    basis_y = np.array(adata.obsm[f'X_{basis}'][path, 1]).ravel()
+
+    for idx, (x, y) in enumerate(zip(basis_x, basis_y)):
+        if idx < len(basis_x) - 1:
+            dx, dy = basis_x[idx + 1] - x, basis_y[idx + 1] - y
+            ax.arrow(x, y, dx, dy, width=linewidth, head_width=0,
+                     length_includes_head=True,
+                     color=linecolor, zorder=5)
+
+    ax.scatter(basis_x, basis_y,
+               s=size, c=color, cmap=cmap,
+               edgecolors=edgecolor, linewidths=0.5, zorder=10)
+
+    return ax

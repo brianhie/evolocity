@@ -330,7 +330,7 @@ def evo_h1(args, model, seqs, vocabulary):
     plt.close()
 
     plot_pseudofitness(
-        adata, basis='umap', min_mass=1., smooth=1., levels=100,
+        adata, basis='umap', smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         save='_h1_pseudofitness.png', dpi=500
@@ -436,7 +436,7 @@ def evo_h3(args, model, seqs, vocabulary):
     plt.close()
 
     plot_pseudofitness(
-        adata, basis='umap', min_mass=1., smooth=0.7, levels=100,
+        adata, basis='umap', smooth=0.7, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         save='_h3_pseudofitness.png', dpi=500

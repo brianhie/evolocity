@@ -402,9 +402,10 @@ def epi_gong2013(args, model, seqs, vocabulary):
 
 
     plot_pseudofitness(
-        adata, basis='umap', min_mass=4., smooth=1., pf_smooth=2., levels=100,
+        adata,
+        basis='umap', smooth=1., pf_smooth=2., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
-        c='#aaaaaa', show=False,
+        c='#aaaaaa', show=False, ax=ax,
         save='_np_pseudofitness.png', dpi=500
     )
 
