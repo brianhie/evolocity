@@ -9,7 +9,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Flu sequence analysis')
     parser.add_argument('model_name', type=str,
                         help='Type of language model (e.g., hmm, lstm)')
-    parser.add_argument('--namespace', type=str, default='flu_human',
+    parser.add_argument('--namespace', type=str, default='flu',
                         help='Model namespace')
     parser.add_argument('--dim', type=int, default=512,
                         help='Embedding dimension')
@@ -71,8 +71,7 @@ def process(fnames, meta_fnames):
             if str(record.seq).count('X') > 10:
                 continue
             accession = record.description.split('|')[0].split(':')[1]
-            if args.namespace == 'flu_human' and \
-               metas[accession]['Host Species'] != 'human':
+            if metas[accession]['Host Species'] != 'human':
                 continue
             if record.seq not in seqs:
                 seqs[record.seq] = []
@@ -263,7 +262,7 @@ def evo_h1(args, model, seqs, vocabulary):
 
     sc.set_figure_params(dpi_save=500)
     sc.tl.umap(adata, min_dist=1.)
-    plot_umap(adata)
+    plot_umap(adata, namespace='h1')
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -293,6 +292,14 @@ def evo_h1(args, model, seqs, vocabulary):
                  adata.uns["velocity_graph_neg"],)
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
+
+    tool_onehot_msa(
+        adata,
+        dirname='target/evolocity_alignments/h1',
+        n_threads=40,
+    )
+    tool_residue_scores(adata)
+    plot_residue_scores(adata, save='_h1_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -328,6 +335,8 @@ def evo_h1(args, model, seqs, vocabulary):
     plt.subplots_adjust(right=0.85)
     plt.savefig('figures/scvelo__h1_year_velostream.png', dpi=500)
     plt.close()
+
+    # Evolocity pseudotime visualization.
 
     plot_pseudofitness(
         adata, basis='umap', smooth=1., levels=100,
@@ -369,7 +378,7 @@ def evo_h3(args, model, seqs, vocabulary):
 
     sc.set_figure_params(dpi_save=500)
     sc.tl.umap(adata, min_dist=1.)
-    plot_umap(adata)
+    plot_umap(adata, namespace='h3')
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -390,7 +399,6 @@ def evo_h3(args, model, seqs, vocabulary):
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
         velocity_graph(adata, args, vocabulary, model,
-                       score='self',
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
@@ -399,6 +407,16 @@ def evo_h3(args, model, seqs, vocabulary):
                  adata.uns["velocity_graph_neg"],)
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
+
+    tool_onehot_msa(
+        adata,
+        dirname='target/evolocity_alignments/h3',
+        n_threads=40,
+    )
+    tool_residue_scores(adata)
+    plot_residue_scores(adata, percentile_keep=0,
+                        save='_h3_residue_scores.png')
+    #exit()
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -426,7 +444,7 @@ def evo_h3(args, model, seqs, vocabulary):
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1.,# linewidth=0.7,
+        adata, basis='umap', min_mass=4., smooth=1., linewidth=0.7,
         color='Collection Date', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')

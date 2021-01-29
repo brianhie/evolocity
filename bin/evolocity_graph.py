@@ -1,4 +1,4 @@
-from Bio import pairwise2
+from Bio import pairwise2, SeqIO
 from Bio.SubsMat import MatrixInfo as matlist
 from scanpy.tools._dpt import DPT
 from scipy.sparse import coo_matrix, issparse, spdiags, linalg
@@ -33,7 +33,7 @@ def norm(A):
 def get_iterative_indices(
         indices,
         index,
-        n_recurse_neighbors=2,
+        n_recurse_neighbors=0,
         max_neighs=None,
 ):
     def iterate_indices(indices, index, n_recurse_neighbors):
@@ -911,3 +911,159 @@ def plot_path(
                edgecolors=edgecolor, linewidths=0.5, zorder=10)
 
     return ax
+
+def tool_onehot_msa(
+        adata,
+        reference=None,
+        key='onehot',
+        seq_key='seq',
+        backend='mafft',
+        dirname='target/evolocity_alignments',
+        n_threads=1,
+        copy=False,
+):
+    # Write unaligned fasta.
+
+    from Bio.Seq import Seq
+    from Bio.SeqRecord import SeqRecord
+    seqs = [
+        SeqRecord(Seq(seq), id='seq{}'.format(idx), description='')
+        for idx, seq in enumerate(adata.obs[seq_key])
+    ]
+
+    if dirname.endswith('/'):
+        dirname = dirname.rstrip('/')
+    mkdir_p(dirname)
+    ifname = dirname + '/unaligned.fasta'
+    SeqIO.write(seqs, ifname, 'fasta')
+
+    # Align fasta.
+
+    if backend == 'mafft':
+        command = (
+            'mafft ' +
+            '--thread {} '.format(n_threads) +
+            '--auto --inputorder ' +
+            ifname
+        ).split()
+    else:
+        raise ValueError('Unsupported backend: {}'.format(backend))
+
+    import subprocess
+    ofname = dirname + '/aligned.fasta'
+    with open(ofname, 'w') as ofile, \
+         open(dirname + '/' + backend + '.log', 'w') as olog:
+        subprocess.run(command, stdout=ofile, stderr=olog)
+
+    # Read alignment and turn to one-hot encoding.
+
+    from Bio import AlignIO
+    with open(ofname) as f:
+        alignment = AlignIO.read(f, 'fasta')
+
+    n_seqs = len(alignment)
+    assert(n_seqs == adata.X.shape[0])
+    if reference is not None:
+        ref_aseq = str(alignment[reference].seq)
+        n_residues = len(ref_aseq.replace('-', ''))
+    else:
+        n_residues = len(alignment[0].seq)
+    align_matrix = np.zeros((n_seqs, n_residues))
+
+    vocabulary = {}
+
+    for i, record in enumerate(alignment):
+        assert(record.id == 'seq{}'.format(i))
+        aseq = str(record.seq)
+        j = 0
+        for char_idx, char in enumerate(aseq):
+            if reference is not None and ref_aseq[char_idx] == '-':
+                continue
+            if char not in vocabulary:
+                vocabulary[char] = len(vocabulary)
+            align_matrix[i, j] = vocabulary[char]
+            j += 1
+
+    keys = sorted([ vocabulary[key] for key in vocabulary ])
+    from sklearn.preprocessing import OneHotEncoder
+    enc = OneHotEncoder(
+        categories=[ keys ] * align_matrix.shape[1],
+        sparse=False,
+    )
+    X_onehot = enc.fit_transform(align_matrix)
+    assert(X_onehot.shape[1] == len(keys) * n_residues)
+
+    lookup = { vocabulary[key]: key for key in vocabulary }
+
+    adata.obsm[f'X_{key}'] = X_onehot
+    adata.obs[f'seqs_msa'] = [ str(record.seq) for record in alignment ]
+    adata.uns[f'{key}_vocabulary'] = lookup
+
+    return adata if copy else None
+
+def tool_residue_scores(
+        adata,
+        basis='onehot',
+        scale=1.,
+        key='residue_scores',
+        copy=False,
+):
+    if f'X_{basis}' not in adata.obsm:
+        raise ValueError(f'Could not find basis {basis}, '
+                         'consider running onehot_msa() first.')
+
+    scv.tl.velocity_embedding(adata, basis=basis, scale=scale)
+
+    onehot_velo = np.array(adata.obsm[f'velocity_{basis}'])
+
+    adata.uns[key] = onehot_velo.sum(0).reshape((
+        len(adata.obs['seqs_msa'][0]),
+        len(adata.uns[f'{basis}_vocabulary'])
+    ))
+
+    return adata if copy else None
+
+def plot_residue_scores(
+        adata,
+        percentile_keep=75,
+        basis='onehot',
+        key='residue_scores',
+        cmap='RdBu',
+        save=None,
+):
+    scores = AnnData(adata.uns[key])
+
+    vocab = adata.uns[f'{basis}_vocabulary']
+    scores.var_names = [
+        vocab[key] for key in sorted(vocab.keys())
+    ]
+
+    positions = [ str(x) for x in range(scores.X.shape[0]) ]
+    scores.obs['position'] = positions
+
+    if percentile_keep > 0:
+        score_sum = np.abs(scores.X).sum(1)
+        cutoff = np.percentile(score_sum, percentile_keep)
+        scores = scores[score_sum >= cutoff]
+
+    end = max(abs(np.min(scores.X)), np.max(scores.X)) # Zero-centered colors.
+    scores.X /= end # Scale within -1 and 1, inclusive.
+
+    plt.figure(figsize=(
+        max(scores.X.shape[1] // 2, 5),
+        max(scores.X.shape[0] // 20, 5)
+    ))
+    sns.heatmap(
+        scores.X,
+        xticklabels=scores.var_names,
+        yticklabels=scores.obs['position'],
+        cmap=cmap,
+        vmin=-1.,
+        vmax=1.,
+    )
+
+    if save is not None:
+        plt.savefig('figures/evolocity_' + save)
+        plt.close()
+    else:
+        return ax

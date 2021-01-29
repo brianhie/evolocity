@@ -363,6 +363,16 @@ def epi_gong2013(args, model, seqs, vocabulary):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
+    tool_onehot_msa(
+        adata,
+        dirname='target/evolocity_alignments/np',
+        n_threads=40,
+    )
+    tool_residue_scores(adata)
+    plot_residue_scores(adata, save='_np_residue_scores.png')
+
+    exit()
+
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,

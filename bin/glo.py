@@ -90,23 +90,18 @@ def parse_meta(record, taxonomy):
 
     gene_id = gene_id.lower()
     globin_type = 'other/unlabeled'
-    if '_myoglobin' in gene_id:
+    if 'myoglobin' in gene_id:
         globin_type = 'myoglobin'
-    if '_neuroglobin' in gene_id:
+    elif 'neuroglobin' in gene_id:
         globin_type = 'neuroglobin'
-    if 'hemoglobin_subunit_alpha' in gene_id or \
-       'hemoglobin_alpha' in gene_id or \
-       'hba' in gene_id:
+    elif 'cytoglobin' in gene_id:
+        globin_type = 'cytoglobin'
+    elif 'alpha' in gene_id or \
+         'hba' in gene_id:
         globin_type = 'hemoglobin_alpha'
-    elif 'hemoglobin_subunit_beta' in gene_id or \
-       'hemoglobin_beta' in gene_id or \
-       'beta' in gene_id:
+    elif 'hbb' in gene_id or \
+         'beta' in gene_id:
         globin_type = 'hemoglobin_beta'
-    elif ('_hemoglobin' in gene_id or '_haemoglobin' in gene_id) and \
-         (tax_group == 'eukaryota' or tax_group == 'fungi' or
-          tax_group == 'arthropoda'):
-        globin_type = 'hemoglobin_monomeric'
-
 
     return {
         'accession': accession,
@@ -206,11 +201,15 @@ def evo_globin(args, model, seqs, vocabulary):
 
     adata = seqs_to_anndata(seqs)
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
-    #print('\n'.join([ x for x in adata[adata.obs.louvain == '15'].obs['gene_id'] ]))
+    #print('\n'.join([ '\t'.join(fields) for fields in zip(
+    #    adata[adata.obs.louvain == '23'].obs['species'],
+    #    adata[adata.obs.louvain == '23'].obs['gene_id'],
+    #    adata[adata.obs.louvain == '23'].obs['lineage'],
+    #) ]))
     #exit()
 
     sc.set_figure_params(dpi_save=500)
@@ -221,7 +220,7 @@ def evo_globin(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/glo_knn40'
+    cache_prefix = 'target/ev_cache/glo_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -235,7 +234,7 @@ def evo_globin(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -316,8 +315,8 @@ def evo_globin(args, model, seqs, vocabulary):
     sns.violinplot(data=adata.obs, x='globin_type', y='pseudofitness',
                    order=[
                        'neuroglobin',
+                       'cytoglobin',
                        'myoglobin',
-                       #'hemoglobin_monomeric',
                        'hemoglobin_alpha',
                        'hemoglobin_beta',
                    ])
