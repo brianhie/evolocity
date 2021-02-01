@@ -196,6 +196,10 @@ def evo_cyc(args, model, seqs, vocabulary):
     sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata)
 
+    #check_uniref50(adata)
+    #sc.pl.umap(adata, color='uniref50', save='_cyc_uniref50.png',
+    #           edges=True,)
+
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
@@ -224,6 +228,14 @@ def evo_cyc(args, model, seqs, vocabulary):
                  adata.uns["velocity_graph_neg"],)
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
+
+    tool_onehot_msa(
+        adata,
+        dirname='target/evolocity_alignments/cyc',
+        n_threads=40,
+    )
+    tool_residue_scores(adata)
+    plot_residue_scores(adata, save='_cyc_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,

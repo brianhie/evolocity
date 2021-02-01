@@ -84,6 +84,7 @@ def load_meta(meta_fnames):
                     host = 'other_mammal'
 
                 metas[accession] = {
+                    'gene_id': f'{subtype}_{year}_{host}',
                     'subtype': subtype,
                     'year': year,
                     'date': date,
@@ -335,6 +336,10 @@ def epi_gong2013(args, model, seqs, vocabulary):
     sc.pl.umap(adata, color='gong2013_step', save='_np_gong2013.png',
                edges=True,)
 
+    #check_uniref50(adata)
+    #sc.pl.umap(adata, color='uniref50', save='_np_uniref50.png',
+    #           edges=True,)
+
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
@@ -370,8 +375,6 @@ def epi_gong2013(args, model, seqs, vocabulary):
     )
     tool_residue_scores(adata)
     plot_residue_scores(adata, save='_np_residue_scores.png')
-
-    exit()
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,

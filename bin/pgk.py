@@ -217,6 +217,11 @@ def evo_pgk(args, model, seqs, vocabulary):
     sc.tl.umap(adata, min_dist=0.7)
     plot_umap(adata)
 
+    check_uniref50(adata)
+    sc.pl.umap(adata, color='uniref50', save='_pgk_uniref50.png',
+               edges=True,)
+    exit()
+
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
@@ -245,6 +250,15 @@ def evo_pgk(args, model, seqs, vocabulary):
                  adata.uns["velocity_graph_neg"],)
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
+
+    tool_onehot_msa(
+        adata,
+        reference=list(adata.obs['gene_id']).index('PGK1_HUMAN'),
+        dirname='target/evolocity_alignments/pgk',
+        n_threads=40,
+    )
+    tool_residue_scores(adata)
+    plot_residue_scores(adata, save='_pgk_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,

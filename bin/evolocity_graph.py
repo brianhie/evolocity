@@ -998,6 +998,7 @@ def tool_onehot_msa(
     adata.obsm[f'X_{key}'] = X_onehot
     adata.obs[f'seqs_msa'] = [ str(record.seq) for record in alignment ]
     adata.uns[f'{key}_vocabulary'] = lookup
+    adata.uns[f'{key}_shape'] = (n_residues, len(lookup))
 
     return adata if copy else None
 
@@ -1009,17 +1010,19 @@ def tool_residue_scores(
         copy=False,
 ):
     if f'X_{basis}' not in adata.obsm:
-        raise ValueError(f'Could not find basis {basis}, '
+        raise ValueError(f'Could not find basis "{basis}", '
                          'consider running onehot_msa() first.')
 
-    scv.tl.velocity_embedding(adata, basis=basis, scale=scale)
+    scv.tl.velocity_embedding(
+        adata,
+        basis=basis,
+        scale=scale,
+        autoscale=False,
+    )
 
     onehot_velo = np.array(adata.obsm[f'velocity_{basis}'])
 
-    adata.uns[key] = onehot_velo.sum(0).reshape((
-        len(adata.obs['seqs_msa'][0]),
-        len(adata.uns[f'{basis}_vocabulary'])
-    ))
+    adata.uns[key] = onehot_velo.sum(0).reshape(adata.uns[f'{basis}_shape'])
 
     return adata if copy else None
 
@@ -1067,3 +1070,22 @@ def plot_residue_scores(
         plt.close()
     else:
         return ax
+
+def check_uniref50(
+        adata,
+        key='uniref50',
+        verbose=True,
+        id_key='gene_id',
+        fname='data/uniref/uniref50.fasta',
+):
+    uniref_seqs = set([
+        str(record.seq) for record in SeqIO.parse(fname, 'fasta')
+    ])
+    is_uniref = [ seq in uniref_seqs for seq in adata.obs['seq'] ]
+
+    if verbose:
+        tprint('UniRef50 seqs:')
+        for gene_id in adata[is_uniref].obs[id_key]:
+            tprint(f'\t{gene_id}')
+
+    adata.obs[key] = is_uniref

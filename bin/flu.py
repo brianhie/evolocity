@@ -256,7 +256,7 @@ def evo_h1(args, model, seqs, vocabulary):
     adata = adata[(adata.obs['Host Species'] == 'human') &
                   (adata.obs['Subtype'] == 'H1')]
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -268,7 +268,7 @@ def evo_h1(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/h1_knn30'
+    cache_prefix = 'target/ev_cache/h1_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -282,7 +282,7 @@ def evo_h1(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -372,7 +372,7 @@ def evo_h3(args, model, seqs, vocabulary):
     adata = adata[(adata.obs['Host Species'] == 'human') &
                   (adata.obs['Subtype'] == 'H3')]
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -384,7 +384,7 @@ def evo_h3(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/h3_knn40'
+    cache_prefix = 'target/ev_cache/h3_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -414,9 +414,8 @@ def evo_h3(args, model, seqs, vocabulary):
         n_threads=40,
     )
     tool_residue_scores(adata)
-    plot_residue_scores(adata, percentile_keep=0,
+    plot_residue_scores(adata, percentile_keep=75,
                         save='_h3_residue_scores.png')
-    #exit()
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
