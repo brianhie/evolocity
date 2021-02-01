@@ -161,9 +161,12 @@ def split_seqs(seqs, split_method='random'):
     return train_seqs, test_seqs
 
 def setup(args):
-    fnames = [ 'data/cov/sars_cov2_seqs.fa',
-               'data/cov/viprbrc_db.fasta',
-               'data/cov/gisaid.fasta' ]
+    fnames = [
+        'data/cov/sars_cov2_seqs.fa',
+        'data/cov/viprbrc_db.fasta',
+        'data/cov/spikeprot0129.fasta',
+        #'data/cov/gisaid.fasta',
+    ]
 
     seqs = process(fnames)
 
