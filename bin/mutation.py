@@ -464,12 +464,14 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
         comb_batch = len(seqs)
     n_batches = math.ceil(float(len(seqs)) / comb_batch)
 
+    from copy import deepcopy
+
     seq_change = {}
     for batchi in range(n_batches):
         start = batchi * comb_batch
         end = (batchi + 1) * comb_batch
         prob_seqs_batch = {
-            seq: prob_seqs[seq] for seq in seqs[start:end]
+            seq: deepcopy(prob_seqs[seq]) for seq in seqs[start:end]
             if seq != seq_to_mutate
         }
         prob_seqs_batch = embed_seqs(
@@ -480,6 +482,7 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
             meta = prob_seqs_batch[mut_seq][0]
             sem_change = abs(base_embedding - meta['embedding']).sum()
             seq_change[mut_seq] = sem_change
+        del prob_seqs_batch
 
     cache_fname = dirname + (
         '/analyze_semantics_{}_{}_{}.txt'
