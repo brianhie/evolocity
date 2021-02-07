@@ -1076,10 +1076,10 @@ def check_uniref50(
         key='uniref50',
         verbose=True,
         id_key='gene_id',
-        fname='data/uniref/uniref50.fasta',
+        dsname='data/uniref/uniref50.fasta',
 ):
     uniref_seqs = set([
-        str(record.seq) for record in SeqIO.parse(fname, 'fasta')
+        str(record.seq) for record in SeqIO.parse(dsname, 'fasta')
     ])
     is_uniref = [ seq in uniref_seqs for seq in adata.obs['seq'] ]
 
@@ -1089,3 +1089,49 @@ def check_uniref50(
             tprint(f'\t{gene_id}')
 
     adata.obs[key] = is_uniref
+
+def training_distances(
+        seqs,
+        namespace='',
+        key='homology',
+        dataset='uniref',
+        dsname='data/uniref/uniref50.fasta',
+):
+    if not dsname.endswith('.fasta') and not dsname.endswith('.fa'):
+        raise ValueError('Must provide .fasta file as dataset')
+
+    from fuzzywuzzy import process
+
+    dirname = 'target/training_seqs'
+    if namespace:
+        dirname += f'/{namespace}'
+    mkdir_p(dirname)
+
+    # Get set of closest training sequences.
+
+    fname = dirname + f'/training_{dataset}.txt'
+    if os.path.isfile(fname):
+        with open(fname) as f:
+            training_seqs = f.read().rstrip().split()
+    else:
+        dataset_seqs = set([
+            str(record.seq) for record in SeqIO.parse(dsname, 'fasta')
+        ])
+
+        training_seqs = sorted(set([
+            seq for seq in seqs if str(seq) in dataset_seqs
+        ]))
+
+        if namespace:
+            with open(fname, 'w') as of:
+                for seq in training_seqs:
+                    of.write(str(seq) + '\n')
+
+    # Compute distance to closest training sequence.
+
+    for seq in seqs:
+        ratio = process.extractOne(str(seq), training_seqs)[1]
+        for meta in seqs[seq]:
+            meta[key] = float(ratio)
+
+    return seqs

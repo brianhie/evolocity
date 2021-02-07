@@ -58,6 +58,7 @@ def load_meta(meta_fnames):
                 accession = line[1:].rstrip()
                 fields = line.rstrip().split('|')
 
+                embl_id = fields[0]
                 subtype = fields[4]
                 year = fields[5]
                 date = fields[5]
@@ -85,6 +86,7 @@ def load_meta(meta_fnames):
 
                 metas[accession] = {
                     'gene_id': f'{subtype}_{year}_{host}',
+                    'embl_id': embl_id,
                     'subtype': subtype,
                     'year': year,
                     'date': date,
@@ -114,6 +116,8 @@ def process(args, fnames, meta_fnames):
             if record.seq not in seqs:
                 seqs[record.seq] = []
             seqs[record.seq].append(meta)
+
+    seqs = training_distances(seqs, namespace=args.namespace)
 
     tprint('Found {} unique sequences'.format(len(seqs)))
 
@@ -198,6 +202,7 @@ def plot_umap(adata):
     sc.pl.umap(adata, color='resist_oseltamivir', save='_np_oseltamivir.png')
     sc.pl.umap(adata, color='virulence', save='_np_virulence.png')
     sc.pl.umap(adata, color='transmission', save='_np_transmission.png')
+    sc.pl.umap(adata, color='homology', save='_np_homology.png')
 
 def seqs_to_anndata(seqs):
     X, obs = [], {}
@@ -414,13 +419,17 @@ def epi_gong2013(args, model, seqs, vocabulary):
     plt.close()
 
 
-    plot_pseudofitness(
+    plt.figure()
+    ax = plot_pseudofitness(
         adata,
-        basis='umap', smooth=1., pf_smooth=2., levels=100,
+        basis='umap', smooth=1., pf_smooth=1.5, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
-        c='#aaaaaa', show=False, ax=ax,
-        save='_np_pseudofitness.png', dpi=500
+        c='#aaaaaa', show=False,
     )
+    plt.tight_layout(pad=1.1)
+    draw_gong_path(ax, adata)
+    plt.savefig('figures/scvelo__np_pseudofitness.png', dpi=500)
+    plt.close()
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
@@ -436,6 +445,15 @@ def epi_gong2013(args, model, seqs, vocabulary):
            .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
                                 adata.obs['year'][nnan_idx])))
 
+    nnan_idx = (np.isfinite(adata.obs['homology']) &
+                np.isfinite(adata.obs['pseudofitness']))
+    tprint('Pseudofitness-homology Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
+                                 adata.obs['homology'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Pseudofitness-homology Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
+                                adata.obs['homology'][nnan_idx])))
 
 if __name__ == '__main__':
     args = parse_args()

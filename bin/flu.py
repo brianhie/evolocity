@@ -57,6 +57,9 @@ def load_meta(meta_fnames):
                         meta[key] = value.split(':')[1].split('/')[-1].lower()
                     else:
                         meta[key] = value
+                meta['gene_id'] = '{}_{}_{}'.format(
+                    meta['Subtype'], meta['Collection Date'], meta['Host Species']
+                )
                 metas[accession] = meta
     return metas
 
@@ -264,6 +267,10 @@ def evo_h1(args, model, seqs, vocabulary):
     sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata, namespace='h1')
 
+    #check_uniref50(adata)
+    #sc.pl.umap(adata, color='uniref50', save='_h1_uniref50.png',
+    #           edges=True,)
+
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
@@ -327,7 +334,7 @@ def evo_h1(args, model, seqs, vocabulary):
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1., linewidth=0.7,
+        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
         color='Collection Date', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')

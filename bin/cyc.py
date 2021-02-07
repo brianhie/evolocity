@@ -118,6 +118,9 @@ def process(fnames):
                 seqs[record.seq] = []
             meta['seq_len'] = len(record.seq)
             seqs[record.seq].append(meta)
+
+    seqs = training_distances(seqs, namespace=args.namespace)
+
     return seqs
 
 def split_seqs(seqs, split_method='random'):
@@ -150,6 +153,8 @@ def plot_umap(adata, namespace='cyc'):
                save='_{}_louvain.png'.format(namespace))
     sc.pl.umap(adata, color='seq_len', edges=True,
                save='_{}_seqlen.png'.format(namespace))
+    sc.pl.umap(adata, color='homology', edges=True,
+               save='_{}_homology.png'.format(namespace))
 
 def seqs_to_anndata(seqs):
     X, obs = [], {}
@@ -186,6 +191,8 @@ def evo_cyc(args, model, seqs, vocabulary):
 
     adata = seqs_to_anndata(seqs)
 
+    adata = adata[adata.obs['homology'] > 75.]
+
     sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
@@ -196,15 +203,11 @@ def evo_cyc(args, model, seqs, vocabulary):
     sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata)
 
-    #check_uniref50(adata)
-    #sc.pl.umap(adata, color='uniref50', save='_cyc_uniref50.png',
-    #           edges=True,)
-
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/cyc_knn30'
+    cache_prefix = 'target/ev_cache/cyc_homologous_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -317,17 +320,16 @@ def evo_cyc(args, model, seqs, vocabulary):
     plt.tight_layout()
     plt.savefig('figures/cyc_taxonomy_pseudofitness.png', dpi=500)
     plt.close()
-    exit()
 
-    nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
+    nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-time Spearman r = {}, P = {}'
+    tprint('Pseudofitness-homology Spearman r = {}, P = {}'
            .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
-                                 adata.obs['Collection Date'][nnan_idx],
+                                 adata.obs['homology'][nnan_idx],
                                  nan_policy='omit')))
-    tprint('Pseudofitness-time Pearson r = {}, P = {}'
+    tprint('Pseudofitness-homology Pearson r = {}, P = {}'
            .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
-                                adata.obs['Collection Date'][nnan_idx])))
+                                adata.obs['homology'][nnan_idx])))
 
 if __name__ == '__main__':
     args = parse_args()

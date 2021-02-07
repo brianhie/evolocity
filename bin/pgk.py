@@ -132,6 +132,9 @@ def process(fnames):
                 seqs[record.seq] = []
             meta['seq_len'] = len(record.seq)
             seqs[record.seq].append(meta)
+
+    seqs = training_distances(seqs, namespace=args.namespace)
+
     return seqs
 
 def split_seqs(seqs, split_method='random'):
@@ -140,15 +143,15 @@ def split_seqs(seqs, split_method='random'):
 def setup(args):
     fnames = [ 'data/pgk/uniprot_pgk.fa' ]
 
-    seqs = process(fnames)
-
-    #seq_lens = [ len(seq) for seq in seqs ]
-    #plt.figure()
-    #plt.hist(seq_lens, bins=5000)
-    #plt.xlim([ 360, 370 ])
-    #plt.savefig('figures/pgk_seq_len.png', dpi=300)
-    #plt.close()
-    #exit()
+    import pickle
+    cache_fname = 'target/ev_cache/pgk_seqs.pkl'
+    try:
+        with open(cache_fname, 'rb') as f:
+            seqs = pickle.load(f)
+    except:
+        seqs = process(fnames)
+        with open(cache_fname, 'wb') as of:
+            pickle.dump(seqs, of)
 
     seq_len = max([ len(seq) for seq in seqs ]) + 2
     vocab_size = len(AAs) + 2
@@ -164,6 +167,8 @@ def plot_umap(adata, namespace='pgk'):
                save='_{}_louvain.png'.format(namespace))
     sc.pl.umap(adata, color='seq_len', edges=True,
                save='_{}_seqlen.png'.format(namespace))
+    sc.pl.umap(adata, color='homology', edges=True,
+               save='_{}_homology.png'.format(namespace))
 
 def seqs_to_anndata(seqs):
     X, obs = [], {}
@@ -200,6 +205,8 @@ def evo_pgk(args, model, seqs, vocabulary):
 
     adata = seqs_to_anndata(seqs)
 
+    adata = adata[adata.obs['homology'] > 80.]
+
     sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
@@ -207,7 +214,6 @@ def evo_pgk(args, model, seqs, vocabulary):
     #exit()
 
     sc.set_figure_params(dpi_save=500)
-
     #import umap
     #adata.obsm['X_umap'] = umap.UMAP(
     #    densmap=True,
@@ -217,16 +223,11 @@ def evo_pgk(args, model, seqs, vocabulary):
     sc.tl.umap(adata, min_dist=0.7)
     plot_umap(adata)
 
-    check_uniref50(adata)
-    sc.pl.umap(adata, color='uniref50', save='_pgk_uniref50.png',
-               edges=True,)
-    exit()
-
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/pgk_knn50'
+    cache_prefix = 'target/ev_cache/pgk_homologous_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -318,6 +319,16 @@ def evo_pgk(args, model, seqs, vocabulary):
     plt.tight_layout()
     plt.savefig('figures/pgk_taxonomy_pseudofitness.png', dpi=500)
     plt.close()
+
+    nnan_idx = (np.isfinite(adata.obs['homology']) &
+                np.isfinite(adata.obs['pseudofitness']))
+    tprint('Pseudofitness-homology Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
+                                 adata.obs['homology'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Pseudofitness-homology Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
+                                adata.obs['homology'][nnan_idx])))
 
 if __name__ == '__main__':
     args = parse_args()
