@@ -226,7 +226,7 @@ def evo_enolase(args, model, seqs, vocabulary):
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.3)
+    sc.tl.umap(adata, min_dist=1.1)
     plot_umap(adata)
 
     #####################################
@@ -293,7 +293,7 @@ def evo_enolase(args, model, seqs, vocabulary):
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3.2, smooth=1., linewidth=1.,
+        adata, basis='umap', min_mass=3., smooth=1.2, density=0.7,
         color='tax_kingdom', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -303,10 +303,10 @@ def evo_enolase(args, model, seqs, vocabulary):
     plt.close()
 
     plot_pseudofitness(
-        adata, basis='umap', min_mass=1., smooth=0.5, levels=100,
+        adata, basis='umap', min_mass=1., smooth=0.8, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True,
+        rank_transform=True, use_ends=False,
         save='_eno_pseudofitness.png', dpi=500
     )
 
@@ -325,6 +325,9 @@ def evo_enolase(args, model, seqs, vocabulary):
     plt.tight_layout()
     plt.savefig('figures/eno_taxonomy_pseudofitness.png', dpi=500)
     plt.close()
+
+    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
+               save='_eno_pseudofitness.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudofitness']))

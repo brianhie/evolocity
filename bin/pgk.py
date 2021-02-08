@@ -220,7 +220,7 @@ def evo_pgk(args, model, seqs, vocabulary):
     #    n_neighbors=30,
     #    dens_lambda=2.0,
     #).fit_transform(adata.X)
-    sc.tl.umap(adata, min_dist=0.7)
+    sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata)
 
     #####################################
@@ -287,7 +287,7 @@ def evo_pgk(args, model, seqs, vocabulary):
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3.2, smooth=1., linewidth=1.,
+        adata, basis='umap', min_mass=3., smooth=1.5, linewidth=1.,
         color='tax_kingdom', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -300,7 +300,7 @@ def evo_pgk(args, model, seqs, vocabulary):
         adata, basis='umap', min_mass=1., smooth=0.6, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True,
+        rank_transform=True, use_ends=False,
         save='_pgk_pseudofitness.png', dpi=500
     )
 
@@ -319,6 +319,9 @@ def evo_pgk(args, model, seqs, vocabulary):
     plt.tight_layout()
     plt.savefig('figures/pgk_taxonomy_pseudofitness.png', dpi=500)
     plt.close()
+
+    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
+               save='_pgk_pseudofitness.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudofitness']))

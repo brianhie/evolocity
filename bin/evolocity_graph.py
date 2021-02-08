@@ -379,10 +379,14 @@ def velocity_graph(
     if verbose:
         tprint('Computing likelihoods...')
     vgraph.compute_likelihoods(args, vocabulary, model)
+    if verbose:
+        print('')
 
     if verbose:
         tprint('Computing velocity graph...')
     vgraph.compute_gradients(args, vocabulary, model)
+    if verbose:
+        print('')
 
     adata.uns[f'{vkey}_graph'] = vgraph.graph
     adata.uns[f'{vkey}_graph_neg'] = vgraph.graph_neg
@@ -459,6 +463,7 @@ def velocity_pseudotime(
         groups=None,
         root_key=None,
         end_key=None,
+        use_ends=True,
         n_dcs=10,
         use_velocity_graph=True,
         save_diffmap=None,
@@ -515,7 +520,7 @@ def velocity_pseudotime(
             vpt.compute_pseudotime()
             pseudotimes.append(scale(vpt.pseudotime))
 
-        if end_key is not None:
+        if end_key is not None and use_ends:
             vpt.set_iroots(end_key)
             for iroot in vpt.iroots:
                 if iroot is None:
@@ -651,6 +656,7 @@ def plot_pseudofitness(
         adata,
         pfkey='pseudofitness',
         rank_transform=False,
+        use_ends=True,
         fill=True,
         levels=10,
         basis=None,
@@ -709,6 +715,7 @@ def plot_pseudofitness(
             groups=groups,
             rank_transform=rank_transform,
             use_velocity_graph=True,
+            use_ends=use_ends,
         )
         adata.obs[pfkey] = adata.obs[f'{vkey}_pseudotime']
 

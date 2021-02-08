@@ -142,7 +142,15 @@ def split_seqs(seqs, split_method='random'):
 def setup(args):
     fnames = [ 'data/glo/uniprot_globin.fa' ]
 
-    seqs = process(fnames)
+    import pickle
+    cache_fname = 'target/ev_cache/glo_seqs.pkl'
+    try:
+        with open(cache_fname, 'rb') as f:
+            seqs = pickle.load(f)
+    except:
+        seqs = process(fnames)
+        with open(cache_fname, 'wb') as of:
+            pickle.dump(seqs, of)
 
     #seq_lens = [ len(seq) for seq in seqs ]
     #plt.figure()
@@ -205,7 +213,9 @@ def evo_globin(args, model, seqs, vocabulary):
 
     adata = seqs_to_anndata(seqs)
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+    adata = adata[adata.obs['homology'] > 80.]
+
+    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -217,18 +227,14 @@ def evo_globin(args, model, seqs, vocabulary):
     #exit()
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.8)
+    sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata)
-
-    #check_uniref50(adata)
-    #sc.pl.umap(adata, color='uniref50', save='_glo_uniref50.png',
-    #           edges=True,)
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/glo_knn30'
+    cache_prefix = 'target/ev_cache/glo_homologous_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -242,7 +248,7 @@ def evo_globin(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -292,12 +298,9 @@ def evo_globin(args, model, seqs, vocabulary):
         adata, basis='umap', smooth=0.6, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True,
+        rank_transform=True, use_ends=False,
         save='_glo_pseudofitness.png', dpi=500
     )
-
-    adata.obs['root_cells'][adata.obs['root_cells'] < 1] = 0.
-    adata.obs['end_points'][adata.obs['end_points'] < 1] = 0.
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
@@ -332,6 +335,9 @@ def evo_globin(args, model, seqs, vocabulary):
     plt.tight_layout()
     plt.savefig('figures/glo_type_pseudofitness.png', dpi=500)
     plt.close()
+
+    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
+               save='_glo_pseudofitness.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudofitness']))
