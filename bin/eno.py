@@ -215,7 +215,7 @@ def evo_enolase(args, model, seqs, vocabulary):
 
     adata = adata[adata.obs['homology'] > 80.]
 
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
 
     #print('\n'.join([
     #    x + '\t' + y
@@ -233,7 +233,7 @@ def evo_enolase(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/eno_homologous_knn50'
+    cache_prefix = 'target/ev_cache/eno_homologous_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -247,7 +247,7 @@ def evo_enolase(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
