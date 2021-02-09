@@ -520,7 +520,7 @@ def velocity_pseudotime(
             vpt.compute_pseudotime()
             pseudotimes.append(scale(vpt.pseudotime))
 
-        if end_key is not None and use_ends:
+        if use_ends:
             vpt.set_iroots(end_key)
             for iroot in vpt.iroots:
                 if iroot is None:
