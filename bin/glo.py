@@ -259,6 +259,42 @@ def evo_globin(args, model, seqs, vocabulary):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
+    alpha_idx = [
+        cluster in { '3', '4', '6', '9', '11', '13', '14' }
+        for cluster in adata.obs['louvain']
+    ]
+    adata_alpha = adata[alpha_idx]
+    tool_onehot_msa(
+        adata_alpha,
+        reference=list(adata.obs['gene_id']).index(
+            'hba_human_hemoglobin_subunit_alpha'
+        ),
+        dirname='target/evolocity_alignments/glo',
+        n_threads=40,
+    )
+    print(adata_alpha.X.shape)
+    print(adata_alpha.obsm['X_onehot'].shape)
+    tool_residue_scores(adata_alpha)
+    plot_residue_scores(adata_alpha, percentile_keep=0,
+                        save='_glo-alpha_residue_scores.png')
+
+    beta_idx = [
+        cluster in { '0', '2', '5', '7', '15' }
+        for cluster in adata.obs['louvain']
+    ]
+    adata_beta = adata[beta_idx]
+    tool_onehot_msa(
+        adata_beta,
+        reference=list(adata.obs['gene_id']).index(
+            'hbb_human_hemoglobin_subunit_beta'
+        ),
+        dirname='target/evolocity_alignments/glo',
+        n_threads=40,
+    )
+    tool_residue_scores(adata_beta)
+    plot_residue_scores(adata_beta, percentile_keep=0,
+                        save='_glo-beta_residue_scores.png')
+
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,

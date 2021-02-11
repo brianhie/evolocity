@@ -1078,16 +1078,29 @@ def plot_residue_scores(
     else:
         return ax
 
+def load_uniref(dsname):
+    if dsname.endswith('.xml'):
+        with open(dsname) as f:
+            uniref_seqs = set([
+                str(record.seq) for record in SeqIO.UniprotIO.UniprotIterator(f)
+            ])
+    elif dsname.endswith('.fasta') or dsname.endswith('.fa'):
+        uniref_seqs = set([
+            str(record.seq) for record in SeqIO.parse(dsname, 'fasta')
+        ])
+    else:
+        raise ValueError(f'Invalid extension for file "{dsname}"')
+
+    return uniref_seqs
+
 def check_uniref50(
         adata,
         key='uniref50',
         verbose=True,
         id_key='gene_id',
-        dsname='data/uniref/uniref50.fasta',
+        dsname='data/uniref/uniref50.xml',
 ):
-    uniref_seqs = set([
-        str(record.seq) for record in SeqIO.parse(dsname, 'fasta')
-    ])
+    uniref_seqs = load_uniref(dsname)
     is_uniref = [ seq in uniref_seqs for seq in adata.obs['seq'] ]
 
     if verbose:
@@ -1102,13 +1115,8 @@ def training_distances(
         namespace='',
         key='homology',
         dataset='uniref',
-        dsname='data/uniref/uniref50.fasta',
+        dsname='data/uniref/uniref50.xml',
 ):
-    if not dsname.endswith('.fasta') and not dsname.endswith('.fa'):
-        raise ValueError('Must provide .fasta file as dataset')
-
-    from fuzzywuzzy import process
-
     dirname = 'target/training_seqs'
     if namespace:
         dirname += f'/{namespace}'
@@ -1121,9 +1129,7 @@ def training_distances(
         with open(fname) as f:
             training_seqs = f.read().rstrip().split()
     else:
-        dataset_seqs = set([
-            str(record.seq) for record in SeqIO.parse(dsname, 'fasta')
-        ])
+        dataset_seqs = load_uniref(dsname)
 
         training_seqs = sorted(set([
             seq for seq in seqs if str(seq) in dataset_seqs
@@ -1135,6 +1141,8 @@ def training_distances(
                     of.write(str(seq) + '\n')
 
     # Compute distance to closest training sequence.
+
+    from fuzzywuzzy import process
 
     for seq in seqs:
         ratio = process.extractOne(str(seq), training_seqs)[1]
