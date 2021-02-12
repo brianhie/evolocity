@@ -277,8 +277,11 @@ def evo_h1(args, model, seqs, vocabulary):
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.3)
+    #sc.tl.umap(adata, min_dist=1.3)
+    sc.tl.draw_graph(adata, layout='fa')
+    adata.obsm['X_umap'] = adata.obsm['X_draw_graph_fa']
     plot_umap(adata, namespace='h1')
+    exit()
 
     #####################################
     ## Compute evolocity and visualize ##

@@ -195,39 +195,33 @@ def seqs_to_anndata(seqs):
 
     return adata
 
-def evo_pgk(args, model, seqs, vocabulary):
-    ######################################
-    ## Visualize Cytochrome C landscape ##
-    ######################################
+def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
+
+    #########################
+    ## Visualize landscape ##
+    #########################
 
     seqs = populate_embedding(args, model, seqs, vocabulary,
                               use_cache=True)
 
     adata = seqs_to_anndata(seqs)
 
-    adata = adata[adata.obs['homology'] > 80.]
+    if 'homologous' in namespace:
+        adata = adata[adata.obs['homology'] > 80.]
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
-    #print('\n'.join([ x for x in adata[adata.obs.louvain == '4'].obs['gene_id'] ]))
-    #exit()
 
     sc.set_figure_params(dpi_save=500)
-    #import umap
-    #adata.obsm['X_umap'] = umap.UMAP(
-    #    densmap=True,
-    #    n_neighbors=30,
-    #    dens_lambda=2.0,
-    #).fit_transform(adata.X)
     sc.tl.umap(adata, min_dist=1.)
-    plot_umap(adata)
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/pgk_homologous_knn30'
+    cache_prefix = f'target/ev_cache/{namespace}_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -241,7 +235,7 @@ def evo_pgk(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -255,11 +249,11 @@ def evo_pgk(args, model, seqs, vocabulary):
     tool_onehot_msa(
         adata,
         reference=list(adata.obs['gene_id']).index('PGK1_HUMAN'),
-        dirname='target/evolocity_alignments/pgk',
+        dirname=f'target/evolocity_alignments/{namespace}',
         n_threads=40,
     )
     tool_residue_scores(adata)
-    plot_residue_scores(adata, save='_pgk_residue_scores.png')
+    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -269,7 +263,7 @@ def evo_pgk(args, model, seqs, vocabulary):
                               autoscale=True,)
     scv.pl.velocity_embedding(
         adata, basis='umap', color='tax_group',
-        save='_pgk_taxonomy_velo.png',
+        save=f'_{namespace}_taxonomy_velo.png',
     )
 
     # Grid visualization.
@@ -281,19 +275,19 @@ def evo_pgk(args, model, seqs, vocabulary):
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__pgk_taxonomy_velogrid.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_taxonomy_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3., smooth=1.5, linewidth=1.,
+        adata, basis='umap', min_mass=3., smooth=1.2, density=0.7,
         color='tax_kingdom', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__pgk_taxonomy_velostream.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_taxonomy_velostream.png', dpi=500)
     plt.close()
 
     plot_pseudofitness(
@@ -301,12 +295,12 @@ def evo_pgk(args, model, seqs, vocabulary):
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         rank_transform=True, use_ends=False,
-        save='_pgk_pseudofitness.png', dpi=500
+        save=f'_{namespace}_pseudofitness.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
-                   save='_pgk_origins.png', dpi=500)
+                   save=f'_{namespace}_origins.png', dpi=500)
 
     plt.figure()
     sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudofitness',
@@ -317,11 +311,11 @@ def evo_pgk(args, model, seqs, vocabulary):
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig('figures/pgk_taxonomy_pseudofitness.png', dpi=500)
+    plt.savefig(f'figures/{namespace}_taxonomy_pseudofitness.png', dpi=500)
     plt.close()
 
     sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
-               save='_pgk_pseudofitness.png')
+               save=f'_{namespace}_pseudofitness.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudofitness']))
@@ -362,4 +356,9 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        evo_pgk(args, model, seqs, vocabulary)
+
+        tprint('All PGK sequences:')
+        evo_pgk(args, model, seqs, vocabulary, namespace='pgk')
+
+        tprint('Restrict based on similarity to training')
+        evo_pgk(args, model, seqs, vocabulary, namespace='pgk_homologous')

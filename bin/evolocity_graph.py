@@ -1078,29 +1078,36 @@ def plot_residue_scores(
     else:
         return ax
 
-def load_uniref(dsname):
-    if dsname.endswith('.xml'):
-        with open(dsname) as f:
-            uniref_seqs = set([
-                str(record.seq) for record in SeqIO.UniprotIO.UniprotIterator(f)
-            ])
-    elif dsname.endswith('.fasta') or dsname.endswith('.fa'):
+def load_uniref(ds_fname, map_fname=None):
+    if ds_fname.endswith('.fasta') or ds_fname.endswith('.fa'):
         uniref_seqs = set([
-            str(record.seq) for record in SeqIO.parse(dsname, 'fasta')
+            str(record.seq) for record in SeqIO.parse(ds_fname, 'fasta')
         ])
     else:
-        raise ValueError(f'Invalid extension for file "{dsname}"')
+        raise ValueError(f'Invalid extension for file "{ds_fname}"')
 
-    return uniref_seqs
+    if map_fname is None:
+        return uniref_seqs
+
+    cluster_map = {
+        record.id: str(record.seq)
+        for record in SeqIO.parse(ds_fname, 'fasta')
+    }
+    with open(map_fname) as f:
+        for line in f:
+            fields = line.rstrip().split()
+            cluster_map[fields[0]] = fields[-1]
+
+    return uniref_seqs, cluster_map
 
 def check_uniref50(
         adata,
         key='uniref50',
         verbose=True,
         id_key='gene_id',
-        dsname='data/uniref/uniref50.xml',
+        ds_fname='data/uniref/uniref50_2018_03.fasta',
 ):
-    uniref_seqs = load_uniref(dsname)
+    uniref_seqs = load_uniref(ds_fname)
     is_uniref = [ seq in uniref_seqs for seq in adata.obs['seq'] ]
 
     if verbose:
@@ -1114,8 +1121,10 @@ def training_distances(
         seqs,
         namespace='',
         key='homology',
+        accession_key='accession',
         dataset='uniref',
-        dsname='data/uniref/uniref50.xml',
+        ds_fname='data/uniref/uniref50_2018_03.fasta',
+        map_fname='data/uniref/uniref50_2018_03_mapping.txt',
 ):
     dirname = 'target/training_seqs'
     if namespace:
@@ -1129,10 +1138,14 @@ def training_distances(
         with open(fname) as f:
             training_seqs = f.read().rstrip().split()
     else:
-        dataset_seqs = load_uniref(dsname)
+        dataset_seqs, cluster_map = load_uniref(ds_fname, map_fname)
 
         training_seqs = sorted(set([
             seq for seq in seqs if str(seq) in dataset_seqs
+        ]) | set([
+            cluster_map[cluster_map[meta[accession_key]]]
+            for seq in seqs for meta in seqs[seq]
+            if accession_key in meta and meta[accession_key] in cluster_map
         ]))
 
         if namespace:

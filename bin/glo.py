@@ -203,38 +203,33 @@ def seqs_to_anndata(seqs):
 
     return adata
 
-def evo_globin(args, model, seqs, vocabulary):
-    ######################################
-    ## Visualize Cytochrome C landscape ##
-    ######################################
+def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
+
+    #########################
+    ## Visualize landscape ##
+    #########################
 
     seqs = populate_embedding(args, model, seqs, vocabulary,
                               use_cache=True)
 
     adata = seqs_to_anndata(seqs)
 
-    adata = adata[adata.obs['homology'] > 80.]
+    if 'homologous' in namespace:
+        adata = adata[adata.obs['homology'] > 80.]
 
     sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
-    #print('\n'.join([ '\t'.join(fields) for fields in zip(
-    #    adata[adata.obs.louvain == '23'].obs['species'],
-    #    adata[adata.obs.louvain == '23'].obs['gene_id'],
-    #    adata[adata.obs.louvain == '23'].obs['lineage'],
-    #) ]))
-    #exit()
-
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
-    plot_umap(adata)
+    sc.tl.umap(adata, min_dist=0.8)
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/glo_homologous_knn50'
+    cache_prefix = f'target/ev_cache/{namespace}_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -259,41 +254,40 @@ def evo_globin(args, model, seqs, vocabulary):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    alpha_idx = [
-        cluster in { '3', '4', '6', '9', '11', '13', '14' }
-        for cluster in adata.obs['louvain']
-    ]
-    adata_alpha = adata[alpha_idx]
-    tool_onehot_msa(
-        adata_alpha,
-        reference=list(adata.obs['gene_id']).index(
-            'hba_human_hemoglobin_subunit_alpha'
-        ),
-        dirname='target/evolocity_alignments/glo',
-        n_threads=40,
-    )
-    print(adata_alpha.X.shape)
-    print(adata_alpha.obsm['X_onehot'].shape)
-    tool_residue_scores(adata_alpha)
-    plot_residue_scores(adata_alpha, percentile_keep=0,
-                        save='_glo-alpha_residue_scores.png')
+    if namespace == 'glo':
+        alpha_idx = [
+            cluster in { '3', '4', '6', '9', '11', '13', '14' }
+            for cluster in adata.obs['louvain']
+        ]
+        adata_alpha = adata[alpha_idx]
+        tool_onehot_msa(
+            adata_alpha,
+            reference=list(adata.obs['gene_id']).index(
+                'hba_human_hemoglobin_subunit_alpha'
+            ),
+            dirname='target/evolocity_alignments/glo',
+            n_threads=40,
+        )
+        tool_residue_scores(adata_alpha)
+        plot_residue_scores(adata_alpha, percentile_keep=0,
+                            save='_glo-alpha_residue_scores.png')
 
-    beta_idx = [
-        cluster in { '0', '2', '5', '7', '15' }
-        for cluster in adata.obs['louvain']
-    ]
-    adata_beta = adata[beta_idx]
-    tool_onehot_msa(
-        adata_beta,
-        reference=list(adata.obs['gene_id']).index(
-            'hbb_human_hemoglobin_subunit_beta'
-        ),
-        dirname='target/evolocity_alignments/glo',
-        n_threads=40,
-    )
-    tool_residue_scores(adata_beta)
-    plot_residue_scores(adata_beta, percentile_keep=0,
-                        save='_glo-beta_residue_scores.png')
+        beta_idx = [
+            cluster in { '0', '2', '5', '7', '15' }
+            for cluster in adata.obs['louvain']
+        ]
+        adata_beta = adata[beta_idx]
+        tool_onehot_msa(
+            adata_beta,
+            reference=list(adata.obs['gene_id']).index(
+                'hbb_human_hemoglobin_subunit_beta'
+            ),
+            dirname='target/evolocity_alignments/glo',
+            n_threads=40,
+        )
+        tool_residue_scores(adata_beta)
+        plot_residue_scores(adata_beta, percentile_keep=0,
+                            save='_glo-beta_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -303,7 +297,7 @@ def evo_globin(args, model, seqs, vocabulary):
                               autoscale=True,)
     scv.pl.velocity_embedding(
         adata, basis='umap', color='tax_group',
-        save='_glo_taxonomy_velo.png',
+        save=f'_{namespace}_taxonomy_velo.png',
     )
 
     # Grid visualization.
@@ -315,7 +309,7 @@ def evo_globin(args, model, seqs, vocabulary):
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__glo_taxonomy_velogrid.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_taxonomy_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
@@ -327,7 +321,7 @@ def evo_globin(args, model, seqs, vocabulary):
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__glo_taxonomy_velostream.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_taxonomy_velostream.png', dpi=500)
     plt.close()
 
     plot_pseudofitness(
@@ -335,12 +329,12 @@ def evo_globin(args, model, seqs, vocabulary):
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         rank_transform=True, use_ends=False,
-        save='_glo_pseudofitness.png', dpi=500
+        save=f'_{namespace}_pseudofitness.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
-                   save='_glo_origins.png', dpi=500)
+                   save=f'_{namespace}_origins.png', dpi=500)
 
     plt.figure()
     sns.violinplot(data=adata.obs, x='tax_group', y='pseudofitness',
@@ -355,7 +349,7 @@ def evo_globin(args, model, seqs, vocabulary):
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig('figures/glo_taxonomy_pseudofitness.png', dpi=500)
+    plt.savefig(f'figures/{namespace}_taxonomy_pseudofitness.png', dpi=500)
     plt.close()
 
     plt.figure()
@@ -369,11 +363,11 @@ def evo_globin(args, model, seqs, vocabulary):
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig('figures/glo_type_pseudofitness.png', dpi=500)
+    plt.savefig(f'figures/{namespace}_type_pseudofitness.png', dpi=500)
     plt.close()
 
     sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
-               save='_glo_pseudofitness.png')
+               save=f'_{namespace}_pseudofitness.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudofitness']))
@@ -414,4 +408,9 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        evo_globin(args, model, seqs, vocabulary)
+
+        tprint('All globin sequences:')
+        evo_globin(args, model, seqs, vocabulary, namespace='glo')
+
+        tprint('Restrict based on similarity to training:')
+        evo_globin(args, model, seqs, vocabulary, namespace='glo_homologous')
