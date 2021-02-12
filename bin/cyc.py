@@ -194,7 +194,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
 
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=35, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -206,7 +206,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn50'
+    cache_prefix = f'target/ev_cache/{namespace}_knn35'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -220,7 +220,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=35, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
