@@ -90,6 +90,11 @@ def get_model(args, seq_len, vocab_size,
             'esm1b_t33_650M_UR50S',
             repr_layer=[-1],
         )
+    elif args.model_name == 'tape':
+        from tape_model import TAPEModel
+        model = TAPEModel(
+            'bert-base',
+        )
     else:
         err_model(args.model_name)
 
@@ -280,6 +285,12 @@ def predict_sequence_prob(args, seq_of_interest, vocabulary, model,
         return predict_sequence_prob_fb(
             seq_of_interest, model.alphabet_, model.model_,
             model.repr_layers_, verbose=verbose,
+        )
+
+    if args.model_name == 'tape':
+        from tape_semantics import predict_sequence_prob_tape
+        return predict_sequence_prob_tape(
+            seq_of_interest, model
         )
 
     seqs = { seq_of_interest: [ {} ] }

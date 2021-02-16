@@ -294,8 +294,9 @@ def epi_gong2013(args, model, seqs, vocabulary):
                                          args, vocabulary, model,)
             data.append([ name, seq,
                           score_full, score_muts, score_self ])
-            tprint('{}: {}, {}, {}'.format(name, score_full,
-                                           score_muts, score_self))
+            tprint('{}: {}, {}, {}'.format(
+                name, score_full, score_muts, score_self
+            ))
 
     df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
                                       'self_score' ])
@@ -471,6 +472,10 @@ if __name__ == '__main__':
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
                        if '<' not in tok }
+        args.checkpoint = args.model_name
+    elif args.model_name == 'tape':
+        vocabulary = { tok: model.alphabet_[tok]
+                       for tok in model.alphabet_ if '<' not in tok }
         args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)

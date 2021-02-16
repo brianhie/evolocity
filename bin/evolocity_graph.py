@@ -96,7 +96,7 @@ def likelihood_compare(seq1, seq2, args, vocabulary, model,
             y_pred = predict_sequence_prob(
                 args, seq_pred, vocabulary, model, verbose=verbose
             )
-            if 'esm' not in args.model_name:
+            if not ('esm' in args.model_name or args.model_name == 'tape'):
                 y_pred = np.log(y_pred)
 
             seq_probs = np.array([
@@ -166,7 +166,7 @@ def likelihood_self(seq1, seq2, args, vocabulary, model,
             y_pred = predict_sequence_prob(
                 args, a_seq, vocabulary, model, verbose=verbose
             )
-            if 'esm' not in args.model_name:
+            if not ('esm' in args.model_name or args.model_name == 'tape'):
                 y_pred = np.log(y_pred)
 
         orig_idx, scores = 0, []
@@ -218,7 +218,7 @@ class VelocityGraph:
             self,
             adata,
             seqs,
-            score='effects',
+            score='other',
             scale_dist=False,
             vkey='velocity',
             n_recurse_neighbors=None,
