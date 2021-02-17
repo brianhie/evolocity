@@ -209,10 +209,16 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
     ## Visualize landscape ##
     #########################
 
-    seqs = populate_embedding(args, model, seqs, vocabulary,
-                              use_cache=True)
+    adata_cache = 'target/ev_cache/glo_adata.h5ad'
+    try:
+        import anndata
+        adata = anndata.read_h5ad(adata_cache)
+    except:
+        seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
 
-    adata = seqs_to_anndata(seqs)
+        adata = seqs_to_anndata(seqs)
+
+        adata.write(adata_cache)
 
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
@@ -396,6 +402,10 @@ if __name__ == '__main__':
                        for tok in model.alphabet_.tok_to_idx
                        if '<' not in tok }
         args.checkpoint = args.model_name
+    elif args.model_name == 'tape':
+        vocabulary = { tok: model.alphabet_[tok]
+                       for tok in model.alphabet_ if '<' not in tok }
+        args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)
         tprint('Model summary:')
@@ -408,9 +418,15 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
+        namespace = args.namespace
+        if args.model_name == 'tape':
+            namespace += '_tape'
+            evo_globin(args, model, seqs, vocabulary, namespace=namespace)
+            exit()
 
         tprint('All globin sequences:')
         evo_globin(args, model, seqs, vocabulary, namespace='glo')
 
-        tprint('Restrict based on similarity to training:')
-        evo_globin(args, model, seqs, vocabulary, namespace='glo_homologous')
+        if args.model_name != 'tape':
+            tprint('Restrict based on similarity to training:')
+            evo_globin(args, model, seqs, vocabulary, namespace='glo_homologous')

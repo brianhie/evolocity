@@ -259,35 +259,40 @@ def analyze_embedding(args, model, seqs, vocabulary):
 
     seq_clusters(adata)
 
-def evo_h1(args, model, seqs, vocabulary):
+def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
+
     ############################
     ## Visualize HA landscape ##
     ############################
 
-    seqs = populate_embedding(args, model, seqs, vocabulary,
-                              use_cache=True)
+    adata_cache = 'target/ev_cache/h1_adata.h5ad'
+    try:
+        import anndata
+        adata = anndata.read_h5ad(adata_cache)
+    except:
+        seqs = populate_embedding(args, model, seqs, vocabulary,
+                                  use_cache=True)
 
-    adata = seqs_to_anndata(seqs)
+        adata = seqs_to_anndata(seqs)
 
-    adata = adata[(adata.obs['Host Species'] == 'human') &
-                  (adata.obs['Subtype'] == 'H1')]
+        adata = adata[(adata.obs['Host Species'] == 'human') &
+                      (adata.obs['Subtype'] == 'H1')]
 
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        adata.write(adata_cache)
+
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    #sc.tl.umap(adata, min_dist=1.3)
-    sc.tl.draw_graph(adata, layout='fa')
-    adata.obsm['X_umap'] = adata.obsm['X_draw_graph_fa']
-    plot_umap(adata, namespace='h1')
-    exit()
+    sc.tl.umap(adata, min_dist=1.3)
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/h1_knn50'
+    cache_prefix = f'target/ev_cache/{namespace}_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -301,7 +306,7 @@ def evo_h1(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -314,11 +319,11 @@ def evo_h1(args, model, seqs, vocabulary):
 
     tool_onehot_msa(
         adata,
-        dirname='target/evolocity_alignments/h1',
+        dirname=f'target/evolocity_alignments/{namespace}',
         n_threads=40,
     )
     tool_residue_scores(adata)
-    plot_residue_scores(adata, save='_h1_residue_scores.png')
+    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -328,7 +333,7 @@ def evo_h1(args, model, seqs, vocabulary):
                               autoscale=True,)
     scv.pl.velocity_embedding(
         adata, basis='umap', color='Collection Date',
-        save='_h1_year_velo.png',
+        save=f'_{namespace}_year_velo.png',
     )
 
     # Grid visualization.
@@ -340,7 +345,7 @@ def evo_h1(args, model, seqs, vocabulary):
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__h1_year_velogrid.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
@@ -352,7 +357,7 @@ def evo_h1(args, model, seqs, vocabulary):
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__h1_year_velostream.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
     plt.close()
 
     # Evolocity pseudotime visualization.
@@ -361,13 +366,13 @@ def evo_h1(args, model, seqs, vocabulary):
         adata, basis='umap', smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True,
-        save='_h1_pseudofitness.png', dpi=500
+        rank_transform=True, use_ends=False,
+        save=f'_{namespace}_pseudofitness.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
-                   save='_h1_origins.png', dpi=500)
+                   save=f'_{namespace}_origins.png', dpi=500)
 
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
                 np.isfinite(adata.obs['pseudofitness']))
@@ -520,6 +525,10 @@ if __name__ == '__main__':
                        for tok in model.alphabet_.tok_to_idx
                        if '<' not in tok }
         args.checkpoint = args.model_name
+    elif args.model_name == 'tape':
+        vocabulary = { tok: model.alphabet_[tok]
+                       for tok in model.alphabet_ if '<' not in tok }
+        args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)
         tprint('Model summary:')
@@ -581,5 +590,8 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        evo_h1(args, model, seqs, vocabulary)
+        namespace = args.namespace
+        if args.model_name == 'tape':
+            namespace += '_tape'
+        evo_h1(args, model, seqs, vocabulary, namespace=namespace)
         #evo_h3(args, model, seqs, vocabulary)

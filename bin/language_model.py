@@ -15,13 +15,13 @@ class LanguageModel(object):
         if seed is not None:
             tf.random.set_seed(seed)
 
-        #physical_devices = tf.config.list_physical_devices('GPU')
-        #try:
-        #    for device in physical_devices:
-        #        tf.config.experimental.set_memory_growth(device, True)
-        #except:
-        #    # Invalid device or cannot modify virtual devices once initialized.
-        #    pass
+        physical_devices = tf.config.list_physical_devices('GPU')
+        try:
+            for device in physical_devices:
+                tf.config.experimental.set_memory_growth(device, True)
+        except:
+            # Invalid device or cannot modify virtual devices once initialized.
+            pass
 
     def split_and_pad(self, *args, **kwargs):
         raise NotImplementedError('Use LM instantiation instead '

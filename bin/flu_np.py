@@ -89,7 +89,7 @@ def load_meta(meta_fnames):
                     'embl_id': embl_id,
                     'subtype': subtype,
                     'year': year,
-                    'date': date,
+                    'date': str(date),
                     'country': country,
                     'host': host,
                     'resist_adamantane': resist_adamantane,
@@ -192,17 +192,19 @@ def interpret_clusters(adata):
     tprint('Purity, Louvain and subtype: {}'
            .format(np.mean(largest_pct_subtype)))
 
-def plot_umap(adata):
-    sc.pl.umap(adata, color='louvain', save='_np_louvain.png')
-    sc.pl.umap(adata, color='subtype', save='_np_subtype.png')
-    sc.pl.umap(adata, color='year', save='_np_year.png',
+def plot_umap(adata, namespace='np'):
+    sc.pl.umap(adata, color='louvain', save=f'_{namespace}_louvain.png')
+    sc.pl.umap(adata, color='subtype', save=f'_{namespace}_subtype.png')
+    sc.pl.umap(adata, color='year', save=f'_{namespace}_year.png',
                edges=True,)
-    sc.pl.umap(adata, color='host', save='_np_host.png')
-    sc.pl.umap(adata, color='resist_adamantane', save='_np_adamantane.png')
-    sc.pl.umap(adata, color='resist_oseltamivir', save='_np_oseltamivir.png')
-    sc.pl.umap(adata, color='virulence', save='_np_virulence.png')
-    sc.pl.umap(adata, color='transmission', save='_np_transmission.png')
-    sc.pl.umap(adata, color='homology', save='_np_homology.png')
+    sc.pl.umap(adata, color='host', save=f'_{namespace}_host.png')
+    sc.pl.umap(adata, color='resist_adamantane',
+               save=f'_{namespace}_adamantane.png')
+    sc.pl.umap(adata, color='resist_oseltamivir',
+               save=f'_{namespace}_oseltamivir.png')
+    sc.pl.umap(adata, color='virulence', save=f'_{namespace}_virulence.png')
+    sc.pl.umap(adata, color='transmission', save=f'_{namespace}_transmission.png')
+    sc.pl.umap(adata, color='homology', save=f'_{namespace}_homology.png')
 
 def seqs_to_anndata(seqs):
     X, obs = [], {}
@@ -268,7 +270,8 @@ def draw_gong_path(ax, adata):
     ax.scatter(gong_x, gong_y, s=15, c=gong_c, cmap='Oranges',
                edgecolors='black', linewidths=0.5, zorder=10)
 
-def epi_gong2013(args, model, seqs, vocabulary):
+def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
+
     ###############
     ## Load data ##
     ###############
@@ -308,29 +311,36 @@ def epi_gong2013(args, model, seqs, vocabulary):
     ## Visualize NP landscape ##
     ############################
 
-    seqs = populate_embedding(args, model, seqs, vocabulary,
-                              use_cache=True)
+    adata_cache = 'target/ev_cache/np_adata.h5ad'
+    try:
+        import anndata
+        adata = anndata.read_h5ad(adata_cache)
+    except:
+        seqs = populate_embedding(args, model, seqs, vocabulary,
+                                  use_cache=True)
 
-    for seq in seqs:
-        for example_meta in seqs[seq]:
-            example_meta['gong2013_step'] = 0
-    for node_idx, (_, seq) in enumerate(nodes):
-        if seq in seqs:
-            for meta in seqs[seq]:
+        for seq in seqs:
+            for example_meta in seqs[seq]:
+                example_meta['gong2013_step'] = 0
+        for node_idx, (_, seq) in enumerate(nodes):
+            if seq in seqs:
+                for meta in seqs[seq]:
+                    meta['gong2013_step'] = node_idx + 100
+            else:
+                meta = {}
+                for key in example_meta:
+                    meta[key] = None
+                meta['embedding'] = embed_seqs(
+                    args, model, { seq: [ {} ] }, vocabulary, verbose=False,
+                )[seq][0]['embedding'].mean(0)
                 meta['gong2013_step'] = node_idx + 100
-        else:
-            meta = {}
-            for key in example_meta:
-                meta[key] = None
-            meta['embedding'] = embed_seqs(
-                args, model, { seq: [ {} ] }, vocabulary, verbose=False,
-            )[seq][0]['embedding'].mean(0)
-            meta['gong2013_step'] = node_idx + 100
-            seqs[seq] = [ meta ]
+                seqs[seq] = [ meta ]
 
-    adata = seqs_to_anndata(seqs)
+        adata = seqs_to_anndata(seqs)
 
-    adata = adata[(adata.obs.host == 'human')]
+        adata = adata[(adata.obs.host == 'human')]
+
+        adata.write(adata_cache)
 
     sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
 
@@ -338,19 +348,15 @@ def epi_gong2013(args, model, seqs, vocabulary):
 
     sc.set_figure_params(dpi_save=500)
     sc.tl.umap(adata, min_dist=1.)
-    plot_umap(adata)
-    sc.pl.umap(adata, color='gong2013_step', save='_np_gong2013.png',
+    plot_umap(adata, namespace=namespace)
+    sc.pl.umap(adata, color='gong2013_step', save=f'_{namespace}_gong2013.png',
                edges=True,)
-
-    #check_uniref50(adata)
-    #sc.pl.umap(adata, color='uniref50', save='_np_uniref50.png',
-    #           edges=True,)
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/np_knn40'
+    cache_prefix = f'target/ev_cache/{namespace}_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -364,8 +370,7 @@ def epi_gong2013(args, model, seqs, vocabulary):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0,)
+        velocity_graph(adata, args, vocabulary, model)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -376,11 +381,11 @@ def epi_gong2013(args, model, seqs, vocabulary):
 
     tool_onehot_msa(
         adata,
-        dirname='target/evolocity_alignments/np',
+        dirname=f'target/evolocity_alignments/{namespace}',
         n_threads=40,
     )
     tool_residue_scores(adata)
-    plot_residue_scores(adata, save='_np_residue_scores.png')
+    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -389,7 +394,7 @@ def epi_gong2013(args, model, seqs, vocabulary):
                               retain_scale=False,
                               autoscale=True,)
     scv.pl.velocity_embedding(
-        adata, basis='umap', color='year', save='_np_year_velo.png',
+        adata, basis='umap', color='year', save=f'_{namespace}_year_velo.png',
     )
 
     # Grid visualization.
@@ -402,7 +407,7 @@ def epi_gong2013(args, model, seqs, vocabulary):
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     draw_gong_path(ax, adata)
-    plt.savefig('figures/scvelo__np_year_velogrid.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
@@ -416,7 +421,7 @@ def epi_gong2013(args, model, seqs, vocabulary):
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     draw_gong_path(ax, adata)
-    plt.savefig('figures/scvelo__np_year_velostream.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
     plt.close()
 
 
@@ -426,15 +431,16 @@ def epi_gong2013(args, model, seqs, vocabulary):
         basis='umap', smooth=1., pf_smooth=1.5, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
+        rank_transform=True, use_ends=False,
     )
     plt.tight_layout(pad=1.1)
     draw_gong_path(ax, adata)
-    plt.savefig('figures/scvelo__np_pseudofitness.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_pseudofitness.png', dpi=500)
     plt.close()
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
-                   save='_np_origins.png', dpi=500)
+                   save=f'_{namespace}_origins.png', dpi=500)
 
     nnan_idx = (np.isfinite(adata.obs['year']) &
                 np.isfinite(adata.obs['pseudofitness']))
@@ -502,4 +508,7 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        epi_gong2013(args, model, seqs, vocabulary)
+        namespace = args.namespace
+        if args.model_name == 'tape':
+            namespace += '_tape'
+        epi_gong2013(args, model, seqs, vocabulary, namespace=namespace)

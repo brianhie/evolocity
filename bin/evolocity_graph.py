@@ -100,7 +100,11 @@ def likelihood_compare(seq1, seq2, args, vocabulary, model,
                 y_pred = np.log(y_pred)
 
             seq_probs = np.array([
-                y_pred[i + 1, vocabulary[seq_pred[i]]]
+                y_pred[i + 1, (
+                    vocabulary[seq_pred[i]]
+                    if seq_pred[i] in vocabulary else
+                    model.unk_idx_
+                )]
                 for i in positions
             ])
 
@@ -177,15 +181,13 @@ def likelihood_self(seq1, seq2, args, vocabulary, model,
                 # TODO: ADD DELETION LIKELIHOODS.
                 pass
             elif other_seq[a_idx] != ch:
-                ch_idx = vocabulary[ch] if ch in vocabulary else (
-                    model.alphabet_.unk_idx if 'esm' in args.model_name
-                    else vocabulary['X']
-                )
+                ch_idx = vocabulary[ch] \
+                         if ch in vocabulary else \
+                         model.unk_idx_
                 o_idx = vocabulary[other_seq[a_idx]] \
-                    if other_seq[a_idx] in vocabulary else (
-                    model.alphabet_.unk_idx
-                    if 'esm' in args.model_name else vocabulary['X']
-                )
+                        if other_seq[a_idx] in vocabulary else \
+                        model.unk_idx_
+
                 prob_wt = y_pred[a_idx + 1, ch_idx]
                 prob_mut = y_pred[a_idx + 1, o_idx]
                 scores.append(prob_wt - prob_mut)
@@ -276,11 +278,11 @@ class VelocityGraph:
 
             if self.score == 'other':
                 self.seq_probs[seq] = np.array([
-                    y_pred[i + 1, vocabulary[seq[i]]]
-                    if seq[i] in vocabulary else
-                    (model.alphabet_.unk_idx
-                     if 'esm' in args.model_name else vocabulary['X'])
-                    for i in range(len(seq))
+                    y_pred[i + 1, (
+                        vocabulary[seq[i]]
+                        if seq[i] in vocabulary else
+                        model.unk_idx_
+                    )] for i in range(len(seq))
                 ])
             else:
                 self.seq_probs[seq] = y_pred
@@ -339,7 +341,9 @@ class VelocityGraph:
 
 def velocity_graph(
         adata,
-        args, vocabulary, model,
+        args,
+        vocabulary,
+        model,
         score='other',
         scale_dist=False,
         seqs=None,

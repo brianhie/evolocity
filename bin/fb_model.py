@@ -12,6 +12,7 @@ class FBModel(object):
             model = model.cuda()
         self.model_ = model
         self.alphabet_ = alphabet
+        self.unk_idx_ = alphabet_.tok_to_idx['<unk>']
 
         assert(all(
             -(model.num_layers + 1) <= i <= model.num_layers
