@@ -280,7 +280,7 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
 
         adata.write(adata_cache)
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -292,7 +292,7 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn40'
+    cache_prefix = f'target/ev_cache/{namespace}_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -306,7 +306,7 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -366,13 +366,16 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
         adata, basis='umap', smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True, use_ends=False,
+        rank_transform=False, use_ends=True,
         save=f'_{namespace}_pseudofitness.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save=f'_{namespace}_origins.png', dpi=500)
+
+    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
+               save=f'_{namespace}_pseudofitness.png')
 
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
                 np.isfinite(adata.obs['pseudofitness']))
@@ -590,7 +593,7 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = args.namespace
+        namespace = 'h1'#args.namespace
         if args.model_name == 'tape':
             namespace += '_tape'
         evo_h1(args, model, seqs, vocabulary, namespace=namespace)

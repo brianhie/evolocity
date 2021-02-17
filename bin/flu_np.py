@@ -442,6 +442,9 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save=f'_{namespace}_origins.png', dpi=500)
 
+    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
+               save=f'_{namespace}_pseudofitness.png')
+
     nnan_idx = (np.isfinite(adata.obs['year']) &
                 np.isfinite(adata.obs['pseudofitness']))
     tprint('Pseudofitness-time Spearman r = {}, P = {}'
