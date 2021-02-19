@@ -182,19 +182,24 @@ def seqs_to_anndata(seqs):
     return adata
 
 def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
+
     ######################################
     ## Visualize Cytochrome C landscape ##
     ######################################
 
-    seqs = populate_embedding(args, model, seqs, vocabulary,
-                              use_cache=True)
-
-    adata = seqs_to_anndata(seqs)
+    adata_cache = 'target/ev_cache/cyc_adata.h5ad'
+    try:
+        import anndata
+        adata = anndata.read_h5ad(adata_cache)
+    except:
+        seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
+        adata = seqs_to_anndata(seqs)
+        adata.write(adata_cache)
 
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
 
-    sc.pp.neighbors(adata, n_neighbors=35, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -206,7 +211,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn35'
+    cache_prefix = f'target/ev_cache/{namespace}_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -220,7 +225,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=35, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
         velocity_graph(adata, args, vocabulary, model,
                        n_recurse_neighbors=0,)
         from scipy.sparse import save_npz
@@ -265,7 +270,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=2., smooth=1.1, linewidth=1.,
+        adata, basis='umap', min_mass=1., smooth=1., linewidth=1.,
         color='tax_group', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -347,6 +352,10 @@ if __name__ == '__main__':
                        for tok in model.alphabet_.tok_to_idx
                        if '<' not in tok }
         args.checkpoint = args.model_name
+    elif args.model_name == 'tape':
+        vocabulary = { tok: model.alphabet_[tok]
+                       for tok in model.alphabet_ if '<' not in tok }
+        args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)
         tprint('Model summary:')
@@ -359,6 +368,11 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
+        namespace = args.namespace
+        if args.model_name == 'tape':
+            namespace += '_tape'
+            evo_cyc(args, model, seqs, vocabulary, namespace=namespace)
+            exit()
 
         tprint('All cytochrome c sequencecs:')
         evo_cyc(args, model, seqs, vocabulary, namespace='cyc')

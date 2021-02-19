@@ -516,7 +516,7 @@ def velocity_pseudotime(
         vpt.compute_eigen(n_comps=n_dcs)
 
         vpt.set_iroots(root_key)
-        pseudotimes = []
+        pseudotimes = [ np.zeros(adata.X.shape[0]) ]
         for iroot in vpt.iroots:
             if iroot is None:
                 continue
