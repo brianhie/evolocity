@@ -215,9 +215,7 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         adata = anndata.read_h5ad(adata_cache)
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
-
         adata = seqs_to_anndata(seqs)
-
         adata.write(adata_cache)
 
     if 'homologous' in namespace:

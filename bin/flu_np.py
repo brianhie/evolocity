@@ -85,7 +85,7 @@ def load_meta(meta_fnames):
                     host = 'other_mammal'
 
                 metas[accession] = {
-                    'gene_id': f'{subtype}_{year}_{host}',
+                    'gene_id': f'{subtype}_{year}_{host}_{embl_id}',
                     'embl_id': embl_id,
                     'subtype': subtype,
                     'year': year,
@@ -337,9 +337,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
                 seqs[seq] = [ meta ]
 
         adata = seqs_to_anndata(seqs)
-
         adata = adata[(adata.obs.host == 'human')]
-
         adata.write(adata_cache)
 
     sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')

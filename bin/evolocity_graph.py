@@ -954,7 +954,7 @@ def tool_onehot_msa(
         command = (
             'mafft ' +
             '--thread {} '.format(n_threads) +
-            '--auto --inputorder ' +
+            '--auto --treeout --inputorder ' +
             ifname
         ).split()
     else:
