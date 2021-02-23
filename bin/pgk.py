@@ -330,6 +330,8 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
            .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
+    adata.write(f'target/results/{namespace}_adata.h5ad')
+
 if __name__ == '__main__':
     args = parse_args()
 

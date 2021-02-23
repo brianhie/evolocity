@@ -1009,7 +1009,7 @@ def tool_onehot_msa(
     adata.obsm[f'X_{key}'] = X_onehot
     adata.obs[f'seqs_msa'] = [ str(record.seq) for record in alignment ]
     adata.uns[f'{key}_vocabulary'] = lookup
-    adata.uns[f'{key}_shape'] = (n_residues, len(lookup))
+    adata.uns[f'{key}_shape'] = [ n_residues, len(lookup) ]
 
     return adata if copy else None
 
@@ -1033,7 +1033,9 @@ def tool_residue_scores(
 
     onehot_velo = np.array(adata.obsm[f'velocity_{basis}'])
 
-    adata.uns[key] = onehot_velo.sum(0).reshape(adata.uns[f'{basis}_shape'])
+    adata.uns[key] = onehot_velo.sum(0).reshape(
+        tuple(adata.uns[f'{basis}_shape'])
+    )
 
     return adata if copy else None
 

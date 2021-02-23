@@ -383,6 +383,8 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
            .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
+    adata.write(f'target/results/{namespace}_adata.h5ad')
+
 if __name__ == '__main__':
     args = parse_args()
 

@@ -397,6 +397,8 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
            .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
+    adata.write(f'target/results/{namespace}_adata.h5ad')
+
 def evo_h3(args, model, seqs, vocabulary):
     ############################
     ## Visualize HA landscape ##

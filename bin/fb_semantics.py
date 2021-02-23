@@ -7,25 +7,40 @@ def predict_sequence_prob_fb(
         seq, alphabet, model, repr_layers,
         batch_size=80000, verbose=False
 ):
-    seqs = [ seq ]
-    labels = [ 'seq0' ]
+    output = []
 
-    dataset = FastaBatchedDataset(labels, seqs)
-    batches = dataset.get_batch_indices(batch_size, extra_toks_per_seq=1)
-    data_loader = torch.utils.data.DataLoader(
-        dataset, collate_fn=alphabet.get_batch_converter(),
-        batch_sampler=batches
-    )
+    batch_size = 1022
+    for batchi in range(((len(seq) - 1) // batch_size) + 1):
+        start = batchi * batch_size
+        end = (batchi + 1) * batch_size
 
-    with torch.no_grad():
-        for batch_idx, (labels, strs, toks) in enumerate(data_loader):
-            if torch.cuda.is_available():
-                toks = toks.to(device="cuda", non_blocking=True)
-            out = model(toks, repr_layers=repr_layers, return_contacts=False)
-            lsoftmax = torch.nn.LogSoftmax(dim=1)
-            logits = lsoftmax(out["logits"]).to(device="cpu").numpy()
+        seqs = [ seq[start:end] ]
+        labels = [ 'seq0' ]
 
-    return logits[0]
+        dataset = FastaBatchedDataset(labels, seqs)
+        batches = dataset.get_batch_indices(batch_size, extra_toks_per_seq=1)
+        data_loader = torch.utils.data.DataLoader(
+            dataset, collate_fn=alphabet.get_batch_converter(),
+            batch_sampler=batches
+        )
+
+        with torch.no_grad():
+            for batch_idx, (labels, strs, toks) in enumerate(data_loader):
+                if torch.cuda.is_available():
+                    toks = toks.to(device="cuda", non_blocking=True)
+                out = model(toks, repr_layers=repr_layers, return_contacts=False)
+                lsoftmax = torch.nn.LogSoftmax(dim=1)
+                logits = lsoftmax(out["logits"]).to(device="cpu").numpy()
+
+        output.append(logits[0])
+
+    for i, x in enumerate(output):
+        if len(output) > 1 and i > 0:
+            output[i] = output[i][1:]
+        if len(output) > 1 and i < len(output) - 1:
+            output[i] = output[i][:-1]
+
+    return np.vstack(output)
 
 def predict_sequence_prob_mask_fb(
         seq, alphabet, model, repr_layers,
