@@ -143,8 +143,6 @@ def likelihood_muts(seq1, seq2, args, vocabulary, model,
                 substitutions.append(orig_idx)
             orig_idx += 1
 
-    # Substitution likelihood for now.
-    # TODO: ADD DELETION LIKELIHOODS.
     return likelihood_compare(
         seq1, seq2, args, vocabulary, model,
         pos1=sub1, pos2=sub2, seq_cache=seq_cache, verbose=verbose,
@@ -178,7 +176,6 @@ def likelihood_self(seq1, seq2, args, vocabulary, model,
             if ch == '-':
                 continue
             if other_seq[a_idx] == '-':
-                # TODO: ADD DELETION LIKELIHOODS.
                 pass
             elif other_seq[a_idx] != ch:
                 ch_idx = vocabulary[ch] \

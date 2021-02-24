@@ -44,7 +44,7 @@ def dms_results(fname, args, model, vocabulary):
     ])
 
     scores_pred = []
-    for mut in tqdm(df['variant']):
+    for mut in df['variant']:
         pos, aa_mut = int(mut[1:-1]) - 1, mut[-1]
         seq_mut = wt_seq[:pos] + aa_mut + wt_seq[(pos + 1):]
         scores_pred.append(
@@ -81,8 +81,8 @@ if __name__ == '__main__':
         raise NotImplementedError(f'Invalid model {args.model_name}')
 
     fnames = [
-        #'data/dms/dms_adrb2.csv',
-        #'data/dms/dms_bla.csv',
+        'data/dms/dms_adrb2.csv',
+        'data/dms/dms_bla.csv',
         'data/dms/dms_brca1.csv',
         'data/dms/dms_calm1.csv',
         'data/dms/dms_cas9.csv',

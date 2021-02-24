@@ -325,6 +325,9 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     plt.savefig(f'figures/{namespace}_taxonomy_pseudofitness.png', dpi=500)
     plt.close()
 
+    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
+               save=f'_{namespace}_pseudofitness.png')
+
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudofitness']))
     tprint('Pseudofitness-homology Spearman r = {}, P = {}'
