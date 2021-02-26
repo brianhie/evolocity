@@ -653,9 +653,9 @@ def compute_velocity_on_grid(
 
     return X_grid, V_grid
 
-def plot_pseudofitness(
+def plot_pseudotime(
         adata,
-        pfkey='pseudofitness',
+        pfkey='pseudotime',
         rank_transform=False,
         use_ends=False,
         fill=True,

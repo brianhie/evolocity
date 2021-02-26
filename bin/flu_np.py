@@ -154,7 +154,15 @@ def setup(args):
     fnames = [ 'data/influenza/ird_influenzaA_NP_allspecies.fa' ]
     meta_fnames = fnames
 
-    seqs = process(args, fnames, meta_fnames)
+    import pickle
+    cache_fname = 'target/ev_cache/np_seqs.pkl'
+    try:
+        with open(cache_fname, 'rb') as f:
+            seqs = pickle.load(f)
+    except:
+        seqs = process(args, fnames, meta_fnames)
+        with open(cache_fname, 'wb') as of:
+            pickle.dump(seqs, of)
 
     seq_len = max([ len(seq) for seq in seqs ]) + 2
     vocab_size = len(AAs) + 2
@@ -193,18 +201,24 @@ def interpret_clusters(adata):
            .format(np.mean(largest_pct_subtype)))
 
 def plot_umap(adata, namespace='np'):
-    sc.pl.umap(adata, color='louvain', save=f'_{namespace}_louvain.png')
-    sc.pl.umap(adata, color='subtype', save=f'_{namespace}_subtype.png')
+    sc.pl.umap(adata, color='louvain', save=f'_{namespace}_louvain.png',
+               edges=True,)
+    sc.pl.umap(adata, color='subtype', save=f'_{namespace}_subtype.png',
+               edges=True,)
     sc.pl.umap(adata, color='year', save=f'_{namespace}_year.png',
                edges=True,)
-    sc.pl.umap(adata, color='host', save=f'_{namespace}_host.png')
+    sc.pl.umap(adata, color='host', save=f'_{namespace}_host.png',
+               edges=True,)
     sc.pl.umap(adata, color='resist_adamantane',
-               save=f'_{namespace}_adamantane.png')
+               save=f'_{namespace}_adamantane.png', edges=True,)
     sc.pl.umap(adata, color='resist_oseltamivir',
-               save=f'_{namespace}_oseltamivir.png')
-    sc.pl.umap(adata, color='virulence', save=f'_{namespace}_virulence.png')
-    sc.pl.umap(adata, color='transmission', save=f'_{namespace}_transmission.png')
-    sc.pl.umap(adata, color='homology', save=f'_{namespace}_homology.png')
+               save=f'_{namespace}_oseltamivir.png', edges=True,)
+    sc.pl.umap(adata, color='virulence', save=f'_{namespace}_virulence.png',
+               edges=True,)
+    sc.pl.umap(adata, color='transmission', save=f'_{namespace}_transmission.png',
+               edges=True,)
+    sc.pl.umap(adata, color='homology', save=f'_{namespace}_homology.png',
+               edges=True,)
 
 def seqs_to_anndata(seqs):
     X, obs = [], {}
@@ -269,6 +283,36 @@ def draw_gong_path(ax, adata):
 
     ax.scatter(gong_x, gong_y, s=15, c=gong_c, cmap='Oranges',
                edgecolors='black', linewidths=0.5, zorder=10)
+
+def plot_residue_categories(adata, reference=None):
+    if reference is not None:
+        seq_ref = adata.obs['seq'][reference]
+        seq_ref_msa = adata.obs['seqs_msa'][reference]
+        pos2msa, ref_idx = {}, 0
+        for idx, ch in enumerate(seq_ref_msa):
+            if ch == '-':
+                continue
+            assert(ch == seq_ref[ref_idx])
+            pos2msa[ref_idx] = idx
+            ref_idx += 1
+
+    scores = adata.uns['residue_scores']
+    pos_seen = set()
+    while len(pos_seen) < 5:
+        min_idx = np.unravel_index(np.argmin(scores), scores.shape)
+        scores[min_idx] = float('inf')
+        aa = adata.uns['onehot_vocabulary'][min_idx[1]]
+        pos = min_idx[0]
+        if pos in pos_seen:
+            continue
+        pos_seen.add(pos)
+        tprint('Lowest score {}: {}{}'.format(len(pos_seen), aa, pos + 1))
+        adata.obs[f'pos{pos}'] = [
+            seq[pos] if reference is None else seq[pos2msa[pos]]
+            for seq in adata.obs['seqs_msa']
+        ]
+        sc.pl.umap(adata, color=f'pos{pos}', save=f'_{namespace}_pos{pos}.png',
+                   edges=True,)
 
 def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
@@ -379,11 +423,20 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     tool_onehot_msa(
         adata,
+        reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
         dirname=f'target/evolocity_alignments/{namespace}',
         n_threads=40,
     )
     tool_residue_scores(adata)
-    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
+    plot_residue_scores(
+        adata,
+        percentile_keep=0,
+        save=f'_{namespace}_residue_scores.png',
+    )
+    plot_residue_categories(
+        adata,
+        reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
+    )
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -402,6 +455,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         arrow_size=1., arrow_length=3.,
         color='year', show=False,
     )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     draw_gong_path(ax, adata)
@@ -414,7 +468,6 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         adata, basis='umap', min_mass=4., smooth=1., density=1.2,
         color='year', show=False,
     )
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
@@ -422,9 +475,8 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
     plt.close()
 
-
     plt.figure()
-    ax = plot_pseudofitness(
+    ax = plot_pseudotime(
         adata,
         basis='umap', smooth=1., pf_smooth=1.5, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
@@ -433,35 +485,54 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     )
     plt.tight_layout(pad=1.1)
     draw_gong_path(ax, adata)
-    plt.savefig(f'figures/scvelo__{namespace}_pseudofitness.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_pseudotime.png', dpi=500)
     plt.close()
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save=f'_{namespace}_origins.png', dpi=500)
 
-    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
-               save=f'_{namespace}_pseudofitness.png')
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+               save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['year']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
-                                 adata.obs['year'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('Pseudofitness-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
-                                adata.obs['year'][nnan_idx])))
+                np.isfinite(adata.obs['pseudotime']))
 
-    nnan_idx = (np.isfinite(adata.obs['homology']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-homology Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
-                                 adata.obs['homology'][nnan_idx],
+    adata_nnan = adata[nnan_idx]
+
+    plt.figure()
+    sns.regplot(x='year', y='pseudotime', ci=None, logistic=True,
+                data=adata_nnan[adata_nnan.obs['subtype'] == 'H1N1'].obs)
+    plt.ylim([ -0.01, 1.01 ])
+    plt.savefig(f'figures/{namespace}_h1n1_pseudotime-time.png', dpi=500)
+    plt.tight_layout()
+    plt.close()
+
+    plt.figure()
+    sns.regplot(x='year', y='pseudotime', ci=None, logistic=True,
+                data=adata_nnan[adata_nnan.obs['subtype'] == 'H3N2'].obs)
+    plt.ylim([ -0.01, 1.01 ])
+    plt.savefig(f'figures/{namespace}_h3n2_pseudotime-time.png', dpi=500)
+    plt.tight_layout()
+    plt.close()
+
+    tprint('Pseudotime-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                 adata_nnan.obs['year'],
                                  nan_policy='omit')))
-    tprint('Pseudofitness-homology Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
-                                adata.obs['homology'][nnan_idx])))
+    tprint('Pseudotime-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
+                                adata_nnan.obs['year'])))
+
+    nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
+                np.isfinite(adata_nnan.obs['pseudotime']))
+    tprint('Pseudotime-homology Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                 adata_nnan.obs['homology'],
+                                 nan_policy='omit')))
+    tprint('Pseudotime-homology Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'],
+                                adata.obs['homology'])))
 
     adata.write(f'target/results/{namespace}_adata.h5ad')
 

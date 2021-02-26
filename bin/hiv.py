@@ -361,12 +361,12 @@ def evo_keele2008(args, model, seqs, vocabulary):
     plt.savefig('figures/scvelo__env_year_velostream.png', dpi=500)
     plt.close()
 
-    plot_pseudofitness(
+    plot_pseudotime(
         adata, basis='umap', min_mass=1., smooth=0.5, levels=100,
         rank_transform=True,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        save='_env_pseudofitness.png', dpi=500
+        save='_env_pseudotime.png', dpi=500
     )
 
     adata.obs['root_cells'][adata.obs['root_cells'] < 1.] = 0
@@ -375,51 +375,51 @@ def evo_keele2008(args, model, seqs, vocabulary):
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save='_env_origins.png', dpi=500)
-    scv.pl.scatter(adata, color='pseudofitness',
+    scv.pl.scatter(adata, color='pseudotime',
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save='_env_pftime.png', dpi=500)
 
     nnan_idx = (np.isfinite(adata.obs['year']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
+                np.isfinite(adata.obs['pseudotime']))
+    tprint('Pseudotime-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
                                  adata.obs['year'][nnan_idx],
                                  nan_policy='omit')))
-    tprint('Pseudofitness-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
+    tprint('Pseudotime-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['year'][nnan_idx])))
 
     nnan_idx = (np.isfinite(adata.obs['density']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-density Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
+                np.isfinite(adata.obs['pseudotime']))
+    tprint('Pseudotime-density Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
                                  adata.obs['density'][nnan_idx],
                                  nan_policy='omit')))
-    tprint('Pseudofitness-density Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
+    tprint('Pseudotime-density Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['density'][nnan_idx])))
 
     pfs, statuses = [], []
-    for pf, status in zip(adata.obs['pseudofitness'], adata.obs['status']):
+    for pf, status in zip(adata.obs['pseudotime'], adata.obs['status']):
         if np.isfinite(pf) and status != 'None':
             if status == 'chronic':
                 status = 7
             pfs.append(pf)
             statuses.append(int(status))
-    tprint('Pseudofitness-status Spearman r = {}, P = {}'
+    tprint('Pseudotime-status Spearman r = {}, P = {}'
            .format(*ss.spearmanr(pfs, statuses)))
-    tprint('Pseudofitness-status Pearson r = {}, P = {}'
+    tprint('Pseudotime-status Pearson r = {}, P = {}'
            .format(*ss.pearsonr(pfs, statuses)))
     tprint('TF/chronic t-test {}, P = {}'.
            format(*ss.ttest_ind(
-               adata[adata.obs['status'] == '1'].obs['pseudofitness'],
-               adata[adata.obs['status'] == 'chronic'].obs['pseudofitness'],
+               adata[adata.obs['status'] == '1'].obs['pseudotime'],
+               adata[adata.obs['status'] == 'chronic'].obs['pseudotime'],
            )))
 
     adata_keele = adata[(adata.obs['status'] != 'None')]
     plt.figure()
-    sns.violinplot(x='status', y='pseudofitness', data=adata_keele.obs)
-    plt.ylabel('pseudofitness')
+    sns.violinplot(x='status', y='pseudotime', data=adata_keele.obs)
+    plt.ylabel('pseudotime')
     plt.savefig('figures/scvelo__env_fitness_status.png', dpi=500)
     plt.close()
     plt.figure()

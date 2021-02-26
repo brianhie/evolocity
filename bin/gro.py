@@ -268,12 +268,12 @@ def evo_enolase(args, model, seqs, vocabulary):
     plt.savefig('figures/scvelo__eno_taxonomy_velostream.png', dpi=500)
     plt.close()
 
-    plot_pseudofitness(
+    plot_pseudotime(
         adata, basis='umap', min_mass=1., smooth=0.5, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False, ax=ax,
         rank_transform=True,
-        save='_eno_pseudofitness.png', dpi=500
+        save='_eno_pseudotime.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
@@ -281,7 +281,7 @@ def evo_enolase(args, model, seqs, vocabulary):
                    save='_eno_origins.png', dpi=500)
 
     plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_group', y='pseudofitness',
+    sns.violinplot(data=adata.obs, x='tax_group', y='pseudotime',
                    order=[
                        'archaea',
                        'bacteria',
@@ -295,7 +295,7 @@ def evo_enolase(args, model, seqs, vocabulary):
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig('figures/eno_taxonomy_pseudofitness.png', dpi=500)
+    plt.savefig('figures/eno_taxonomy_pseudotime.png', dpi=500)
     plt.close()
 
 if __name__ == '__main__':

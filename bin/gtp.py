@@ -287,12 +287,12 @@ def evo_gtpase(args, model, seqs, vocabulary):
     plt.savefig('figures/scvelo__gtp_taxonomy_velostream.png', dpi=500)
     plt.close()
 
-    plot_pseudofitness(
+    plot_pseudotime(
         adata, basis='umap', min_mass=1., smooth=0.6, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False, ax=ax,
         rank_transform=True,
-        save='_gtp_pseudofitness.png', dpi=500
+        save='_gtp_pseudotime.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
@@ -300,7 +300,7 @@ def evo_gtpase(args, model, seqs, vocabulary):
                    save='_gtp_origins.png', dpi=500)
 
     plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_group', y='pseudofitness',
+    sns.violinplot(data=adata.obs, x='tax_group', y='pseudotime',
                    order=[
                        'eukaryota',
                        'fungi',
@@ -312,18 +312,18 @@ def evo_gtpase(args, model, seqs, vocabulary):
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig('figures/gtp_taxonomy_pseudofitness.png', dpi=500)
+    plt.savefig('figures/gtp_taxonomy_pseudotime.png', dpi=500)
     plt.close()
     exit()
 
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
+                np.isfinite(adata.obs['pseudotime']))
+    tprint('Pseudotime-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
                                  adata.obs['Collection Date'][nnan_idx],
                                  nan_policy='omit')))
-    tprint('Pseudofitness-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
+    tprint('Pseudotime-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['Collection Date'][nnan_idx])))
 
 if __name__ == '__main__':

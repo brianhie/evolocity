@@ -305,12 +305,12 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
     plt.savefig(f'figures/scvelo__{namespace}_taxonomy_velostream.png', dpi=500)
     plt.close()
 
-    plot_pseudofitness(
+    plot_pseudotime(
         adata, basis='umap', min_mass=1., smooth=0.8, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         rank_transform=True, use_ends=False,
-        save=f'_{namespace}_pseudofitness.png', dpi=500
+        save=f'_{namespace}_pseudotime.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
@@ -318,7 +318,7 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
                    save=f'_{namespace}_origins.png', dpi=500)
 
     plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudofitness',
+    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudotime',
                    order=[
                        'archaea',
                        'bacteria',
@@ -326,20 +326,20 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig(f'figures/{namespace}_taxonomy_pseudofitness.png', dpi=500)
+    plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.png', dpi=500)
     plt.close()
 
-    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
-               save=f'_{namespace}_pseudofitness.png')
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+               save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-homology Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
+                np.isfinite(adata.obs['pseudotime']))
+    tprint('Pseudotime-homology Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
                                  adata.obs['homology'][nnan_idx],
                                  nan_policy='omit')))
-    tprint('Pseudofitness-homology Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
+    tprint('Pseudotime-homology Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
     adata.write(f'target/results/{namespace}_adata.h5ad')

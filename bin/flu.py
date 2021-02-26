@@ -63,7 +63,7 @@ def load_meta(meta_fnames):
                 metas[accession] = meta
     return metas
 
-def process(fnames, meta_fnames):
+def process(args, fnames, meta_fnames):
     metas = load_meta(meta_fnames)
 
     seqs = {}
@@ -118,7 +118,7 @@ def setup(args):
         with open(cache_fname, 'rb') as f:
             seqs = pickle.load(f)
     except:
-        seqs = process(fnames, meta_fnames)
+        seqs = process(args, fnames, meta_fnames)
         with open(cache_fname, 'wb') as of:
             pickle.dump(seqs, of)
 
@@ -362,57 +362,73 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
 
     # Evolocity pseudotime visualization.
 
-    plot_pseudofitness(
+    plot_pseudotime(
         adata, basis='umap', smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         rank_transform=False, use_ends=True,
-        save=f'_{namespace}_pseudofitness.png', dpi=500
+        save=f'_{namespace}_pseudotime.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save=f'_{namespace}_origins.png', dpi=500)
 
-    sc.pl.umap(adata, color='pseudofitness', edges=True, cmap='magma',
-               save=f'_{namespace}_pseudofitness.png')
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+               save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
-                                 adata.obs['Collection Date'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('Pseudofitness-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
-                                adata.obs['Collection Date'][nnan_idx])))
+                np.isfinite(adata.obs['pseudotime']))
 
-    nnan_idx = (np.isfinite(adata.obs['homology']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-homology Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
-                                 adata.obs['homology'][nnan_idx],
+    adata_nnan = adata[nnan_idx]
+
+    plt.figure()
+    sns.regplot(x='Collection Date', y='pseudotime',
+                     data=adata_nnan.obs, ci=None)
+    plt.savefig(f'figures/{namespace}_pseudotime-time.png', dpi=500)
+    plt.close()
+
+    tprint('Pseudotime-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                 adata_nnan.obs['Collection Date'],
                                  nan_policy='omit')))
-    tprint('Pseudofitness-homology Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
-                                adata.obs['homology'][nnan_idx])))
+    tprint('Pseudotime-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
+                                adata_nnan.obs['Collection Date'])))
+
+    nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
+                np.isfinite(adata_nnan.obs['pseudotime']))
+    tprint('Pseudotime-homology Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                 adata_nnan.obs['homology'],
+                                 nan_policy='omit')))
+    tprint('Pseudotime-homology Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'],
+                                adata.obs['homology'])))
 
     adata.write(f'target/results/{namespace}_adata.h5ad')
 
-def evo_h3(args, model, seqs, vocabulary):
+def evo_h3(args, model, seqs, vocabulary, namespace='h3'):
     ############################
     ## Visualize HA landscape ##
     ############################
 
-    seqs = populate_embedding(args, model, seqs, vocabulary,
-                              use_cache=True)
+    adata_cache = 'target/ev_cache/h3_adata.h5ad'
+    try:
+        import anndata
+        adata = anndata.read_h5ad(adata_cache)
+    except:
+        seqs = populate_embedding(args, model, seqs, vocabulary,
+                                  use_cache=True)
 
-    adata = seqs_to_anndata(seqs)
+        adata = seqs_to_anndata(seqs)
 
-    adata = adata[(adata.obs['Host Species'] == 'human') &
-                  (adata.obs['Subtype'] == 'H3')]
+        adata = adata[(adata.obs['Host Species'] == 'human') &
+                      (adata.obs['Subtype'] == 'H3')]
 
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        adata.write(adata_cache)
+
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -424,7 +440,7 @@ def evo_h3(args, model, seqs, vocabulary):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = 'target/ev_cache/h3_knn50'
+    cache_prefix = f'target/ev_cache/{namespace}_self_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -439,7 +455,7 @@ def evo_h3(args, model, seqs, vocabulary):
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
         velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0,)
+                       n_recurse_neighbors=0, score='self')
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -450,12 +466,11 @@ def evo_h3(args, model, seqs, vocabulary):
 
     tool_onehot_msa(
         adata,
-        dirname='target/evolocity_alignments/h3',
+        dirname=f'target/evolocity_alignments/{namespace}',
         n_threads=40,
     )
     tool_residue_scores(adata)
-    plot_residue_scores(adata, percentile_keep=75,
-                        save='_h3_residue_scores.png')
+    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -465,7 +480,7 @@ def evo_h3(args, model, seqs, vocabulary):
                               autoscale=True,)
     scv.pl.velocity_embedding(
         adata, basis='umap', color='Collection Date',
-        save='_h3_year_velo.png',
+        save=f'_{namespace}_year_velo.png',
     )
 
     # Grid visualization.
@@ -477,41 +492,68 @@ def evo_h3(args, model, seqs, vocabulary):
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__h3_year_velogrid.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1., linewidth=0.7,
+        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
         color='Collection Date', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/scvelo__h3_year_velostream.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
     plt.close()
 
-    plot_pseudofitness(
-        adata, basis='umap', smooth=0.7, levels=100,
+    # Evolocity pseudotime visualization.
+
+    plot_pseudotime(
+        adata, basis='umap', smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        save='_h3_pseudofitness.png', dpi=500
+        rank_transform=False, use_ends=True,
+        save=f'_{namespace}_pseudotime.png', dpi=500
     )
 
     scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
-                   save='_h3_origins.png', dpi=500)
+                   save=f'_{namespace}_origins.png', dpi=500)
+
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+               save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
-                np.isfinite(adata.obs['pseudofitness']))
-    tprint('Pseudofitness-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudofitness'][nnan_idx],
-                                 adata.obs['Collection Date'][nnan_idx],
+                np.isfinite(adata.obs['pseudotime']))
+
+    adata_nnan = adata[nnan_idx]
+
+    plt.figure()
+    sns.regplot(x='Collection Date', y='pseudotime',
+                     data=adata_nnan.obs, ci=None)
+    plt.savefig(f'figures/{namespace}_pseudotime-time.png', dpi=500)
+    plt.close()
+
+    tprint('Pseudotime-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                 adata_nnan.obs['Collection Date'],
                                  nan_policy='omit')))
-    tprint('Pseudofitness-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudofitness'][nnan_idx],
-                                adata.obs['Collection Date'][nnan_idx])))
+    tprint('Pseudotime-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
+                                adata_nnan.obs['Collection Date'])))
+
+    nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
+                np.isfinite(adata_nnan.obs['pseudotime']))
+    tprint('Pseudotime-homology Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                 adata_nnan.obs['homology'],
+                                 nan_policy='omit')))
+    tprint('Pseudotime-homology Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'],
+                                adata.obs['homology'])))
+
+    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()
@@ -595,8 +637,12 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = 'h1'#args.namespace
+        namespace = 'h1'
         if args.model_name == 'tape':
             namespace += '_tape'
-        evo_h1(args, model, seqs, vocabulary, namespace=namespace)
-        #evo_h3(args, model, seqs, vocabulary)
+        #evo_h1(args, model, seqs, vocabulary, namespace=namespace)
+
+        namespace = 'h3'
+        if args.model_name == 'tape':
+            namespace += '_tape'
+        evo_h3(args, model, seqs, vocabulary, namespace=namespace)
