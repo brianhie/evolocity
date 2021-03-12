@@ -57,10 +57,17 @@ def dms_results(fname, args, model, vocabulary):
 
     for column in df.columns:
         if column.startswith('DMS'):
-            tprint(f'\t{column}:')
+            tprint(f'\t{column}-{args.model_name}:')
             scores_dms = np.array(df[column].values)
             tprint('\t\tSpearman r = {}, P = {}'.format(
                 *ss.spearmanr(scores_pred, scores_dms, nan_policy='omit')
+            ))
+
+            tprint(f'\t{column}-DeepSequence:')
+            scores_deepseq = np.array(df['DeepSequence'].values)
+            scores_dms = np.array(df[column].values)
+            tprint('\t\tSpearman r = {}, P = {}'.format(
+                *ss.spearmanr(scores_deepseq, scores_dms, nan_policy='omit')
             ))
 
 if __name__ == '__main__':

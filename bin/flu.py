@@ -324,6 +324,10 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
     )
     tool_residue_scores(adata)
     plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
+    plot_residue_categories(
+        adata,
+        namespace=namespace,
+    )
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -471,6 +475,10 @@ def evo_h3(args, model, seqs, vocabulary, namespace='h3'):
     )
     tool_residue_scores(adata)
     plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
+    plot_residue_categories(
+        adata,
+        namespace=namespace,
+    )
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -640,7 +648,8 @@ if __name__ == '__main__':
         namespace = 'h1'
         if args.model_name == 'tape':
             namespace += '_tape'
-        #evo_h1(args, model, seqs, vocabulary, namespace=namespace)
+        evo_h1(args, model, seqs, vocabulary, namespace=namespace)
+        #exit()
 
         namespace = 'h3'
         if args.model_name == 'tape':

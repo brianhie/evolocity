@@ -284,36 +284,6 @@ def draw_gong_path(ax, adata):
     ax.scatter(gong_x, gong_y, s=15, c=gong_c, cmap='Oranges',
                edgecolors='black', linewidths=0.5, zorder=10)
 
-def plot_residue_categories(adata, reference=None):
-    if reference is not None:
-        seq_ref = adata.obs['seq'][reference]
-        seq_ref_msa = adata.obs['seqs_msa'][reference]
-        pos2msa, ref_idx = {}, 0
-        for idx, ch in enumerate(seq_ref_msa):
-            if ch == '-':
-                continue
-            assert(ch == seq_ref[ref_idx])
-            pos2msa[ref_idx] = idx
-            ref_idx += 1
-
-    scores = adata.uns['residue_scores']
-    pos_seen = set()
-    while len(pos_seen) < 5:
-        min_idx = np.unravel_index(np.argmin(scores), scores.shape)
-        scores[min_idx] = float('inf')
-        aa = adata.uns['onehot_vocabulary'][min_idx[1]]
-        pos = min_idx[0]
-        if pos in pos_seen:
-            continue
-        pos_seen.add(pos)
-        tprint('Lowest score {}: {}{}'.format(len(pos_seen), aa, pos + 1))
-        adata.obs[f'pos{pos}'] = [
-            seq[pos] if reference is None else seq[pos2msa[pos]]
-            for seq in adata.obs['seqs_msa']
-        ]
-        sc.pl.umap(adata, color=f'pos{pos}', save=f'_{namespace}_pos{pos}.png',
-                   edges=True,)
-
 def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     ###############
@@ -435,6 +405,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     )
     plot_residue_categories(
         adata,
+        namespace=namespace,
         reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
     )
 
