@@ -182,7 +182,7 @@ def seqs_to_anndata(seqs):
     return adata
 
 def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
-    path_fname = 'data/cyc/ancestral_cyc.fa'
+    path_fname = 'data/cyc/ancestral_cyc_codeml.fa'
     nodes = [
         (record.id, str(record.seq))
         for record in SeqIO.parse(path_fname, 'fasta')
@@ -217,9 +217,9 @@ def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
         sns.violinplot(
             data=df[df['tax_type'] == tax_type], x='name', y='score'
         )
+        plt.axhline(y=0, c='maroon')
         plt.savefig(f'figures/{namespace}_ancestral_{tax_type}.png',
                     dpi=500)
-        plt.axhline(y=0, c='maroon')
         plt.close()
 
 def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
