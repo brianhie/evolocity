@@ -203,6 +203,88 @@ def seqs_to_anndata(seqs):
 
     return adata
 
+def globin_ancestral(args, model, seqs, vocabulary, namespace='glo'):
+    path_fname = 'data/glo/ancestral_globins.fa'
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    ######################################
+    ## See how local likelihoods change ##
+    ######################################
+
+    glo_types = {
+        'myoglobin',
+        'hemoglobin_alpha',
+        'hemoglobin_beta'
+    }
+
+    dist_data = []
+    for idx, (name, seq) in enumerate(nodes):
+        for uniprot_seq in seqs:
+            glo_type = Counter([
+                meta['globin_type'] for meta in seqs[uniprot_seq]
+            ]).most_common(1)[0][0]
+            if glo_type not in glo_types:
+                continue
+            if 'myo' not in name and glo_type == 'myoglobin':
+                continue
+            if 'ancestral_beta' in name and 'alpha' in glo_type:
+                continue
+            if 'ancestral_alpha' in name and 'beta' in glo_type:
+                continue
+            score = likelihood_muts(seq, uniprot_seq,
+                                    args, vocabulary, model,)
+            dist_data.append([ glo_type, name, score ])
+
+    df = pd.DataFrame(dist_data, columns=[ 'glo_type', 'name', 'score' ])
+
+    for glo_type in set(df['glo_type']):
+        plt.figure()
+        sns.violinplot(
+            data=df[df['glo_type'] == glo_type], x='name', y='score'
+        )
+        plt.savefig(f'figures/{namespace}_ancestral_{glo_type}.png',
+                    dpi=500)
+        plt.axhline(y=0, c='maroon')
+        plt.close()
+
+def globin_paths(path_fname, args, model, seqs, vocabulary, namespace='glo'):
+    tprint(f'Path defined in {path_fname}:')
+
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    ######################################
+    ## See how local likelihoods change ##
+    ######################################
+
+    data, dist_data = [], []
+    for idx, (name, seq) in enumerate(nodes):
+        if idx == 0:
+            continue
+        seq_prev = nodes[idx - 1][1]
+        score_full = likelihood_full(seq_prev, seq,
+                                     args, vocabulary, model,)
+        score_muts = likelihood_muts(seq_prev, seq,
+                                     args, vocabulary, model,)
+        score_self = likelihood_self(seq_prev, seq,
+                                     args, vocabulary, model,)
+        data.append([ name, seq,
+                      score_full, score_muts, score_self ])
+        tprint('{}: {}, {}, {}'.format(
+            name, score_full, score_muts, score_self
+        ))
+
+    df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
+                                      'self_score' ])
+    tprint('Sum of full scores: {}'.format(sum(df.full)))
+    tprint('Sum of local scores: {}'.format(sum(df.muts)))
+    tprint('Sum of self scores: {}'.format(sum(df.self_score)))
+
 def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
 
     #########################
@@ -421,11 +503,11 @@ if __name__ == '__main__':
         namespace = args.namespace
         if args.model_name == 'tape':
             namespace += '_tape'
-            evo_globin(args, model, seqs, vocabulary, namespace=namespace)
-            exit()
+
+        #globin_ancestral(args, model, seqs, vocabulary, namespace=namespace)
 
         tprint('All globin sequences:')
-        evo_globin(args, model, seqs, vocabulary, namespace='glo')
+        evo_globin(args, model, seqs, vocabulary, namespace=namespace)
 
         if args.model_name != 'tape':
             tprint('Restrict based on similarity to training:')
