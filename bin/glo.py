@@ -504,7 +504,8 @@ if __name__ == '__main__':
         if args.model_name == 'tape':
             namespace += '_tape'
 
-        #globin_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+        globin_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+        exit()
 
         tprint('All globin sequences:')
         evo_globin(args, model, seqs, vocabulary, namespace=namespace)
