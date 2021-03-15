@@ -230,9 +230,9 @@ def globin_ancestral(args, model, seqs, vocabulary, namespace='glo'):
                 continue
             if 'myo' not in name and glo_type == 'myoglobin':
                 continue
-            if 'ancestral_beta' in name and 'alpha' in glo_type:
+            if name == 'ancestral_beta_hemoglobin' and 'alpha' in glo_type:
                 continue
-            if 'ancestral_alpha' in name and 'beta' in glo_type:
+            if name == 'ancestral_alpha_hemoglobin' and 'beta' in glo_type:
                 continue
             score = likelihood_muts(seq, uniprot_seq,
                                     args, vocabulary, model,)
@@ -245,9 +245,9 @@ def globin_ancestral(args, model, seqs, vocabulary, namespace='glo'):
         sns.violinplot(
             data=df[df['glo_type'] == glo_type], x='name', y='score'
         )
+        plt.axhline(y=0, c='maroon')
         plt.savefig(f'figures/{namespace}_ancestral_{glo_type}.png',
                     dpi=500)
-        plt.axhline(y=0, c='maroon')
         plt.close()
 
 def globin_paths(path_fname, args, model, seqs, vocabulary, namespace='glo'):
