@@ -203,6 +203,47 @@ def seqs_to_anndata(seqs):
 
     return adata
 
+def eno_ancestral(args, model, seqs, vocabulary, namespace='eno'):
+    path_fname = 'data/eno/ancestral_eno_codeml.fa'
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    ######################################
+    ## See how local likelihoods change ##
+    ######################################
+
+    tax_types = {
+        'archaea',
+        'bacteria',
+        'eukaryota',
+    }
+
+    dist_data = []
+    for idx, (name, seq) in enumerate(nodes):
+        for uniprot_seq in seqs:
+            tax_type = Counter([
+                meta['tax_kingdom'] for meta in seqs[uniprot_seq]
+            ]).most_common(1)[0][0]
+            if tax_type not in tax_types:
+                continue
+            score = likelihood_muts(seq, uniprot_seq,
+                                    args, vocabulary, model,)
+            dist_data.append([ tax_type, name, score ])
+
+    df = pd.DataFrame(dist_data, columns=[ 'tax_type', 'name', 'score' ])
+
+    for tax_type in set(df['tax_type']):
+        plt.figure()
+        sns.violinplot(
+            data=df[df['tax_type'] == tax_type], x='name', y='score'
+        )
+        plt.axhline(y=0, c='maroon')
+        plt.savefig(f'figures/{namespace}_ancestral_{tax_type}.png',
+                    dpi=500)
+        plt.close()
+
 def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
 
     #########################
@@ -381,11 +422,13 @@ if __name__ == '__main__':
         namespace = args.namespace
         if args.model_name == 'tape':
             namespace += '_tape'
-            evo_enolase(args, model, seqs, vocabulary, namespace=namespace)
-            exit()
+
+        eno_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+        exit()
 
         tprint('All enolase sequences:')
-        evo_enolase(args, model, seqs, vocabulary, namespace='eno')
+        evo_enolase(args, model, seqs, vocabulary, namespace=namespace)
 
-        tprint('Restrict based on similarity to training')
-        evo_enolase(args, model, seqs, vocabulary, namespace='eno_homologous')
+        if args.model_name != 'tape':
+            tprint('Restrict based on similarity to training')
+            evo_enolase(args, model, seqs, vocabulary, namespace='eno_homologous')
