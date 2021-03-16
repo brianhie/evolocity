@@ -27,6 +27,8 @@ def parse_args():
                         help='Train model on portion of data')
     parser.add_argument('--test', action='store_true',
                         help='Test model')
+    parser.add_argument('--ancestral', action='store_true',
+                        help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
     args = parser.parse_args()
@@ -212,15 +214,8 @@ def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
 
     df = pd.DataFrame(dist_data, columns=[ 'tax_type', 'name', 'score' ])
 
-    for tax_type in set(df['tax_type']):
-        plt.figure()
-        sns.violinplot(
-            data=df[df['tax_type'] == tax_type], x='name', y='score'
-        )
-        plt.axhline(y=0, c='maroon')
-        plt.savefig(f'figures/{namespace}_ancestral_{tax_type}.png',
-                    dpi=500)
-        plt.close()
+    plot_ancestral(df, meta_key='tax_type', namespace=namespace)
+
 
 def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
 
@@ -384,6 +379,10 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
 if __name__ == '__main__':
     args = parse_args()
 
+    namespace = args.namespace
+    if args.model_name == 'tape':
+        namespace += '_tape'
+
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
         'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W',
@@ -410,17 +409,18 @@ if __name__ == '__main__':
     if args.train or args.train_split or args.test:
         train_test(args, model, seqs, vocabulary, split_seqs)
 
+    if args.ancestral:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+
+        tprint('Ancestral analysis...')
+        cyc_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+
     if args.evolocity:
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = args.namespace
-        if args.model_name == 'tape':
-            namespace += '_tape'
-
-        cyc_ancestral(args, model, seqs, vocabulary, namespace=namespace)
-        exit()
-
         tprint('All cytochrome c sequencecs:')
         evo_cyc(args, model, seqs, vocabulary, namespace=namespace)
 

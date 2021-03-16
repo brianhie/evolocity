@@ -27,6 +27,8 @@ def parse_args():
                         help='Train model on portion of data')
     parser.add_argument('--test', action='store_true',
                         help='Test model')
+    parser.add_argument('--ancestral', action='store_true',
+                        help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
     args = parser.parse_args()
@@ -236,19 +238,15 @@ def globin_ancestral(args, model, seqs, vocabulary, namespace='glo'):
                 continue
             score = likelihood_muts(seq, uniprot_seq,
                                     args, vocabulary, model,)
-            dist_data.append([ glo_type, name, score ])
+            homology = fuzzyproc.extractOne(seq, uniprot_seq)[1]
+            dist_data.append([ glo_type, name, score, homology ])
 
-    df = pd.DataFrame(dist_data, columns=[ 'glo_type', 'name', 'score' ])
+    df = pd.DataFrame(dist_data, columns=[
+        'glo_type', 'name', 'score', 'homology'
+    ])
 
-    for glo_type in set(df['glo_type']):
-        plt.figure()
-        sns.violinplot(
-            data=df[df['glo_type'] == glo_type], x='name', y='score'
-        )
-        plt.axhline(y=0, c='maroon')
-        plt.savefig(f'figures/{namespace}_ancestral_{glo_type}.png',
-                    dpi=500)
-        plt.close()
+    plot_ancestral(df, meta_key='glo_type', namespace=namespace)
+
 
 def globin_paths(path_fname, args, model, seqs, vocabulary, namespace='glo'):
     tprint(f'Path defined in {path_fname}:')
@@ -470,6 +468,10 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
 if __name__ == '__main__':
     args = parse_args()
 
+    namespace = args.namespace
+    if args.model_name == 'tape':
+        namespace += '_tape'
+
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
         'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W',
@@ -496,16 +498,18 @@ if __name__ == '__main__':
     if args.train or args.train_split or args.test:
         train_test(args, model, seqs, vocabulary, split_seqs)
 
+    if args.ancestral:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+
+        tprint('Ancestral analysis...')
+        globin_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+
     if args.evolocity:
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = args.namespace
-        if args.model_name == 'tape':
-            namespace += '_tape'
-
-        globin_ancestral(args, model, seqs, vocabulary, namespace=namespace)
-        exit()
 
         tprint('All globin sequences:')
         evo_globin(args, model, seqs, vocabulary, namespace=namespace)
