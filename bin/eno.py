@@ -232,7 +232,7 @@ def enolase_ancestral(args, model, seqs, vocabulary, namespace='eno'):
                 continue
             score = likelihood_muts(seq, uniprot_seq,
                                     args, vocabulary, model,)
-            homology = fuzzyproc.extractOne(seq, uniprot_seq)[1]
+            homology = fuzz.ratio(seq, uniprot_seq)
             dist_data.append([ tax_type, name, score, homology ])
 
     df = pd.DataFrame(dist_data, columns=[

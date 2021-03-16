@@ -1229,7 +1229,9 @@ def plot_ancestral(
         plt.close()
 
         if homology_key in df_name:
-            r, p = ss.spearmanr(df_name[score_key], df_name[homology_key])
+            r, p = ss.spearmanr(df_name[score_key].values,
+                                df_name[homology_key].values,
+                                nan_policy='omit')
             tprint('{} corr with ancestral: Spearman r = {}, P = {}'.format(
                 name, r, p
             ))

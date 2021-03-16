@@ -210,9 +210,12 @@ def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
                 continue
             score = likelihood_muts(seq, uniprot_seq,
                                     args, vocabulary, model,)
-            dist_data.append([ tax_type, name, score ])
+            homology = fuzz.ratio(seq, uniprot_seq)
+            dist_data.append([ tax_type, name, score, homology ])
 
-    df = pd.DataFrame(dist_data, columns=[ 'tax_type', 'name', 'score' ])
+    df = pd.DataFrame(dist_data, columns=[
+        'tax_type', 'name', 'score', 'homology'
+    ])
 
     plot_ancestral(df, meta_key='tax_type', namespace=namespace)
 
