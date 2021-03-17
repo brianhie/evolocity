@@ -184,7 +184,7 @@ def seqs_to_anndata(seqs):
     return adata
 
 def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
-    path_fname = 'data/cyc/ancestral_cyc_codeml.fa'
+    path_fname = 'data/cyc/ancestral_cyc_curated_codeml.fa'
     nodes = [
         (record.id, str(record.seq))
         for record in SeqIO.parse(path_fname, 'fasta')
