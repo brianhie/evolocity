@@ -196,6 +196,7 @@ def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
 
     tax_types = {
         'fungi',
+        'chordata',
         'mammalia',
         'viridiplantae',
     }
@@ -208,6 +209,18 @@ def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
             ]).most_common(1)[0][0]
             if tax_type not in tax_types:
                 continue
+            if tax_type == 'fungi' and \
+               ('all' not in name and 'fungi' not in name):
+                continue
+            if tax_type == 'chordata' and \
+               ('all' not in name and 'animalia' not in name):
+                continue
+            if tax_type == 'mammalia' and \
+               ('all' not in name and 'animalia' not in name):
+                continue
+            if tax_type == 'viridiplantae' and \
+               ('all' not in name and 'plantae' not in name):
+                continue
             score = likelihood_muts(seq, uniprot_seq,
                                     args, vocabulary, model,)
             homology = fuzz.ratio(seq, uniprot_seq)
@@ -218,7 +231,7 @@ def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
     ])
 
     plot_ancestral(df, meta_key='tax_type', namespace=namespace)
-
+    plot_ancestral(df, meta_key='name', name_key='tax_type', namespace=namespace)
 
 def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
 

@@ -246,7 +246,7 @@ def globin_ancestral(args, model, seqs, vocabulary, namespace='glo'):
     ])
 
     plot_ancestral(df, meta_key='glo_type', namespace=namespace)
-
+    plot_ancestral(df, meta_key='name', name_key='glo_type', namespace=namespace)
 
 def globin_paths(path_fname, args, model, seqs, vocabulary, namespace='glo'):
     tprint(f'Path defined in {path_fname}:')
@@ -338,6 +338,17 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
+    tool_onehot_msa(
+        adata,
+        dirname=f'target/evolocity_alignments/{namespace}',
+        n_threads=40,
+    )
+    tool_residue_scores(adata)
+    plot_residue_categories(
+        adata,
+        namespace=namespace,
+    )
+
     if namespace == 'glo':
         alpha_idx = [
             cluster in { '3', '4', '6', '9', '11', '13', '14' }
@@ -353,8 +364,11 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
             n_threads=40,
         )
         tool_residue_scores(adata_alpha)
-        plot_residue_scores(adata_alpha, percentile_keep=0,
-                            save='_glo-alpha_residue_scores.png')
+        plot_residue_scores(
+            adata_alpha,
+            percentile_keep=0,
+            save='_glo-alpha_residue_scores.png'
+        )
 
         beta_idx = [
             cluster in { '0', '2', '5', '7', '15' }
@@ -370,8 +384,11 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
             n_threads=40,
         )
         tool_residue_scores(adata_beta)
-        plot_residue_scores(adata_beta, percentile_keep=0,
-                            save='_glo-beta_residue_scores.png')
+        plot_residue_scores(
+            adata_beta,
+            percentile_keep=0,
+            save='_glo-beta_residue_scores.png'
+        )
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,

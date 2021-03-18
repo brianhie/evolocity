@@ -1220,7 +1220,7 @@ def plot_ancestral(
 
         plt.figure()
         sns.violinplot(
-            data=df_name, x=meta_key, y=score_key
+            data=df_name, x=meta_key, y=score_key,
         )
         plt.axhline(y=0, c='#CCCCCC', linestyle='dashed')
         name_sanitized = name.replace('/', '-')
