@@ -415,7 +415,7 @@ def analyze_comb_fitness(
     plt.close()
 
 def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
-                      min_pos=None, max_pos=None, prob_cutoff=0., beta=1.,
+                      min_pos=None, max_pos=None, beta=1.,
                       comb_batch=None, plot_acquisition=True,
                       plot_namespace=None, verbose=True):
     if plot_acquisition:
@@ -440,6 +440,8 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
                 continue
             word_idx = vocabulary[word]
             prob = y_pred[i + 1, word_idx]
+            if 'esm' in args.model_name:
+                prob = np.exp(prob)
             word_pos_prob[(word, i)] = prob
 
     prob_seqs = { seq_to_mutate: [ { 'word': None, 'pos': None } ] }
@@ -447,8 +449,7 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
     for (word, pos), prob in word_pos_prob.items():
         mutable = seq_to_mutate[:pos] + word + seq_to_mutate[pos + 1:]
         seq_prob[mutable] = prob
-        if prob >= prob_cutoff:
-            prob_seqs[mutable] = [ { 'word': word, 'pos': pos } ]
+        prob_seqs[mutable] = [ { 'word': word, 'pos': pos } ]
 
     seqs = np.array([ str(seq) for seq in sorted(seq_prob.keys()) ])
 

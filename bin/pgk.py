@@ -232,6 +232,7 @@ def pgk_ancestral(args, model, seqs, vocabulary, namespace='pgk'):
     ])
 
     plot_ancestral(df, meta_key='tax_type', namespace=namespace)
+    plot_ancestral(df, meta_key='name', name_key='tax_type', namespace=namespace)
 
 def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
 
@@ -287,14 +288,14 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    tool_onehot_msa(
-        adata,
-        reference=list(adata.obs['gene_id']).index('PGK1_HUMAN'),
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    tool_residue_scores(adata)
-    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
+    #tool_onehot_msa(
+    #    adata,
+    #    reference=list(adata.obs['gene_id']).index('PGK1_HUMAN'),
+    #    dirname=f'target/evolocity_alignments/{namespace}',
+    #    n_threads=40,
+    #)
+    #tool_residue_scores(adata)
+    #plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -368,6 +369,26 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
+    anc_seq = """
+    MKNFFFCLFIPYIMPPKARAPLPPGDAERGKKLFKSRA
+    AQCHTAEKGGANSTGPNLYGLFGRKSGTVPGYAYSNAN
+    KNAGIVWEEETLHEYLENPKKYVPGTKMAFAGIKKPKD
+    RADIIAYLKTLKDEELS
+    """.replace('\n', '').replace(' ', '')
+    adata.obs['anc_dist'] = [
+        fuzz.ratio(anc_seq, seq) for seq in adata.obs['seq']
+    ]
+
+    nnan_idx = (np.isfinite(adata.obs['anc_dist']) &
+                np.isfinite(adata.obs['pseudotime']))
+    tprint('Pseudotime-ancestral dist Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
+                                 adata.obs['anc_dist'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Pseudotime-ancestral dist Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
+                                adata.obs['anc_dist'][nnan_idx])))
+
     adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
@@ -389,7 +410,7 @@ if __name__ == '__main__':
     if 'esm' in args.model_name:
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
-                       if '<' not in tok }
+                       if '<' not in tok and tok != '.' and tok != '-' }
         args.checkpoint = args.model_name
     elif args.model_name == 'tape':
         vocabulary = { tok: model.alphabet_[tok]

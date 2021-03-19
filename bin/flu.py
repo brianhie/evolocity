@@ -578,7 +578,7 @@ if __name__ == '__main__':
     if 'esm' in args.model_name:
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
-                       if '<' not in tok }
+                       if '<' not in tok and tok != '.' and tok != '-' }
         args.checkpoint = args.model_name
     elif args.model_name == 'tape':
         vocabulary = { tok: model.alphabet_[tok]
@@ -612,14 +612,14 @@ if __name__ == '__main__':
         tprint('Lee et al. 2018...')
         seq_to_mutate, escape_seqs = load_doud2018()
         analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
-                          prob_cutoff=0., beta=1., plot_acquisition=True,
+                          beta=1., plot_acquisition=True,
                           plot_namespace='flu_h1')
         tprint('')
 
         tprint('Lee et al. 2019...')
         seq_to_mutate, escape_seqs = load_lee2019()
         analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
-                          prob_cutoff=0., beta=1., plot_acquisition=True,
+                          beta=1., plot_acquisition=True,
                           plot_namespace='flu_h3')
 
     if args.combfit:

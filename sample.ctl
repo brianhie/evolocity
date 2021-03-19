@@ -1,6 +1,6 @@
-      seqfile = target/cyc/cyc_curated_aligned.phy  * sequence data filename
-     treefile = target/cyc/cyc_curated_aligned.phy_phyml_tree.txt   * tree structure file name
-      outfile = target/cyc/cyc_curated_models.mlc    * main result file name
+      seqfile = target/pgk/pgk_curated_aligned.phy  * sequence data filename
+     treefile = target/pgk/pgk_curated_aligned.phy_phyml_tree.txt   * tree structure file name
+      outfile = target/pgk/pgk_curated_models.mlc    * main result file name
 
         noisy = 9  * 0,1,2,3,9: how much rubbish on the screen
       verbose = 2  * 0: concise; 1: detailed, 2: too much

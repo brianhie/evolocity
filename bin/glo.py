@@ -480,6 +480,26 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
+    anc_seq = """
+    MVSLSEADKEAIRDVWGKVYANAEENGTTVLVRMFTEH
+    PETKQYFSHFKDISTAEDMKGSPQVKAHGKRVMSALGD
+    VVQHLDNLSSVLKPLAEKHANKHKVDPHNFKLLSDVIL
+    AVLAEKFGGDFTPEARAAWEKLLSVICTHLESAYK
+    """.replace('\n', '').replace(' ', '')
+    adata.obs['anc_dist'] = [
+        fuzz.ratio(anc_seq, seq) for seq in adata.obs['seq']
+    ]
+
+    nnan_idx = (np.isfinite(adata.obs['anc_dist']) &
+                np.isfinite(adata.obs['pseudotime']))
+    tprint('Pseudotime-ancestral dist Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
+                                 adata.obs['anc_dist'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Pseudotime-ancestral dist Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
+                                adata.obs['anc_dist'][nnan_idx])))
+
     adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
@@ -501,7 +521,7 @@ if __name__ == '__main__':
     if 'esm' in args.model_name:
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
-                       if '<' not in tok }
+                       if '<' not in tok and tok != '.' and tok != '-' }
         args.checkpoint = args.model_name
     elif args.model_name == 'tape':
         vocabulary = { tok: model.alphabet_[tok]
