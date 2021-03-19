@@ -338,57 +338,57 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    tool_onehot_msa(
-        adata,
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    tool_residue_scores(adata)
-    plot_residue_categories(
-        adata,
-        namespace=namespace,
-    )
-
-    if namespace == 'glo':
-        alpha_idx = [
-            cluster in { '3', '4', '6', '9', '11', '13', '14' }
-            for cluster in adata.obs['louvain']
-        ]
-        adata_alpha = adata[alpha_idx]
-        tool_onehot_msa(
-            adata_alpha,
-            reference=list(adata.obs['gene_id']).index(
-                'hba_human_hemoglobin_subunit_alpha'
-            ),
-            dirname='target/evolocity_alignments/glo',
-            n_threads=40,
-        )
-        tool_residue_scores(adata_alpha)
-        plot_residue_scores(
-            adata_alpha,
-            percentile_keep=0,
-            save='_glo-alpha_residue_scores.png'
-        )
-
-        beta_idx = [
-            cluster in { '0', '2', '5', '7', '15' }
-            for cluster in adata.obs['louvain']
-        ]
-        adata_beta = adata[beta_idx]
-        tool_onehot_msa(
-            adata_beta,
-            reference=list(adata.obs['gene_id']).index(
-                'hbb_human_hemoglobin_subunit_beta'
-            ),
-            dirname='target/evolocity_alignments/glo',
-            n_threads=40,
-        )
-        tool_residue_scores(adata_beta)
-        plot_residue_scores(
-            adata_beta,
-            percentile_keep=0,
-            save='_glo-beta_residue_scores.png'
-        )
+    #tool_onehot_msa(
+    #    adata,
+    #    dirname=f'target/evolocity_alignments/{namespace}',
+    #    n_threads=40,
+    #)
+    #tool_residue_scores(adata)
+    #plot_residue_categories(
+    #    adata,
+    #    namespace=namespace,
+    #)
+    #
+    #if namespace == 'glo':
+    #    alpha_idx = [
+    #        cluster in { '3', '4', '6', '9', '11', '13', '14' }
+    #        for cluster in adata.obs['louvain']
+    #    ]
+    #    adata_alpha = adata[alpha_idx]
+    #    tool_onehot_msa(
+    #        adata_alpha,
+    #        reference=list(adata.obs['gene_id']).index(
+    #            'hba_human_hemoglobin_subunit_alpha'
+    #        ),
+    #        dirname='target/evolocity_alignments/glo',
+    #        n_threads=40,
+    #    )
+    #    tool_residue_scores(adata_alpha)
+    #    plot_residue_scores(
+    #        adata_alpha,
+    #        percentile_keep=0,
+    #        save='_glo-alpha_residue_scores.png'
+    #    )
+    #
+    #    beta_idx = [
+    #        cluster in { '0', '2', '5', '7', '15' }
+    #        for cluster in adata.obs['louvain']
+    #    ]
+    #    adata_beta = adata[beta_idx]
+    #    tool_onehot_msa(
+    #        adata_beta,
+    #        reference=list(adata.obs['gene_id']).index(
+    #            'hbb_human_hemoglobin_subunit_beta'
+    #        ),
+    #        dirname='target/evolocity_alignments/glo',
+    #        n_threads=40,
+    #    )
+    #    tool_residue_scores(adata_beta)
+    #    plot_residue_scores(
+    #        adata_beta,
+    #        percentile_keep=0,
+    #        save='_glo-beta_residue_scores.png'
+    #    )
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -479,26 +479,6 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
     tprint('Pseudotime-homology Pearson r = {}, P = {}'
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
-
-    anc_seq = """
-    MVSLSEADKEAIRDVWGKVYANAEENGTTVLVRMFTEH
-    PETKQYFSHFKDISTAEDMKGSPQVKAHGKRVMSALGD
-    VVQHLDNLSSVLKPLAEKHANKHKVDPHNFKLLSDVIL
-    AVLAEKFGGDFTPEARAAWEKLLSVICTHLESAYK
-    """.replace('\n', '').replace(' ', '')
-    adata.obs['anc_dist'] = [
-        fuzz.ratio(anc_seq, seq) for seq in adata.obs['seq']
-    ]
-
-    nnan_idx = (np.isfinite(adata.obs['anc_dist']) &
-                np.isfinite(adata.obs['pseudotime']))
-    tprint('Pseudotime-ancestral dist Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
-                                 adata.obs['anc_dist'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-ancestral dist Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
-                                adata.obs['anc_dist'][nnan_idx])))
 
     adata.write(f'target/results/{namespace}_adata.h5ad')
 

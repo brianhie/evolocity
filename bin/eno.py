@@ -381,35 +381,6 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
-    anc_seq = """
-    MPDDMMTVIEDIHAREILDSRGNPTVEVEVTTLEDGTF
-    GRAAVPSGASTGAHEALELRDGDKSRYGGKGVLKAVEN
-    VNDEIAPALIEGGLDASDQRAIDKAMIEELDGTPNEWG
-    WCKSKLGANAILGVSLAVAKAAAAAAGLPLYRYLGGLN
-    AHPTGEFVLPVPMMNIINGGAHADNNVDFQEFMIMPVG
-    APSFKEALRMGAEVYHALKKVLKDKYGGLATAVGDEGG
-    FAPNLASNKEALDLIMEAIEKAGYKPGEDGVVLALDAA
-    ASEFYKDEKGKGYDLDFKKPADKREGGKKFTSEEMVDY
-    YAELVNKYPIVSIEHCNFLTHYPFDPLDEDDWEGWALL
-    TEKLGDKVQLVGDDLFVTNPERLQKGIEKKAANSLLIK
-    VNQIGTLTETLEAIKLAQKSGYTAVISHRSGETEDTTI
-    ADLAVATNSGQIKTGAPARSERIAKYNQLLRIEEELGD
-    AARYAGRNAFRRLKRKGKEEFEDA
-    """.replace('\n', '').replace(' ', '')
-    adata.obs['anc_dist'] = [
-        fuzz.ratio(anc_seq, seq) for seq in adata.obs['seq']
-    ]
-
-    nnan_idx = (np.isfinite(adata.obs['anc_dist']) &
-                np.isfinite(adata.obs['pseudotime']))
-    tprint('Pseudotime-ancestral dist Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
-                                 adata.obs['anc_dist'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-ancestral dist Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
-                                adata.obs['anc_dist'][nnan_idx])))
-
     adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
