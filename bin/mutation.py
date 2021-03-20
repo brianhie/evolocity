@@ -303,7 +303,7 @@ def predict_sequence_prob(args, seq_of_interest, vocabulary, model,
 
 def analyze_comb_fitness(
         args, model, vocabulary, strain, wt_seq, seqs_fitness,
-        comb_batch=None, prob_cutoff=0., beta=1., verbose=True,
+        comb_batch=None, beta=1., verbose=True,
 ):
     from copy import deepcopy
     seqs_fitness = { seq: seqs_fitness[(seq, strain_i)]
@@ -319,8 +319,8 @@ def analyze_comb_fitness(
         for word in vocabulary:
             word_idx = vocabulary[word]
             prob = y_pred[pos + 1, word_idx]
-            if prob < prob_cutoff:
-                continue
+            if 'esm' in args.model_name:
+                prob = np.exp(prob)
             word_pos_prob[(word, pos)] = prob
 
     base_embedding = embed_seqs(

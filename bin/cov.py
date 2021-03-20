@@ -282,13 +282,13 @@ if __name__ == '__main__':
         seq_to_mutate, seqs_escape = load_baum2020()
         analyze_semantics(args, model, vocabulary,
                           seq_to_mutate, seqs_escape, comb_batch=5000,
-                          prob_cutoff=0, beta=1., plot_acquisition=True,)
+                          beta=1., plot_acquisition=True,)
         tprint('Greaney et al. 2020...')
         seq_to_mutate, seqs_escape = load_greaney2020()
         analyze_semantics(args, model, vocabulary,
                           seq_to_mutate, seqs_escape, comb_batch=5000,
                           min_pos=318, max_pos=540, # Restrict to RBD.
-                          prob_cutoff=0, beta=1., plot_acquisition=True,
+                          beta=1., plot_acquisition=True,
                           plot_namespace='cov2rbd')
 
     if args.combfit:
@@ -299,7 +299,7 @@ if __name__ == '__main__':
         for strain in strains:
             analyze_comb_fitness(args, model, vocabulary,
                                  strain, wt_seqs[strain], seqs_fitness,
-                                 comb_batch=10000, prob_cutoff=0., beta=1.)
+                                 comb_batch=10000, beta=1.)
 
     if args.reinfection:
         from reinfection import load_to2020, load_ratg13, load_sarscov1

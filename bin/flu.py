@@ -630,7 +630,7 @@ if __name__ == '__main__':
         for strain in strains:
             analyze_comb_fitness(args, model, vocabulary,
                                  strain, wt_seqs[strain], seqs_fitness,
-                                 prob_cutoff=0., beta=1.)
+                                 beta=1.)
 
         from combinatorial_fitness import load_wu2020
         tprint('Wu et al. 2020...')
@@ -639,7 +639,7 @@ if __name__ == '__main__':
         for strain in strains:
             analyze_comb_fitness(args, model, vocabulary,
                                  strain, wt_seqs[strain], seqs_fitness,
-                                 prob_cutoff=0., beta=1.)
+                                 beta=1.)
 
     if args.evolocity:
         if args.checkpoint is None and not args.train:

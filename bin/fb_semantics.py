@@ -122,7 +122,7 @@ def embed_seqs_fb(
     return embedded_seqs
 
 def fb_semantics(model, repr_layers, alphabet, seq_to_mutate, escape_seqs,
-                 min_pos=None, max_pos=None, prob_cutoff=0., beta=1.,
+                 min_pos=None, max_pos=None, beta=1.,
                  comb_batch=None, plot_acquisition=True,
                  namespace='fb', plot_namespace=None, verbose=True):
 
@@ -160,8 +160,7 @@ def fb_semantics(model, repr_layers, alphabet, seq_to_mutate, escape_seqs,
     for (word, pos), prob in word_pos_prob.items():
         mutable = seq_to_mutate[:pos] + word + seq_to_mutate[pos + 1:]
         seq_prob[mutable] = prob
-        if prob >= prob_cutoff:
-            prob_seqs[mutable] = [ { 'word': word, 'pos': pos } ]
+        prob_seqs[mutable] = [ { 'word': word, 'pos': pos } ]
 
     seqs = np.array([ str(seq) for seq in sorted(seq_prob.keys()) ])
 
