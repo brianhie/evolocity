@@ -443,7 +443,7 @@ if __name__ == '__main__':
     if 'esm' in args.model_name:
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
-                       if '<' not in tok }
+                       if '<' not in tok and tok != '.' and tok != '-' }
         args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)
