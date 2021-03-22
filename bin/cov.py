@@ -40,55 +40,6 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def parse_viprbrc(entry):
-    fields = entry.split('|')
-    if fields[7] == 'NA':
-        date = None
-    else:
-        date = fields[7].split('/')[0]
-        date = dparse(date.replace('_', '-'))
-
-    country = fields[9]
-    from locations import country2continent
-    if country in country2continent:
-        continent = country2continent[country]
-    else:
-        country = 'NA'
-        continent = 'NA'
-
-    from mammals import species2group
-
-    meta = {
-        'strain': fields[5],
-        'host': fields[8],
-        'group': species2group[fields[8]],
-        'country': country,
-        'continent': continent,
-        'dataset': 'viprbrc',
-    }
-    return meta
-
-def parse_nih(entry):
-    fields = entry.split('|')
-
-    country = fields[3]
-    from locations import country2continent
-    if country in country2continent:
-        continent = country2continent[country]
-    else:
-        country = 'NA'
-        continent = 'NA'
-
-    meta = {
-        'strain': 'SARS-CoV-2',
-        'host': 'human',
-        'group': 'human',
-        'country': country,
-        'continent': continent,
-        'dataset': 'nih',
-    }
-    return meta
-
 def parse_gisaid(entry):
     fields = entry.split('|')
 
@@ -111,10 +62,8 @@ def parse_gisaid(entry):
     from mammals import species2group
 
     date = fields[2]
-    try:
-        timestamp = time.mktime(dparse(date).timetuple())
-    except ValueError:
-        timestamp = float('nan')
+    date = date.replace('00', '01')
+    timestamp = time.mktime(dparse(date).timetuple())
 
     meta = {
         'gene_id': fields[1],
@@ -138,12 +87,7 @@ def process(fnames):
                 continue
             if record.seq not in seqs:
                 seqs[record.seq] = []
-            if fname == 'data/cov/viprbrc_db.fasta':
-                meta = parse_viprbrc(record.description)
-            elif fname == 'data/cov/gisaid.fasta':
-                meta = parse_gisaid(record.description)
-            else:
-                meta = parse_nih(record.description)
+            meta = parse_gisaid(record.description)
             meta['accession'] = record.description
             seqs[record.seq].append(meta)
 

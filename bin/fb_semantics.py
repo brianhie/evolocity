@@ -100,8 +100,6 @@ def embed_seqs_fb(
 
         seqs_window = [ seq[start:end] for seq in seqs ]
 
-        print(np.mean([ len(seq) for seq in seqs_window ]))
-
         dataset = FastaBatchedDataset(labels_full, seqs_window)
         batches = dataset.get_batch_indices(batch_size, extra_toks_per_seq=1)
         data_loader = torch.utils.data.DataLoader(
