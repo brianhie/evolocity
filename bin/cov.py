@@ -176,7 +176,7 @@ def setup(args):
     ]
 
     import pickle
-    cache_fname = 'target/ev_cache/np_seqs.pkl'
+    cache_fname = 'target/ev_cache/cov_seqs.pkl'
     try:
         with open(cache_fname, 'rb') as f:
             seqs = pickle.load(f)
