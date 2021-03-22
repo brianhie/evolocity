@@ -1,4 +1,5 @@
 from mutation import *
+from evolocity_graph import *
 
 np.random.seed(1)
 random.seed(1)
@@ -34,6 +35,8 @@ def parse_args():
                         help='Analyze combinatorial fitness')
     parser.add_argument('--reinfection', action='store_true',
                         help='Analyze reinfection cases')
+    parser.add_argument('--evolocity', action='store_true',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -99,17 +102,24 @@ def parse_gisaid(entry):
     else:
         host = 'human'
         from locations import country2continent
+        country = type_id
         if type_id in country2continent:
-            country = type_id
             continent = country2continent[country]
         else:
-            country = 'NA'
             continent = 'NA'
 
     from mammals import species2group
 
+    date = fields[2]
+    try:
+        timestamp = time.mktime(dparse(date).timetuple())
+    except ValueError:
+        timestamp = float('nan')
+
     meta = {
-        'strain': fields[1],
+        'gene_id': fields[1],
+        'date': date,
+        'timestamp': timestamp,
         'host': host,
         'group': species2group[host].lower(),
         'country': country,
@@ -162,13 +172,18 @@ def split_seqs(seqs, split_method='random'):
 
 def setup(args):
     fnames = [
-        'data/cov/sars_cov2_seqs.fa',
-        'data/cov/viprbrc_db.fasta',
         'data/cov/spikeprot0129.fasta',
-        #'data/cov/gisaid.fasta',
     ]
 
-    seqs = process(fnames)
+    import pickle
+    cache_fname = 'target/ev_cache/np_seqs.pkl'
+    try:
+        with open(cache_fname, 'rb') as f:
+            seqs = pickle.load(f)
+    except:
+        seqs = process(fnames)
+        with open(cache_fname, 'wb') as of:
+            pickle.dump(seqs, of)
 
     seq_len = max([ len(seq) for seq in seqs ]) + 2
     vocab_size = len(AAs) + 2
@@ -183,7 +198,7 @@ def interpret_clusters(adata):
     for cluster in clusters:
         tprint('Cluster {}'.format(cluster))
         adata_cluster = adata[adata.obs['louvain'] == cluster]
-        for var in [ 'host', 'country', 'strain' ]:
+        for var in [ 'host', 'continent', ]:
             tprint('\t{}:'.format(var))
             counts = Counter(adata_cluster.obs[var])
             for val, count in counts.most_common():
@@ -233,6 +248,180 @@ def analyze_embedding(args, model, seqs, vocabulary):
                        (adata.obs['louvain'] == '2')]
     plot_umap(adata_cov2, [ 'host', 'group', 'country' ],
               namespace='cov7')
+
+def seqs_to_anndata(seqs):
+    X, obs = [], {}
+    obs['n_seq'] = []
+    obs['seq'] = []
+    for seq in seqs:
+        meta = seqs[seq][0]
+        X.append(meta['embedding'])
+        for key in meta:
+            if key == 'embedding':
+                continue
+            if key not in obs:
+                obs[key] = []
+            obs[key].append(Counter([
+                meta[key] for meta in seqs[seq]
+            ]).most_common(1)[0][0])
+        obs['n_seq'].append(len(seqs[seq]))
+        obs['seq'].append(str(seq))
+    X = np.array(X)
+
+    adata = AnnData(X)
+    for key in obs:
+        adata.obs[key] = obs[key]
+
+    return adata
+
+def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
+    ###############################
+    ## Visualize Spike landscape ##
+    ###############################
+
+    adata_cache = 'target/ev_cache/cov_adata.h5ad'
+    try:
+        import anndata
+        adata = anndata.read_h5ad(adata_cache)
+    except:
+        seqs = populate_embedding(args, model, seqs, vocabulary,
+                                  use_cache=True)
+        adata = seqs_to_anndata(seqs)
+        adata.write(adata_cache)
+
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+
+    sc.tl.louvain(adata, resolution=1.)
+
+    sc.set_figure_params(dpi_save=500)
+    sc.tl.umap(adata, min_dist=1.)
+    categories = [
+        'timestamp',
+        'continent',
+    ]
+    plot_umap(adata, categories, namespace=namespace)
+
+    #####################################
+    ## Compute evolocity and visualize ##
+    #####################################
+
+    cache_prefix = f'target/ev_cache/{namespace}_knn40'
+    try:
+        from scipy.sparse import load_npz
+        adata.uns["velocity_graph"] = load_npz(
+            '{}_vgraph.npz'.format(cache_prefix)
+        )
+        adata.uns["velocity_graph_neg"] = load_npz(
+            '{}_vgraph_neg.npz'.format(cache_prefix)
+        )
+        adata.obs["velocity_self_transition"] = np.load(
+            '{}_vself_transition.npy'.format(cache_prefix)
+        )
+        adata.layers["velocity"] = np.zeros(adata.X.shape)
+    except:
+        velocity_graph(adata, args, vocabulary, model)
+        from scipy.sparse import save_npz
+        save_npz('{}_vgraph.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph"],)
+        save_npz('{}_vgraph_neg.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph_neg"],)
+        np.save('{}_vself_transition.npy'.format(cache_prefix),
+                adata.obs["velocity_self_transition"],)
+
+    tool_onehot_msa(
+        adata,
+        reference=list(adata.obs['gene_id']).index('hCoV-19/Wuhan/WIV04/2019'),
+        dirname=f'target/evolocity_alignments/{namespace}',
+        n_threads=40,
+    )
+    tool_residue_scores(adata)
+    plot_residue_scores(
+        adata,
+        percentile_keep=0,
+        save=f'_{namespace}_residue_scores.png',
+    )
+    plot_residue_categories(
+        adata,
+        namespace=namespace,
+        reference=list(adata.obs['gene_id']).index('hCoV-19/Wuhan/WIV04/2019'),
+    )
+
+    import scvelo as scv
+    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+                              self_transitions=True,
+                              use_negative_cosines=True,
+                              retain_scale=False,
+                              autoscale=True,)
+    scv.pl.velocity_embedding(
+        adata, basis='umap', color='year', save=f'_{namespace}_year_velo.png',
+    )
+
+    # Grid visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_grid(
+        adata, basis='umap', min_mass=4., smooth=1.2,
+        arrow_size=1., arrow_length=3.,
+        color='year', show=False,
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
+    plt.close()
+
+    # Streamplot visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        color='year', show=False,
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
+    plt.close()
+
+    plt.figure()
+    ax = plot_pseudotime(
+        adata,
+        basis='umap', smooth=1., pf_smooth=1.5, levels=100,
+        arrow_size=1., arrow_length=3., cmap='coolwarm',
+        c='#aaaaaa', show=False,
+        rank_transform=True, use_ends=False,
+    )
+    plt.tight_layout(pad=1.1)
+    plt.savefig(f'figures/scvelo__{namespace}_pseudotime.png', dpi=500)
+    plt.close()
+
+    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
+                   cmap=plt.cm.get_cmap('magma').reversed(),
+                   save=f'_{namespace}_origins.png', dpi=500)
+
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+               save=f'_{namespace}_pseudotime.png')
+
+    nnan_idx = (np.isfinite(adata.obs['timestamp']) &
+                np.isfinite(adata.obs['pseudotime']))
+
+    adata_nnan = adata[nnan_idx]
+
+    plt.figure()
+    sns.regplot(x='timestamp', y='pseudotime', ci=None,
+                data=adata_nnan.obs)
+    plt.ylim([ -0.01, 1.01 ])
+    plt.savefig(f'figures/{namespace}_pseudotime-time.png', dpi=500)
+    plt.tight_layout()
+    plt.close()
+
+    tprint('Pseudotime-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                 adata_nnan.obs['timestamp'],
+                                 nan_policy='omit')))
+    tprint('Pseudotime-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
+                                adata_nnan.obs['timestamp'])))
+
+    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()
@@ -323,3 +512,12 @@ if __name__ == '__main__':
         analyze_reinfection(args, model, seqs, vocabulary, wt_seq, mutants,
                             namespace='sarscov1')
         plot_reinfection(namespace='sarscov1')
+
+    if args.evolocity:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+        namespace = args.namespace
+        if args.model_name == 'tape':
+            namespace += '_tape'
+        spike_evolocity(args, model, seqs, vocabulary, namespace=namespace)
