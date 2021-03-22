@@ -319,6 +319,8 @@ def analyze_comb_fitness(
         for word in vocabulary:
             word_idx = vocabulary[word]
             prob = y_pred[pos + 1, word_idx]
+            if 'esm' in args.model_name:
+                prob = np.exp(prob)
             if prob < prob_cutoff:
                 continue
             word_pos_prob[(word, pos)] = prob
@@ -447,6 +449,8 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
     for (word, pos), prob in word_pos_prob.items():
         mutable = seq_to_mutate[:pos] + word + seq_to_mutate[pos + 1:]
         seq_prob[mutable] = prob
+        if 'esm' in args.model_name:
+            prob = np.exp(prob)
         if prob >= prob_cutoff:
             prob_seqs[mutable] = [ { 'word': word, 'pos': pos } ]
 
