@@ -27,6 +27,8 @@ def parse_args():
                         help='Train model on portion of data')
     parser.add_argument('--test', action='store_true',
                         help='Test model')
+    parser.add_argument('--ancestral', action='store_true',
+                        help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
     args = parser.parse_args()
@@ -180,6 +182,56 @@ def seqs_to_anndata(seqs):
         adata.obs[key] = obs[key]
 
     return adata
+
+def cyc_ancestral(args, model, seqs, vocabulary, namespace='cyc'):
+    path_fname = 'data/cyc/ancestral_cyc_curated_codeml.fa'
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    ######################################
+    ## See how local likelihoods change ##
+    ######################################
+
+    tax_types = {
+        'fungi',
+        'chordata',
+        'mammalia',
+        'viridiplantae',
+    }
+
+    dist_data = []
+    for idx, (name, seq) in enumerate(nodes):
+        for uniprot_seq in seqs:
+            tax_type = Counter([
+                meta['tax_group'] for meta in seqs[uniprot_seq]
+            ]).most_common(1)[0][0]
+            if tax_type not in tax_types:
+                continue
+            if tax_type == 'fungi' and \
+               ('all' not in name and 'fungi' not in name):
+                continue
+            if tax_type == 'chordata' and \
+               ('all' not in name and 'animalia' not in name):
+                continue
+            if tax_type == 'mammalia' and \
+               ('all' not in name and 'animalia' not in name):
+                continue
+            if tax_type == 'viridiplantae' and \
+               ('all' not in name and 'plantae' not in name):
+                continue
+            score = likelihood_muts(seq, uniprot_seq,
+                                    args, vocabulary, model,)
+            homology = fuzz.ratio(seq, uniprot_seq)
+            dist_data.append([ tax_type, name, score, homology ])
+
+    df = pd.DataFrame(dist_data, columns=[
+        'tax_type', 'name', 'score', 'homology'
+    ])
+
+    plot_ancestral(df, meta_key='tax_type', namespace=namespace)
+    plot_ancestral(df, meta_key='name', name_key='tax_type', namespace=namespace)
 
 def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
 
@@ -343,6 +395,10 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
 if __name__ == '__main__':
     args = parse_args()
 
+    namespace = args.namespace
+    if args.model_name == 'tape':
+        namespace += '_tape'
+
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
         'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W',
@@ -355,7 +411,7 @@ if __name__ == '__main__':
     if 'esm' in args.model_name:
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
-                       if '<' not in tok }
+                       if '<' not in tok and tok != '.' and tok != '-' }
         args.checkpoint = args.model_name
     elif args.model_name == 'tape':
         vocabulary = { tok: model.alphabet_[tok]
@@ -369,18 +425,21 @@ if __name__ == '__main__':
     if args.train or args.train_split or args.test:
         train_test(args, model, seqs, vocabulary, split_seqs)
 
+    if args.ancestral:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+
+        tprint('Ancestral analysis...')
+        cyc_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+
     if args.evolocity:
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = args.namespace
-        if args.model_name == 'tape':
-            namespace += '_tape'
-            evo_cyc(args, model, seqs, vocabulary, namespace=namespace)
-            exit()
-
         tprint('All cytochrome c sequencecs:')
-        evo_cyc(args, model, seqs, vocabulary, namespace='cyc')
+        evo_cyc(args, model, seqs, vocabulary, namespace=namespace)
 
-        tprint('Restrict based on similarity to training:')
-        evo_cyc(args, model, seqs, vocabulary, namespace='cyc_homologous')
+        if args.model_name != 'tape':
+            tprint('Restrict based on similarity to training:')
+            evo_cyc(args, model, seqs, vocabulary, namespace='cyc_homologous')

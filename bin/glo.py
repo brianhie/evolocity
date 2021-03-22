@@ -27,6 +27,8 @@ def parse_args():
                         help='Train model on portion of data')
     parser.add_argument('--test', action='store_true',
                         help='Test model')
+    parser.add_argument('--ancestral', action='store_true',
+                        help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
     args = parser.parse_args()
@@ -203,6 +205,84 @@ def seqs_to_anndata(seqs):
 
     return adata
 
+def globin_ancestral(args, model, seqs, vocabulary, namespace='glo'):
+    path_fname = 'data/glo/ancestral_globins.fa'
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    ######################################
+    ## See how local likelihoods change ##
+    ######################################
+
+    glo_types = {
+        'myoglobin',
+        'hemoglobin_alpha',
+        'hemoglobin_beta'
+    }
+
+    dist_data = []
+    for idx, (name, seq) in enumerate(nodes):
+        for uniprot_seq in seqs:
+            glo_type = Counter([
+                meta['globin_type'] for meta in seqs[uniprot_seq]
+            ]).most_common(1)[0][0]
+            if glo_type not in glo_types:
+                continue
+            if 'myo' not in name and glo_type == 'myoglobin':
+                continue
+            if name == 'ancestral_beta_hemoglobin' and 'alpha' in glo_type:
+                continue
+            if name == 'ancestral_alpha_hemoglobin' and 'beta' in glo_type:
+                continue
+            score = likelihood_muts(seq, uniprot_seq,
+                                    args, vocabulary, model,)
+            homology = fuzz.ratio(seq, uniprot_seq)
+            dist_data.append([ glo_type, name, score, homology ])
+
+    df = pd.DataFrame(dist_data, columns=[
+        'glo_type', 'name', 'score', 'homology'
+    ])
+
+    plot_ancestral(df, meta_key='glo_type', namespace=namespace)
+    plot_ancestral(df, meta_key='name', name_key='glo_type', namespace=namespace)
+
+def globin_paths(path_fname, args, model, seqs, vocabulary, namespace='glo'):
+    tprint(f'Path defined in {path_fname}:')
+
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    ######################################
+    ## See how local likelihoods change ##
+    ######################################
+
+    data, dist_data = [], []
+    for idx, (name, seq) in enumerate(nodes):
+        if idx == 0:
+            continue
+        seq_prev = nodes[idx - 1][1]
+        score_full = likelihood_full(seq_prev, seq,
+                                     args, vocabulary, model,)
+        score_muts = likelihood_muts(seq_prev, seq,
+                                     args, vocabulary, model,)
+        score_self = likelihood_self(seq_prev, seq,
+                                     args, vocabulary, model,)
+        data.append([ name, seq,
+                      score_full, score_muts, score_self ])
+        tprint('{}: {}, {}, {}'.format(
+            name, score_full, score_muts, score_self
+        ))
+
+    df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
+                                      'self_score' ])
+    tprint('Sum of full scores: {}'.format(sum(df.full)))
+    tprint('Sum of local scores: {}'.format(sum(df.muts)))
+    tprint('Sum of self scores: {}'.format(sum(df.self_score)))
+
 def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
 
     #########################
@@ -258,40 +338,57 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    if namespace == 'glo':
-        alpha_idx = [
-            cluster in { '3', '4', '6', '9', '11', '13', '14' }
-            for cluster in adata.obs['louvain']
-        ]
-        adata_alpha = adata[alpha_idx]
-        tool_onehot_msa(
-            adata_alpha,
-            reference=list(adata.obs['gene_id']).index(
-                'hba_human_hemoglobin_subunit_alpha'
-            ),
-            dirname='target/evolocity_alignments/glo',
-            n_threads=40,
-        )
-        tool_residue_scores(adata_alpha)
-        plot_residue_scores(adata_alpha, percentile_keep=0,
-                            save='_glo-alpha_residue_scores.png')
-
-        beta_idx = [
-            cluster in { '0', '2', '5', '7', '15' }
-            for cluster in adata.obs['louvain']
-        ]
-        adata_beta = adata[beta_idx]
-        tool_onehot_msa(
-            adata_beta,
-            reference=list(adata.obs['gene_id']).index(
-                'hbb_human_hemoglobin_subunit_beta'
-            ),
-            dirname='target/evolocity_alignments/glo',
-            n_threads=40,
-        )
-        tool_residue_scores(adata_beta)
-        plot_residue_scores(adata_beta, percentile_keep=0,
-                            save='_glo-beta_residue_scores.png')
+    #tool_onehot_msa(
+    #    adata,
+    #    dirname=f'target/evolocity_alignments/{namespace}',
+    #    n_threads=40,
+    #)
+    #tool_residue_scores(adata)
+    #plot_residue_categories(
+    #    adata,
+    #    namespace=namespace,
+    #)
+    #
+    #if namespace == 'glo':
+    #    alpha_idx = [
+    #        cluster in { '3', '4', '6', '9', '11', '13', '14' }
+    #        for cluster in adata.obs['louvain']
+    #    ]
+    #    adata_alpha = adata[alpha_idx]
+    #    tool_onehot_msa(
+    #        adata_alpha,
+    #        reference=list(adata.obs['gene_id']).index(
+    #            'hba_human_hemoglobin_subunit_alpha'
+    #        ),
+    #        dirname='target/evolocity_alignments/glo',
+    #        n_threads=40,
+    #    )
+    #    tool_residue_scores(adata_alpha)
+    #    plot_residue_scores(
+    #        adata_alpha,
+    #        percentile_keep=0,
+    #        save='_glo-alpha_residue_scores.png'
+    #    )
+    #
+    #    beta_idx = [
+    #        cluster in { '0', '2', '5', '7', '15' }
+    #        for cluster in adata.obs['louvain']
+    #    ]
+    #    adata_beta = adata[beta_idx]
+    #    tool_onehot_msa(
+    #        adata_beta,
+    #        reference=list(adata.obs['gene_id']).index(
+    #            'hbb_human_hemoglobin_subunit_beta'
+    #        ),
+    #        dirname='target/evolocity_alignments/glo',
+    #        n_threads=40,
+    #    )
+    #    tool_residue_scores(adata_beta)
+    #    plot_residue_scores(
+    #        adata_beta,
+    #        percentile_keep=0,
+    #        save='_glo-beta_residue_scores.png'
+    #    )
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -388,6 +485,10 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
 if __name__ == '__main__':
     args = parse_args()
 
+    namespace = args.namespace
+    if args.model_name == 'tape':
+        namespace += '_tape'
+
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
         'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W',
@@ -400,7 +501,7 @@ if __name__ == '__main__':
     if 'esm' in args.model_name:
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
-                       if '<' not in tok }
+                       if '<' not in tok and tok != '.' and tok != '-' }
         args.checkpoint = args.model_name
     elif args.model_name == 'tape':
         vocabulary = { tok: model.alphabet_[tok]
@@ -414,18 +515,21 @@ if __name__ == '__main__':
     if args.train or args.train_split or args.test:
         train_test(args, model, seqs, vocabulary, split_seqs)
 
+    if args.ancestral:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+
+        tprint('Ancestral analysis...')
+        globin_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+
     if args.evolocity:
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = args.namespace
-        if args.model_name == 'tape':
-            namespace += '_tape'
-            evo_globin(args, model, seqs, vocabulary, namespace=namespace)
-            exit()
 
         tprint('All globin sequences:')
-        evo_globin(args, model, seqs, vocabulary, namespace='glo')
+        evo_globin(args, model, seqs, vocabulary, namespace=namespace)
 
         if args.model_name != 'tape':
             tprint('Restrict based on similarity to training:')

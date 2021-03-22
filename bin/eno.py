@@ -27,6 +27,8 @@ def parse_args():
                         help='Train model on portion of data')
     parser.add_argument('--test', action='store_true',
                         help='Test model')
+    parser.add_argument('--ancestral', action='store_true',
+                        help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
     args = parser.parse_args()
@@ -203,6 +205,43 @@ def seqs_to_anndata(seqs):
 
     return adata
 
+def enolase_ancestral(args, model, seqs, vocabulary, namespace='eno'):
+    path_fname = 'data/eno/ancestral_eno_codeml.fa'
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    ######################################
+    ## See how local likelihoods change ##
+    ######################################
+
+    tax_types = {
+        'archaea',
+        'bacteria',
+        'eukaryota',
+    }
+
+    dist_data = []
+    for idx, (name, seq) in enumerate(nodes):
+        for uniprot_seq in seqs:
+            tax_type = Counter([
+                meta['tax_kingdom'] for meta in seqs[uniprot_seq]
+            ]).most_common(1)[0][0]
+            if tax_type not in tax_types:
+                continue
+            score = likelihood_muts(seq, uniprot_seq,
+                                    args, vocabulary, model,)
+            homology = fuzz.ratio(seq, uniprot_seq)
+            dist_data.append([ tax_type, name, score, homology ])
+
+    df = pd.DataFrame(dist_data, columns=[
+        'tax_type', 'name', 'score', 'homology'
+    ])
+
+    plot_ancestral(df, meta_key='tax_type', namespace=namespace)
+    plot_ancestral(df, meta_key='name', name_key='tax_type', namespace=namespace)
+
 def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
 
     #########################
@@ -261,14 +300,14 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    tool_onehot_msa(
-        adata,
-        reference=list(adata.obs['gene_id']).index('ENOA_HUMAN'),
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    tool_residue_scores(adata)
-    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
+    #tool_onehot_msa(
+    #    adata,
+    #    reference=list(adata.obs['gene_id']).index('ENOA_HUMAN'),
+    #    dirname=f'target/evolocity_alignments/{namespace}',
+    #    n_threads=40,
+    #)
+    #tool_residue_scores(adata)
+    #plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -347,6 +386,10 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
 if __name__ == '__main__':
     args = parse_args()
 
+    namespace = args.namespace
+    if args.model_name == 'tape':
+        namespace += '_tape'
+
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
         'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W',
@@ -359,7 +402,7 @@ if __name__ == '__main__':
     if 'esm' in args.model_name:
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
-                       if '<' not in tok }
+                       if '<' not in tok and tok != '.' and tok != '-' }
         args.checkpoint = args.model_name
     elif args.model_name == 'tape':
         vocabulary = { tok: model.alphabet_[tok]
@@ -373,19 +416,22 @@ if __name__ == '__main__':
     if args.train or args.train_split or args.test:
         train_test(args, model, seqs, vocabulary, split_seqs)
 
+    if args.ancestral:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+
+        tprint('Ancestral analysis...')
+        enolase_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+
     if args.evolocity:
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
 
-        namespace = args.namespace
-        if args.model_name == 'tape':
-            namespace += '_tape'
-            evo_enolase(args, model, seqs, vocabulary, namespace=namespace)
-            exit()
-
         tprint('All enolase sequences:')
-        evo_enolase(args, model, seqs, vocabulary, namespace='eno')
+        evo_enolase(args, model, seqs, vocabulary, namespace=namespace)
 
-        tprint('Restrict based on similarity to training')
-        evo_enolase(args, model, seqs, vocabulary, namespace='eno_homologous')
+        if args.model_name != 'tape':
+            tprint('Restrict based on similarity to training')
+            evo_enolase(args, model, seqs, vocabulary, namespace='eno_homologous')

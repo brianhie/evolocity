@@ -303,7 +303,7 @@ def predict_sequence_prob(args, seq_of_interest, vocabulary, model,
 
 def analyze_comb_fitness(
         args, model, vocabulary, strain, wt_seq, seqs_fitness,
-        comb_batch=None, prob_cutoff=0., beta=1., verbose=True,
+        comb_batch=None, beta=1., verbose=True,
 ):
     from copy import deepcopy
     seqs_fitness = { seq: seqs_fitness[(seq, strain_i)]
@@ -321,8 +321,6 @@ def analyze_comb_fitness(
             prob = y_pred[pos + 1, word_idx]
             if 'esm' in args.model_name:
                 prob = np.exp(prob)
-            if prob < prob_cutoff:
-                continue
             word_pos_prob[(word, pos)] = prob
 
     base_embedding = embed_seqs(
@@ -417,7 +415,7 @@ def analyze_comb_fitness(
     plt.close()
 
 def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
-                      min_pos=None, max_pos=None, prob_cutoff=0., beta=1.,
+                      min_pos=None, max_pos=None, beta=1.,
                       comb_batch=None, plot_acquisition=True,
                       plot_namespace=None, verbose=True):
     if plot_acquisition:
@@ -442,6 +440,8 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
                 continue
             word_idx = vocabulary[word]
             prob = y_pred[i + 1, word_idx]
+            if 'esm' in args.model_name:
+                prob = np.exp(prob)
             word_pos_prob[(word, i)] = prob
 
     prob_seqs = { seq_to_mutate: [ { 'word': None, 'pos': None } ] }
@@ -451,8 +451,7 @@ def analyze_semantics(args, model, vocabulary, seq_to_mutate, escape_seqs,
         seq_prob[mutable] = prob
         if 'esm' in args.model_name:
             prob = np.exp(prob)
-        if prob >= prob_cutoff:
-            prob_seqs[mutable] = [ { 'word': word, 'pos': pos } ]
+        prob_seqs[mutable] = [ { 'word': word, 'pos': pos } ]
 
     seqs = np.array([ str(seq) for seq in sorted(seq_prob.keys()) ])
 

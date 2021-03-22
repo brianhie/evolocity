@@ -1193,12 +1193,53 @@ def training_distances(
 
     # Compute distance to closest training sequence.
 
-    from fuzzywuzzy import process
-
     for seq in seqs:
-        ratio = process.extractOne(str(seq), training_seqs)[1]
+        ratio = fuzzyproc.extractOne(str(seq), training_seqs)[1]
         for meta in seqs[seq]:
             meta[key] = float(ratio)
 
     return seqs
+
+def plot_ancestral(
+        df,
+        meta_key,
+        name_key='name',
+        score_key='score',
+        homology_key='homology',
+        namespace='ancestral',
+):
+    if meta_key not in df:
+        raise ValueError('Metadata key not found.')
+    if name_key not in df:
+        raise ValueError('Ancestral names key not found.')
+    if score_key not in df:
+        raise ValueError('Likelihood scores key not found.')
+
+    for name in set(df[name_key]):
+        df_name = df[df[name_key] == name]
+
+        plt.figure()
+        sns.violinplot(
+            data=df_name, x=meta_key, y=score_key,
+        )
+        plt.axhline(y=0, c='#CCCCCC', linestyle='dashed')
+        name_sanitized = name.replace('/', '-')
+        plt.savefig(f'figures/{namespace}_ancestral_{name_sanitized}.png',
+                    dpi=500)
+        plt.close()
+
+        if homology_key in df_name:
+            r, p = ss.spearmanr(df_name[score_key].values,
+                                df_name[homology_key].values,
+                                nan_policy='omit')
+            tprint('{} corr with ancestral: Spearman r = {}, P = {}'.format(
+                name, r, p
+            ))
+
+        for meta in set(df_name[meta_key]):
+            score_dist = df_name[df_name[meta_key] == meta].score.values
+            tprint('{} and {}: {}% percentile'.format(
+                name, meta,
+                ss.percentileofscore(score_dist, 0)
+            ))
 

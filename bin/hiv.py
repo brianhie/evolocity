@@ -443,7 +443,7 @@ if __name__ == '__main__':
     if 'esm' in args.model_name:
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
-                       if '<' not in tok }
+                       if '<' not in tok and tok != '.' and tok != '-' }
         args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)
@@ -479,7 +479,7 @@ if __name__ == '__main__':
         analyze_semantics(
             args, model, vocabulary, seq_to_mutate, escape_seqs,
             min_pos=min_pos, max_pos=max_pos,
-            prob_cutoff=0., beta=1., plot_acquisition=True,
+            beta=1., plot_acquisition=True,
         )
 
     if args.combfit:
@@ -490,7 +490,7 @@ if __name__ == '__main__':
         for strain in strains:
             analyze_comb_fitness(args, model, vocabulary,
                                  strain, wt_seqs[strain], seqs_fitness,
-                                 prob_cutoff=0., beta=1.)
+                                 beta=1.)
 
     if args.evolocity:
         if args.checkpoint is None and not args.train:
