@@ -142,7 +142,7 @@ def interpret_clusters(adata):
     for cluster in clusters:
         tprint('Cluster {}'.format(cluster))
         adata_cluster = adata[adata.obs['louvain'] == cluster]
-        for var in [ 'host', 'continent', ]:
+        for var in [ 'host', 'continent', 'gene_id' ]:
             tprint('\t{}:'.format(var))
             counts = Counter(adata_cluster.obs[var])
             for val, count in counts.most_common():
@@ -216,6 +216,16 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         adata = seqs_to_anndata(seqs)
         adata = adata[adata.obs['seqlen'] >= 1263]
         adata = adata[adata.obs['seqlen'] <= 1283]
+        adata = adata[[
+            seq.endswith('HYT') for seq in adata.obs['seq']
+        ]]
+        adata = adata[[
+            seq.startswith('M') for seq in adata.obs['seq']
+        ]]
+        adata = adata[
+            adata.obs['timestamp'] >
+            time.mktime(dparse('2019-11-30').timetuple())
+        ]
         adata.write(adata_cache)
 
     sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
@@ -223,8 +233,9 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.5)
+    sc.tl.umap(adata, min_dist=0.4)
     categories = [
+        'louvain',
         'seqlen',
         'timestamp',
         'continent',
@@ -233,13 +244,11 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     ]
     plot_umap(adata, categories, namespace=namespace)
 
-    exit()
-
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn50'
+    cache_prefix = f'target/ev_cache/{namespace}_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -279,7 +288,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     )
     plot_residue_categories(
         adata,
-        positions=[ 483, 500, 613 ],
+        positions=[ 17, 416, 483, 500, 613, 680, ],
         namespace=namespace,
         reference=list(adata.obs['seq']).index(wt_seq),
     )
@@ -291,7 +300,8 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
                               retain_scale=False,
                               autoscale=True,)
     scv.pl.velocity_embedding(
-        adata, basis='umap', color='year', save=f'_{namespace}_year_velo.png',
+        adata, basis='umap', color='timestamp',
+        save=f'_{namespace}_time_velo.png',
     )
 
     # Grid visualization.
@@ -299,24 +309,24 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     ax = scv.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=4., smooth=1.2,
         arrow_size=1., arrow_length=3.,
-        color='year', show=False,
+        color='timestamp', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_time_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=4., smooth=1., density=1.2,
-        color='year', show=False,
+        color='timestamp', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
+    plt.savefig(f'figures/scvelo__{namespace}_time_velostream.png', dpi=500)
     plt.close()
 
     plt.figure()
