@@ -116,7 +116,7 @@ def split_seqs(seqs, split_method='random'):
 
 def setup(args):
     fnames = [
-        'data/cov/spikeprot0129.fasta',
+        'data/cov/spikeprot0322.fasta',
     ]
 
     import pickle
@@ -151,33 +151,41 @@ def interpret_clusters(adata):
 
 def plot_umap(adata, categories, namespace='cov'):
     for category in categories:
-        sc.pl.umap(adata, color=category,
+        sc.pl.umap(adata, color=category, edges=True,
                    save='_{}_{}.png'.format(namespace, category))
 
-def analyze_embedding(args, model, seqs, vocabulary):
-    seqs = embed_seqs(args, model, seqs, vocabulary, use_cache=True)
-
+def seqs_to_anndata(seqs):
     X, obs = [], {}
     obs['n_seq'] = []
     obs['seq'] = []
+    obs['seqlen'] = []
     for seq in seqs:
         meta = seqs[seq][0]
-        X.append(meta['embedding'].mean(0))
+        X.append(meta['embedding'])
+        earliest_idx = np.argmin([
+            meta['timestamp'] for meta in seqs[seq]
+        ])
         for key in meta:
             if key == 'embedding':
                 continue
             if key not in obs:
                 obs[key] = []
-            obs[key].append(Counter([
+            obs[key].append([
                 meta[key] for meta in seqs[seq]
-            ]).most_common(1)[0][0])
+            ][earliest_idx])
         obs['n_seq'].append(len(seqs[seq]))
         obs['seq'].append(str(seq))
+        obs['seqlen'].append(len(seq))
     X = np.array(X)
 
     adata = AnnData(X)
     for key in obs:
         adata.obs[key] = obs[key]
+
+    return adata
+
+def analyze_embedding(args, model, seqs, vocabulary):
+    seqs = embed_seqs(args, model, seqs, vocabulary, use_cache=True)
 
     sc.pp.neighbors(adata, n_neighbors=20, use_rep='X')
     sc.tl.louvain(adata, resolution=1.)
@@ -193,31 +201,6 @@ def analyze_embedding(args, model, seqs, vocabulary):
     plot_umap(adata_cov2, [ 'host', 'group', 'country' ],
               namespace='cov7')
 
-def seqs_to_anndata(seqs):
-    X, obs = [], {}
-    obs['n_seq'] = []
-    obs['seq'] = []
-    for seq in seqs:
-        meta = seqs[seq][0]
-        X.append(meta['embedding'])
-        for key in meta:
-            if key == 'embedding':
-                continue
-            if key not in obs:
-                obs[key] = []
-            obs[key].append(Counter([
-                meta[key] for meta in seqs[seq]
-            ]).most_common(1)[0][0])
-        obs['n_seq'].append(len(seqs[seq]))
-        obs['seq'].append(str(seq))
-    X = np.array(X)
-
-    adata = AnnData(X)
-    for key in obs:
-        adata.obs[key] = obs[key]
-
-    return adata
-
 def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     ###############################
     ## Visualize Spike landscape ##
@@ -231,25 +214,32 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         seqs = populate_embedding(args, model, seqs, vocabulary,
                                   use_cache=True)
         adata = seqs_to_anndata(seqs)
+        adata = adata[adata.obs['seqlen'] >= 1263]
+        adata = adata[adata.obs['seqlen'] <= 1283]
         adata.write(adata_cache)
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
+    sc.tl.umap(adata, min_dist=1.5)
     categories = [
+        'seqlen',
         'timestamp',
         'continent',
+        'n_seq',
+        'host',
     ]
     plot_umap(adata, categories, namespace=namespace)
+
+    exit()
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn40'
+    cache_prefix = f'target/ev_cache/{namespace}_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -272,9 +262,12 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
+    wt_fname = 'data/cov/cov2_spike_wt.fasta'
+    wt_seq = str(SeqIO.read(wt_fname, 'fasta').seq)
+
     tool_onehot_msa(
         adata,
-        reference=list(adata.obs['gene_id']).index('hCoV-19/Wuhan/WIV04/2019'),
+        reference=list(adata.obs['seq']).index(wt_seq),
         dirname=f'target/evolocity_alignments/{namespace}',
         n_threads=40,
     )
@@ -286,8 +279,9 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     )
     plot_residue_categories(
         adata,
+        positions=[ 483, 500, 613 ],
         namespace=namespace,
-        reference=list(adata.obs['gene_id']).index('hCoV-19/Wuhan/WIV04/2019'),
+        reference=list(adata.obs['seq']).index(wt_seq),
     )
 
     import scvelo as scv

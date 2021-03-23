@@ -1083,6 +1083,7 @@ def plot_residue_scores(
 
 def plot_residue_categories(
         adata,
+        positions=None,
         namespace='rescat',
         reference=None
 ):
@@ -1097,22 +1098,25 @@ def plot_residue_categories(
             pos2msa[ref_idx] = idx
             ref_idx += 1
 
-    scores = adata.uns['residue_scores']
-    pos_seen = set()
-    while len(pos_seen) < 5:
-        min_idx = np.unravel_index(np.argmin(scores), scores.shape)
-        scores[min_idx] = float('inf')
-        aa = adata.uns['onehot_vocabulary'][min_idx[1]]
-        pos = min_idx[0]
-        if pos in pos_seen:
-            continue
-        pos_seen.add(pos)
-        tprint('Lowest score {}: {}{}'.format(len(pos_seen), aa, pos + 1))
+    if positions is None:
+        scores = adata.uns['residue_scores']
+        pos_seen = set()
+        while len(pos_seen) < 5:
+            min_idx = np.unravel_index(np.argmin(scores), scores.shape)
+            scores[min_idx] = float('inf')
+            aa = adata.uns['onehot_vocabulary'][min_idx[1]]
+            pos = min_idx[0]
+            if pos in pos_seen:
+                continue
+            pos_seen.add(pos)
+            tprint('Lowest score {}: {}{}'.format(len(pos_seen), aa, pos + 1))
+        positions = sorted(pos_seen)
+
+    for pos in positions:
         adata.obs[f'pos{pos}'] = [
             seq[pos] if reference is None else seq[pos2msa[pos]]
             for seq in adata.obs['seqs_msa']
         ]
-
         sc.pl.umap(adata, color=f'pos{pos}', save=f'_{namespace}_pos{pos}.png',
                    edges=True,)
 
@@ -1242,4 +1246,3 @@ def plot_ancestral(
                 name, meta,
                 ss.percentileofscore(score_dist, 0)
             ))
-
