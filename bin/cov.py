@@ -307,7 +307,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     # Grid visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=4., smooth=1.2,
+        adata, basis='umap', min_mass=1., smooth=1.2,
         arrow_size=1., arrow_length=3.,
         color='timestamp', show=False,
     )
@@ -320,7 +320,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        adata, basis='umap', min_mass=1., smooth=1., density=1.2,
         color='timestamp', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
