@@ -414,16 +414,16 @@ if __name__ == '__main__':
                              'from checkpoint.')
 
         tprint('Ancestral analysis...')
-        pgk_ancestral(args, model, seqs, vocabulary, namespace=namespace)
+        serpin_ancestral(args, model, seqs, vocabulary, namespace=namespace)
 
     if args.evolocity:
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
 
-        tprint('All PGK sequences:')
-        evo_pgk(args, model, seqs, vocabulary, namespace=namespace)
+        tprint('All serpin sequences:')
+        evo_serpins(args, model, seqs, vocabulary, namespace=namespace)
 
         if args.model_name != 'tape':
             tprint('Restrict based on similarity to training')
-            evo_pgk(args, model, seqs, vocabulary, namespace='pgk_homologous')
+            evo_serpins(args, model, seqs, vocabulary, namespace='ser_homologous')
