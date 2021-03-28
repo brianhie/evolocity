@@ -166,9 +166,9 @@ def interpret_clusters(adata):
            .format(np.mean(largest_pct_subtype)))
 
 def plot_umap(adata):
-    sc.tl.umap(adata, min_dist=1.)
     sc.pl.umap(adata, color='louvain', save='_hiv_louvain.png')
     sc.pl.umap(adata, color='subtype', save='_hiv_subtype.png')
+    sc.pl.umap(adata, color='year', save='_hiv_year.png')
 
 def seqs_to_anndata(seqs):
     keys = set([ key for seq in seqs for meta in seqs[seq] for key in meta ])
@@ -428,6 +428,129 @@ def evo_keele2008(args, model, seqs, vocabulary):
     plt.close()
 
 
+def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
+    #############################
+    ## Visualize Env landscape ##
+    #############################
+
+    adata_cache = 'target/ev_cache/env_adata.h5ad'
+    try:
+        import anndata
+        adata = anndata.read_h5ad(adata_cache)
+    except:
+        seqs = populate_embedding(args, model, seqs, vocabulary,
+                                  namespace='hiv', use_cache=True)
+        adata = seqs_to_anndata(seqs)
+        adata.write(adata_cache)
+
+    keep_subtypes = {
+        'AE', 'B', 'C', 'BC', 'D',
+    }
+    adata.obs['simple_subtype'] = [
+        subtype if subtype in keep_subtypes else 'A'
+        for subtype in adata.obs['subtype']
+    ]
+
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+
+    sc.tl.louvain(adata, resolution=1.)
+
+    sc.set_figure_params(dpi_save=500)
+    sc.tl.umap(adata, min_dist=1.)
+    plot_umap(adata)
+
+    cache_prefix = 'target/ev_cache/env_knn40'
+    try:
+        from scipy.sparse import load_npz
+        adata.uns["velocity_graph"] = load_npz(
+            '{}_vgraph.npz'.format(cache_prefix)
+        )
+        adata.uns["velocity_graph_neg"] = load_npz(
+            '{}_vgraph_neg.npz'.format(cache_prefix)
+        )
+        adata.obs["velocity_self_transition"] = np.load(
+            '{}_vself_transition.npy'.format(cache_prefix)
+        )
+        adata.layers["velocity"] = np.zeros(adata.X.shape)
+    except:
+        velocity_graph(adata, args, vocabulary, model)
+        from scipy.sparse import save_npz
+        save_npz('{}_vgraph.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph"],)
+        save_npz('{}_vgraph_neg.npz'.format(cache_prefix),
+                 adata.uns["velocity_graph_neg"],)
+        np.save('{}_vself_transition.npy'.format(cache_prefix),
+                adata.obs["velocity_self_transition"],)
+
+    import scvelo as scv
+    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+                              self_transitions=True,
+                              use_negative_cosines=True,
+                              retain_scale=False,
+                              autoscale=True,)
+    scv.pl.velocity_embedding(
+        adata, basis='umap', color='year',
+        save=f'_{namespace}_year_velo.png',
+    )
+
+    # Grid visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_grid(
+        adata, basis='umap', min_mass=1., smooth=1.,
+        arrow_size=1., arrow_length=3.,
+        color='year', show=False,
+    )
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
+    plt.close()
+
+    # Streamplot visualization.
+    plt.figure()
+    ax = scv.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
+        color='year', show=False,
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
+    plt.close()
+    ax = scv.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=3.7, smooth=1., linewidth=0.7,
+        color='simple_subtype', show=False,
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/scvelo__{namespace}_subtype_velostream.png', dpi=500)
+    plt.close()
+
+    plot_pseudotime(
+        adata, basis='umap', min_mass=1., smooth=0.5, levels=100,
+        rank_transform=True,
+        arrow_size=1., arrow_length=3., cmap='coolwarm',
+        c='#aaaaaa', show=False,
+        save=f'_{namespace}_pseudotime.png', dpi=500
+    )
+
+    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
+                   cmap=plt.cm.get_cmap('magma').reversed(),
+                   save=f'_{namespace}_origins.png', dpi=500)
+    scv.pl.scatter(adata, color='pseudotime',
+                   cmap=plt.cm.get_cmap('magma').reversed(),
+                   save=f'_{namespace}_pseudotime.png', dpi=500)
+
+    nnan_idx = (np.isfinite(adata.obs['year']) &
+                np.isfinite(adata.obs['pseudotime']))
+    tprint('Pseudotime-time Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
+                                 adata.obs['year'][nnan_idx],
+                                 nan_policy='omit')))
+    tprint('Pseudotime-time Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
+                                adata.obs['year'][nnan_idx])))
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -505,4 +628,5 @@ if __name__ == '__main__':
             raise ValueError('Embeddings not available for models: {}'
                              .format(', '.join(no_embed)))
 
-        evo_keele2008(args, model, seqs, vocabulary)
+        #evo_keele2008(args, model, seqs, vocabulary)
+        evo_env(args, model, seqs, vocabulary)

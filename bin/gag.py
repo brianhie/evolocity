@@ -134,7 +134,6 @@ def interpret_clusters(adata):
            .format(np.mean(largest_pct_subtype)))
 
 def plot_umap(adata):
-    sc.tl.umap(adata, min_dist=1.)
     sc.pl.umap(adata, color='louvain', save='_gag_louvain.png')
     sc.pl.umap(adata, color='subtype', save='_gag_subtype.png')
     sc.pl.umap(adata, color='year', save='_gag_year.png')
@@ -181,15 +180,23 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         adata = seqs_to_anndata(seqs)
         adata.write(adata_cache)
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+    keep_subtypes = {
+        'AE', 'B', 'C', 'BC', 'D',
+    }
+    adata.obs['simple_subtype'] = [
+        subtype if subtype in keep_subtypes else 'A'
+        for subtype in adata.obs['subtype']
+    ]
+
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
+    sc.tl.umap(adata, min_dist=0.7)
     plot_umap(adata)
 
-    cache_prefix = 'target/ev_cache/gag_knn30'
+    cache_prefix = 'target/ev_cache/gag_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -245,6 +252,16 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
+    plt.close()
+    plt.figure()
+    ax = scv.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=3.7, smooth=1., linewidth=0.7,
+        color='simple_subtype', show=False,
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/scvelo__{namespace}_subtype_velostream.png', dpi=500)
     plt.close()
 
     plot_pseudotime(
