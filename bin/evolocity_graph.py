@@ -1084,7 +1084,7 @@ def plot_residue_scores(
 def plot_residue_categories(
         adata,
         positions=None,
-        namespace='rescat',
+        namespace='residue_categories',
         reference=None
 ):
     if reference is not None:
@@ -1167,6 +1167,7 @@ def training_distances(
         dataset='uniref',
         ds_fname='data/uniref/uniref50_2018_03.fasta',
         map_fname='data/uniref/uniref50_2018_03_mapping.txt',
+        exact_search=True,
 ):
     dirname = 'target/training_seqs'
     if namespace:
@@ -1182,7 +1183,7 @@ def training_distances(
     else:
         dataset_seqs, cluster_map = load_uniref(ds_fname, map_fname)
 
-        training_seqs = sorted(set([
+        training_seqs = (set([
             seq for seq in seqs if str(seq) in dataset_seqs
         ]) | set([
             cluster_map[cluster_map[meta[accession_key]]]
@@ -1192,15 +1193,40 @@ def training_distances(
 
         if namespace:
             with open(fname, 'w') as of:
-                for seq in training_seqs:
+                for seq in sorted(training_seqs):
                     of.write(str(seq) + '\n')
 
     # Compute distance to closest training sequence.
 
-    for seq in seqs:
-        ratio = fuzzyproc.extractOne(str(seq), training_seqs)[1]
-        for meta in seqs[seq]:
-            meta[key] = float(ratio)
+    if exact_search:
+        for seq in seqs:
+            ratio = fuzzyproc.extractOne(str(seq), training_seqs)[1]
+            for meta in seqs[seq]:
+                meta[key] = float(ratio)
+
+    else:
+        from datasketch import MinHash, MinHashLSHForest
+        from nltk import ngrams
+
+        # Index training sequences.
+        lsh = MinHashLSHForest(num_perm=128)
+        for seq in training_seqs:
+            seq = str(seq)
+            minhash = MinHash(num_perm=128)
+            for d in ngrams(seq, 5):
+                minhash.update(''.join(d).encode('utf-8'))
+            lsh.insert(seq, minhash)
+        lsh.index()
+
+        # Query data structure for (approximately) closest seqs.
+        for seq in seqs:
+            minhash = MinHash(num_perm=128)
+            for d in ngrams(seq, 5):
+                minhash.update(''.join(d).encode('utf-8'))
+            result = lsh.query(minhash, 1)[0]
+            ratio = fuzz.ratio(str(seq), result)[1]
+            for meta in seqs[seq]:
+                meta[key] = float(ratio)
 
     return seqs
 

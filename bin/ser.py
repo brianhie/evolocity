@@ -256,7 +256,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
 
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -268,7 +268,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn50'
+    cache_prefix = f'target/ev_cache/{namespace}_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(

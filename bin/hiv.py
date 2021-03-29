@@ -451,15 +451,15 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
         for subtype in adata.obs['subtype']
     ]
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
+    sc.tl.umap(adata, min_dist=0.5)
     plot_umap(adata)
 
-    cache_prefix = 'target/ev_cache/env_knn40'
+    cache_prefix = 'target/ev_cache/env_knn30'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -508,7 +508,7 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
+        adata, basis='umap', min_mass=3.2, smooth=1., linewidth=0.7,
         color='year', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
@@ -517,7 +517,7 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
     plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
     plt.close()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3.7, smooth=1., linewidth=0.7,
+        adata, basis='umap', min_mass=3.2, smooth=1., linewidth=0.7,
         color='simple_subtype', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
