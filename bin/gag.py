@@ -248,7 +248,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
         color='year', show=False,
     )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)

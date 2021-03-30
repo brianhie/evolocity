@@ -167,13 +167,13 @@ def setup(args):
     return model, seqs
 
 def plot_umap(adata, namespace='ser'):
-    sc.pl.umap(adata, color='tax_group', edges=True,
+    sc.pl.umap(adata, color='tax_group', edges=True, edges_color='#cccccc',
                save='_{}_taxonomy.png'.format(namespace))
-    sc.pl.umap(adata, color='louvain', edges=True,
+    sc.pl.umap(adata, color='louvain', edges=True, edges_color='#cccccc',
                save='_{}_louvain.png'.format(namespace))
-    sc.pl.umap(adata, color='seq_len', edges=True,
+    sc.pl.umap(adata, color='seq_len', edges=True, edges_color='#cccccc',
                save='_{}_seqlen.png'.format(namespace))
-    sc.pl.umap(adata, color='homology', edges=True,
+    sc.pl.umap(adata, color='homology', edges=True, edges_color='#cccccc',
                save='_{}_homology.png'.format(namespace))
 
 def seqs_to_anndata(seqs):
@@ -256,7 +256,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -268,7 +268,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn30'
+    cache_prefix = f'target/ev_cache/{namespace}_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -282,8 +282,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0,)
+        velocity_graph(adata, args, vocabulary, model)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -292,14 +291,13 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    tool_onehot_msa(
-        adata,
-        reference=list(adata.obs['gene_id']).index('A1AT_HUMAN'),
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    tool_residue_scores(adata)
-    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
+    #tool_onehot_msa(
+    #    adata,
+    #    dirname=f'target/evolocity_alignments/{namespace}',
+    #    n_threads=40,
+    #)
+    #tool_residue_scores(adata)
+    #plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -327,7 +325,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     # Streamplot visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3., smooth=1.2, density=0.7,
+        adata, basis='umap', min_mass=1., smooth=1., density=0.7,
         color='tax_kingdom', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -349,19 +347,14 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
                    save=f'_{namespace}_origins.png', dpi=500)
 
     plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudotime',
-                   order=[
-                       'archaea',
-                       'bacteria',
-                       'eukaryota',
-                   ])
+    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudotime')
     plt.xticks(rotation=60)
     plt.tight_layout()
     plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.png', dpi=500)
     plt.close()
 
-    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
-               save=f'_{namespace}_pseudotime.png')
+    sc.pl.umap(adata, color='pseudotime', edges=True,  edges_color='#cccccc',
+               cmap='magma', save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudotime']))

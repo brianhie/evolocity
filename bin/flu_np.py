@@ -406,8 +406,12 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plot_residue_categories(
         adata,
         namespace=namespace,
+        positions=[
+            42, 104, 238, 373, 422, 423, 455, 480,
+        ],
         reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
     )
+    exit()
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,

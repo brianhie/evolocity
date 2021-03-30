@@ -451,7 +451,7 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
         for subtype in adata.obs['subtype']
     ]
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -459,7 +459,7 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
     sc.tl.umap(adata, min_dist=0.5)
     plot_umap(adata)
 
-    cache_prefix = 'target/ev_cache/env_knn30'
+    cache_prefix = 'target/ev_cache/env_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
