@@ -201,11 +201,11 @@ def interpret_clusters(adata):
            .format(np.mean(largest_pct_subtype)))
 
 def plot_umap(adata, namespace='np'):
+    sc.pl.umap(adata, color='year', save=f'_{namespace}_year.png',
+               edges=True,)
     sc.pl.umap(adata, color='louvain', save=f'_{namespace}_louvain.png',
                edges=True,)
     sc.pl.umap(adata, color='subtype', save=f'_{namespace}_subtype.png',
-               edges=True,)
-    sc.pl.umap(adata, color='year', save=f'_{namespace}_year.png',
                edges=True,)
     sc.pl.umap(adata, color='host', save=f'_{namespace}_host.png',
                edges=True,)
@@ -325,7 +325,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     ## Visualize NP landscape ##
     ############################
 
-    adata_cache = 'target/ev_cache/np_adata.h5ad'
+    adata_cache = f'target/ev_cache/{namespace}_adata.h5ad'
     try:
         import anndata
         adata = anndata.read_h5ad(adata_cache)
@@ -352,17 +352,15 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
         adata = seqs_to_anndata(seqs)
         adata = adata[(adata.obs.host == 'human')]
+
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.3)
+
         adata.write(adata_cache)
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata, namespace=namespace)
-    sc.pl.umap(adata, color='gong2013_step', save=f'_{namespace}_gong2013.png',
-               edges=True,)
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -391,24 +389,23 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    tool_onehot_msa(
-        adata,
-        reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    tool_residue_scores(adata)
-    plot_residue_scores(
-        adata,
-        save=f'_{namespace}_residue_scores.png',
-    )
-    plot_residue_categories(
-        adata,
-        namespace=namespace,
-        n_plot=10,
-        reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
-    )
-    exit()
+    #tool_onehot_msa(
+    #    adata,
+    #    reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
+    #    dirname=f'target/evolocity_alignments/{namespace}',
+    #    n_threads=40,
+    #)
+    #tool_residue_scores(adata)
+    #plot_residue_scores(
+    #    adata,
+    #    save=f'_{namespace}_residue_scores.png',
+    #)
+    #plot_residue_categories(
+    #    adata,
+    #    namespace=namespace,
+    #    n_plot=10,
+    #    reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
+    #)
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
@@ -423,7 +420,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     # Grid visualization.
     plt.figure()
     ax = scv.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=4., smooth=1.2,
+        adata, basis='umap', min_mass=4., smooth=1.,
         arrow_size=1., arrow_length=3.,
         color='year', show=False,
     )
@@ -440,7 +437,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         adata, basis='umap', min_mass=4., smooth=1., density=1.2,
         color='year', show=False,
     )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    #sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     draw_gong_path(ax, adata)
@@ -450,7 +447,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.figure()
     ax = plot_pseudotime(
         adata,
-        basis='umap', smooth=1., pf_smooth=1.5, levels=100,
+        basis='umap', smooth=0.8, pf_smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
         rank_transform=True, use_ends=False,
@@ -511,6 +508,10 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 if __name__ == '__main__':
     args = parse_args()
 
+    namespace = args.namespace
+    if args.model_name == 'tape':
+        namespace += '_tape'
+
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
         'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W',
@@ -554,7 +555,4 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = args.namespace
-        if args.model_name == 'tape':
-            namespace += '_tape'
         epi_gong2013(args, model, seqs, vocabulary, namespace=namespace)

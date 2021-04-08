@@ -278,14 +278,13 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
         adata = adata[(adata.obs['Host Species'] == 'human') &
                       (adata.obs['Subtype'] == 'H1')]
 
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.umap(adata, min_dist=1.3)
+        sc.tl.louvain(adata, resolution=1.)
+
         adata.write(adata_cache)
 
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.3)
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -649,7 +648,7 @@ if __name__ == '__main__':
         if args.model_name == 'tape':
             namespace += '_tape'
         evo_h1(args, model, seqs, vocabulary, namespace=namespace)
-        #exit()
+        exit()
 
         namespace = 'h3'
         if args.model_name == 'tape':

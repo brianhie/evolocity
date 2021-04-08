@@ -13,4 +13,5 @@ class TAPEModel(object):
 
         self.tokenizer_ = TAPETokenizer(vocab='iupac')
         self.alphabet_ = self.tokenizer_.vocab
+        self.alphabet_['J'] = self.alphabet_['<unk>']
         self.unk_idx_ = self.tokenizer_.vocab['<unk>']
