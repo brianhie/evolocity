@@ -400,15 +400,12 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     tool_residue_scores(adata)
     plot_residue_scores(
         adata,
-        percentile_keep=0,
         save=f'_{namespace}_residue_scores.png',
     )
     plot_residue_categories(
         adata,
         namespace=namespace,
-        positions=[
-            42, 104, 238, 373, 422, 423, 455, 480,
-        ],
+        n_plot=10,
         reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
     )
     exit()

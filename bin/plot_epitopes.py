@@ -22,6 +22,7 @@ if __name__ == '__main__':
             if epitope_id in valid_ids:
                 mult = valid_ids[epitope_id]
             else:
+                #mult = 1
                 continue
             try:
                 start = int(fields[5])
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     plt.figure(figsize=(10, 4))
     plt.hist(positions, bins=(seq_end - seq_start)*2)
     plt.xlim([ seq_start, seq_end ])
-    for i in [ 104, 238, 373, 455, 480 ]:
+    for i in [ 21, 104, 135, 238, 370, 373, 449, 455, 480, ]:
         plt.axvline(x=i, c='maroon')
         print('Found {} publications at position {}'.format(
             positions.count(i), i

@@ -134,9 +134,10 @@ def interpret_clusters(adata):
            .format(np.mean(largest_pct_subtype)))
 
 def plot_umap(adata):
-    sc.pl.umap(adata, color='louvain', save='_gag_louvain.png')
     sc.pl.umap(adata, color='subtype', save='_gag_subtype.png')
     sc.pl.umap(adata, color='year', save='_gag_year.png')
+    sc.pl.umap(adata, color='homology', save='_gag_homology.png')
+    sc.pl.umap(adata, color='louvain', save='_gag_louvain.png')
 
 def seqs_to_anndata(seqs):
     keys = set([ key for seq in seqs for meta in seqs[seq] for key in meta ])
@@ -196,7 +197,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     sc.tl.umap(adata, min_dist=0.7)
     plot_umap(adata)
 
-    cache_prefix = 'target/ev_cache/gag_knn40'
+    cache_prefix = f'target/ev_cache/{namespace}_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -289,9 +290,25 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['year'][nnan_idx])))
 
+    if args.model_name != 'tape':
+        nnan_idx = (np.isfinite(adata.obs['homology']) &
+                    np.isfinite(adata.obs['pseudotime']))
+        tprint('Pseudotime-homology Spearman r = {}, P = {}'
+               .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
+                                     adata.obs['homology'][nnan_idx],
+                                     nan_policy='omit')))
+        tprint('Pseudotime-homology Pearson r = {}, P = {}'
+               .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
+                                    adata.obs['homology'][nnan_idx])))
+
+    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()
+
+    namespace = args.namespace
+    if args.model_name == 'tape':
+        namespace += '_tape'
 
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
@@ -325,4 +342,4 @@ if __name__ == '__main__':
             raise ValueError('Embeddings not available for models: {}'
                              .format(', '.join(no_embed)))
 
-        evo_gag(args, model, seqs, vocabulary)
+        evo_gag(args, model, seqs, vocabulary, namespace=namespace)

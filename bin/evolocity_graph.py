@@ -1084,6 +1084,7 @@ def plot_residue_scores(
 def plot_residue_categories(
         adata,
         positions=None,
+        n_plot=5,
         namespace='residue_categories',
         reference=None
 ):
@@ -1101,7 +1102,7 @@ def plot_residue_categories(
     if positions is None:
         scores = adata.uns['residue_scores']
         pos_seen = set()
-        while len(pos_seen) < 5:
+        while len(pos_seen) < n_plot:
             min_idx = np.unravel_index(np.argmin(scores), scores.shape)
             scores[min_idx] = float('inf')
             aa = adata.uns['onehot_vocabulary'][min_idx[1]]
