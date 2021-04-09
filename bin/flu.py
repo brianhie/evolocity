@@ -280,12 +280,12 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
                       (adata.obs['Subtype'] == 'H1')]
 
         sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-        sc.tl.umap(adata, min_dist=1.3)
+        sc.tl.umap(adata, min_dist=1.)
         sc.tl.louvain(adata, resolution=1.)
 
         adata.write(adata_cache)
 
-    sc.set_figure_params(dpi_save=500)
+    evo.set_figure_params(dpi_save=500)
     plot_umap(adata, namespace=namespace)
 
     #####################################

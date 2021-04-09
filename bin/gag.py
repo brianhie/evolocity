@@ -181,6 +181,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
         sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
 
@@ -192,9 +193,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         for subtype in adata.obs['subtype']
     ]
 
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
+    evo.set_figure_params(dpi_save=500)
     plot_umap(adata)
 
     cache_prefix = f'target/ev_cache/{namespace}_knn40'

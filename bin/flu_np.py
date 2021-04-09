@@ -356,11 +356,11 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
         sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=1.61)
+        sc.tl.umap(adata, min_dist=1.)
 
         adata.write(adata_cache)
 
-    evo.set_figure_params(dpi_save=500)
+    evo.set_figure_params(dpi_save=500, figsize=(5, 5))
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -434,7 +434,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     # Streamplot visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1.2, density=1.5,
+        adata, basis='umap', min_mass=3., smooth=1.2, density=1.2,
         color='year', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
