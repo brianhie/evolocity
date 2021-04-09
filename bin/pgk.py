@@ -279,7 +279,7 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        evo.tl.velocity_graph(adata, args, vocabulary, model)
+        evo.tl.velocity_graph(adata, vocabulary, model)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
