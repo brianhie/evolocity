@@ -1,1 +1,1 @@
-from scvelo.plotting import *
+from evolocity.plotting import *

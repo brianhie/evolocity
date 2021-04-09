@@ -2,7 +2,6 @@ from .. import settings
 from .. import logging as logg
 from ..preprocessing.moments import get_connectivities
 from ..preprocessing.neighbors import verify_neighbors
-from .velocity_graph import VelocityGraph
 from .transition_matrix import transition_matrix
 from .utils import scale, groups_to_bool, strings_to_categoricals, get_plasticity_score
 

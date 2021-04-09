@@ -1,7 +1,9 @@
-from scipy.sparse import csr_matrix, issparse
+import errno
 import matplotlib.pyplot as pl
-import pandas as pd
 import numpy as np
+import os
+import pandas as pd
+from scipy.sparse import csr_matrix, issparse
 import warnings
 
 warnings.simplefilter("ignore")
@@ -221,7 +223,7 @@ def randomized_velocity(adata, vkey="velocity", add_key="velocity_random"):
         )
     adata.layers[add_key] = V_rnd
 
-    from .velocity_graph import velocity_graph
+    from .evolocity_tools import velocity_graph
     from .velocity_embedding import velocity_embedding
 
     velocity_graph(adata, vkey=add_key)
@@ -341,7 +343,7 @@ def cutoff_small_velocities(
 
     adata.layers[key_added] = csr_matrix(W).multiply(adata.layers[vkey]).tocsr()
 
-    from .velocity_graph import velocity_graph
+    from .evolocity_tools import velocity_graph
     from .velocity_embedding import velocity_embedding
 
     velocity_graph(adata, vkey=key_added, approx=True)
@@ -506,3 +508,13 @@ def get_plasticity_score(adata, modality="Ms"):
     idx_top_genes = np.argsort(adata.var["gene_count_corr"].values)[::-1][:200]
     Ms = np.array(adata.layers[modality][:, idx_top_genes])
     return scale(np.mean(Ms / np.max(Ms, axis=0), axis=1))
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise

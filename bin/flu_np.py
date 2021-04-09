@@ -1,5 +1,6 @@
 from mutation import *
 from evolocity_graph import *
+import evolocity as evo
 
 np.random.seed(1)
 random.seed(1)
@@ -299,27 +300,27 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     ## See how local likelihoods change ##
     ######################################
 
-    data = []
-    for idx, (name, seq) in enumerate(nodes):
-        if idx > 0:
-            seq_prev = nodes[idx - 1][1]
-            score_full = likelihood_full(seq_prev, seq,
-                                         args, vocabulary, model,)
-            score_muts = likelihood_muts(seq_prev, seq,
-                                         args, vocabulary, model,)
-            score_self = likelihood_self(seq_prev, seq,
-                                         args, vocabulary, model,)
-            data.append([ name, seq,
-                          score_full, score_muts, score_self ])
-            tprint('{}: {}, {}, {}'.format(
-                name, score_full, score_muts, score_self
-            ))
-
-    df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
-                                      'self_score' ])
-    tprint('Sum of full scores: {}'.format(sum(df.full)))
-    tprint('Sum of local scores: {}'.format(sum(df.muts)))
-    tprint('Sum of self scores: {}'.format(sum(df.self_score)))
+    #data = []
+    #for idx, (name, seq) in enumerate(nodes):
+    #    if idx > 0:
+    #        seq_prev = nodes[idx - 1][1]
+    #        score_full = likelihood_full(seq_prev, seq,
+    #                                     args, vocabulary, model,)
+    #        score_muts = likelihood_muts(seq_prev, seq,
+    #                                     args, vocabulary, model,)
+    #        score_self = likelihood_self(seq_prev, seq,
+    #                                     args, vocabulary, model,)
+    #        data.append([ name, seq,
+    #                      score_full, score_muts, score_self ])
+    #        tprint('{}: {}, {}, {}'.format(
+    #            name, score_full, score_muts, score_self
+    #        ))
+    #
+    #df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
+    #                                  'self_score' ])
+    #tprint('Sum of full scores: {}'.format(sum(df.full)))
+    #tprint('Sum of local scores: {}'.format(sum(df.muts)))
+    #tprint('Sum of self scores: {}'.format(sum(df.self_score)))
 
     ############################
     ## Visualize NP landscape ##
@@ -380,7 +381,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        velocity_graph(adata, args, vocabulary, model)
+        evo.tl.velocity_graph(adata, vocabulary, model)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -389,37 +390,36 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    #tool_onehot_msa(
-    #    adata,
-    #    reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
-    #    dirname=f'target/evolocity_alignments/{namespace}',
-    #    n_threads=40,
-    #)
-    #tool_residue_scores(adata)
-    #plot_residue_scores(
-    #    adata,
-    #    save=f'_{namespace}_residue_scores.png',
-    #)
-    #plot_residue_categories(
-    #    adata,
-    #    namespace=namespace,
-    #    n_plot=10,
-    #    reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
-    #)
+    evo.tl.onehot_msa(
+        adata,
+        reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
+        dirname=f'target/evolocity_alignments/{namespace}',
+        n_threads=40,
+    )
+    evo.tl.residue_scores(adata)
+    evo.pl.residue_scores(
+        adata,
+        save=f'_{namespace}_residue_scores.png',
+    )
+    evo.pl.residue_categories(
+        adata,
+        namespace=namespace,
+        n_plot=10,
+        reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
+    )
 
-    import scvelo as scv
-    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+    evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
                               use_negative_cosines=True,
                               retain_scale=False,
                               autoscale=True,)
-    scv.pl.velocity_embedding(
+    evo.pl.velocity_embedding(
         adata, basis='umap', color='year', save=f'_{namespace}_year_velo.png',
     )
 
     # Grid visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_grid(
+    ax = evo.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=4., smooth=1.,
         arrow_size=1., arrow_length=3.,
         color='year', show=False,
@@ -428,24 +428,24 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     draw_gong_path(ax, adata)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_stream(
+    ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=4., smooth=1., density=1.2,
         color='year', show=False,
     )
-    #sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     draw_gong_path(ax, adata)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_year_velostream.png', dpi=500)
     plt.close()
 
     plt.figure()
-    ax = plot_pseudotime(
+    ax = evo.pl.velocity_contour(
         adata,
         basis='umap', smooth=0.8, pf_smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
@@ -454,12 +454,12 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     )
     plt.tight_layout(pad=1.1)
     draw_gong_path(ax, adata)
-    plt.savefig(f'figures/scvelo__{namespace}_pseudotime.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_pseudotime.png', dpi=500)
     plt.close()
 
-    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save=f'_{namespace}_origins.png', dpi=500)
+    sc.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
+                  color_map=plt.cm.get_cmap('magma').reversed(),
+                  save=f'_{namespace}_origins.png')
 
     sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
                save=f'_{namespace}_pseudotime.png')

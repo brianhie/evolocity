@@ -1,9 +1,12 @@
-import .utils as plu
+from .. import logging as logg
 from ..tools.velocity_embedding import quiver_autoscale, velocity_embedding
 
+from anndata import AnnData
 import matplotlib.pyplot as plt
 import numpy as np
+import scanpy as sc
 import scipy.stats as ss
+import seaborn as sns
 
 def shortest_path(
         adata,
@@ -134,7 +137,8 @@ def residue_categories(
         positions=None,
         n_plot=5,
         namespace='residue_categories',
-        reference=None
+        reference=None,
+        verbose=True,
 ):
     if reference is not None:
         seq_ref = adata.obs['seq'][reference]
@@ -158,7 +162,8 @@ def residue_categories(
             if pos in pos_seen:
                 continue
             pos_seen.add(pos)
-            tprint('Lowest score {}: {}{}'.format(len(pos_seen), aa, pos + 1))
+            if verbose:
+                logg.info('Lowest score {}: {}{}'.format(len(pos_seen), aa, pos + 1))
         positions = sorted(pos_seen)
 
     for pos in positions:

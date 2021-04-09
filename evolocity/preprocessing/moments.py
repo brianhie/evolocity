@@ -1,6 +1,6 @@
 from .. import settings
 from .. import logging as logg
-from .utils import not_yet_normalized, normalize_per_node
+from .utils import not_yet_normalized
 from .neighbors import neighbors, get_connectivities, get_n_neighs, verify_neighbors
 
 from scipy.sparse import csr_matrix, issparse
@@ -57,8 +57,6 @@ def moments(
     adata = data.copy() if copy else data
 
     layers = [layer for layer in {"spliced", "unspliced"} if layer in adata.layers]
-    if any([not_yet_normalized(adata.layers[layer]) for layer in layers]):
-        normalize_per_node(adata)
 
     if n_neighbors is not None and n_neighbors > get_n_neighs(adata):
         neighbors(

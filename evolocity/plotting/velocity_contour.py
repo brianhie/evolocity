@@ -1,5 +1,18 @@
-from ..tools.evolocity_tools import velocity_pseudotime
+from ..tools.velocity_pseudotime import velocity_pseudotime
 from ..tools.velocity_embedding import velocity_embedding
+from .utils import (
+    default_arrow,
+    default_basis,
+    default_color,
+    get_ax,
+    get_basis,
+    get_components,
+    groups_to_bool,
+    make_unique_list,
+    savefig_or_show,
+    velocity_embedding_changed,
+)
+from .velocity_embedding_grid import compute_velocity_on_grid
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -75,33 +88,33 @@ def velocity_contour(
     smooth = 0.5 if smooth is None else smooth
     pf_smooth = smooth if pf_smooth is None else pf_smooth
 
-    basis = plu.default_basis(adata, **kwargs) \
+    basis = default_basis(adata, **kwargs) \
             if basis is None \
-            else plu.get_basis(adata, basis)
+            else get_basis(adata, basis)
     if vkey == 'all':
         lkeys = list(adata.layers.keys())
         vkey = [key for key in lkeys if 'velocity' in key and '_u' not in key]
     color, color_map = kwargs.pop('c', color), kwargs.pop('cmap', color_map)
-    colors = plu.make_unique_list(color, allow_array=True)
-    layers, vkeys = (plu.make_unique_list(layer),
-                     plu.make_unique_list(vkey))
+    colors = make_unique_list(color, allow_array=True)
+    layers, vkeys = (make_unique_list(layer),
+                     make_unique_list(vkey))
 
     if V is None:
         for key in vkeys:
-            if recompute or plu.velocity_embedding_changed(
+            if recompute or velocity_embedding_changed(
                     adata, basis=basis, vkey=key
             ):
                 velocity_embedding(adata, basis=basis, vkey=key)
 
     color, layer, vkey = colors[0], layers[0], vkeys[0]
-    color = plu.default_color(adata) if color is None else color
+    color = default_color(adata) if color is None else color
 
     _adata = (
-        adata[plu.groups_to_bool(adata, groups, groupby=color)]
+        adata[groups_to_bool(adata, groups, groupby=color)]
         if groups is not None and color in adata.obs.keys()
         else adata
     )
-    comps, obsm = plu.get_components(components, basis), _adata.obsm
+    comps, obsm = get_components(components, basis), _adata.obsm
     X_emb = np.array(obsm[f'X_{basis}'][:, comps]) \
             if X is None else X[:, :2]
     V_emb = np.array(obsm[f'{vkey}_{basis}'][:, comps]) \
@@ -135,8 +148,8 @@ def velocity_contour(
         'dpi': dpi,
     }
 
-    ax, show = plu.get_ax(ax, show, figsize, dpi)
-    hl, hw, hal = plu.default_arrow(arrow_size)
+    ax, show = get_ax(ax, show, figsize, dpi)
+    hl, hw, hal = default_arrow(arrow_size)
     if arrow_length is not None:
         scale = 1 / arrow_length
     if scale is None:
@@ -189,6 +202,6 @@ def velocity_contour(
     #cbar = plt.colorbar(contour)
     #cbar.ax.set_ylabel(pfkey)
 
-    plu.savefig_or_show(dpi=dpi, save=save, show=show)
+    savefig_or_show(dpi=dpi, save=save, show=show)
     if show is False:
         return ax

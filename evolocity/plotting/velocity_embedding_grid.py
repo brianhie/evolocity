@@ -52,7 +52,7 @@ def compute_velocity_on_grid(
     dists, neighs = nn.kneighbors(X_grid)
 
     scale = np.mean([(g[1] - g[0]) for g in grs]) * smooth
-    weight = ss.norm.pdf(x=dists, scale=scale)
+    weight = normal.pdf(x=dists, scale=scale)
     p_mass = weight.sum(1)
 
     V_grid = (V_emb[neighs] * weight[:, :, None]).sum(1)
