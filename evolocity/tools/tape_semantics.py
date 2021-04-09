@@ -1,5 +1,3 @@
-from utils import *
-
 import torch
 
 def predict_sequence_prob_tape(seq, model):

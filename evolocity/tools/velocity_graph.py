@@ -80,14 +80,6 @@ def predict_sequence_prob(seq_of_interest, vocabulary, model,
     else:
         raise ValueError('Invalid model name {}'.format(model.name_))
 
-    seqs = { seq_of_interest: [ {} ] }
-    X_cat, lengths = featurize_seqs(seqs, vocabulary)
-
-    y_pred = model.predict(X_cat, lengths)
-    assert(y_pred.shape[0] == len(seq_of_interest) + 2)
-
-    return y_pred
-
 def likelihood_compare(seq1, seq2, vocabulary, model,
                        pos1=None, pos2=None, seq_cache={}, verbose=False):
     likelihoods = []
@@ -312,7 +304,7 @@ def velocity_graph(
             model_name=model_name,
             mkey=mkey,
         )
-    model = velocity_model[mkey]
+    model = adata.uns[mkey]
     vocabulary = model.vocabulary_
 
     vgraph = VelocityGraph(
