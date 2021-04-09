@@ -306,7 +306,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        evo.tl.velocity_graph(adata, vocabulary, model)
+        evo.tl.velocity_graph(adata, model_name=args.model_name)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -372,7 +372,6 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         rank_transform=True, use_ends=True,
     )
     plt.tight_layout(pad=1.1)
-    draw_gong_path(ax, adata)
     plt.savefig(f'figures/evolocity__{namespace}_contour.png', dpi=500)
     plt.close()
 

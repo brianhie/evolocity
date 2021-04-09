@@ -381,7 +381,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        evo.tl.velocity_graph(adata, vocabulary, model)
+        evo.tl.velocity_graph(adata, model_name=args.model_name)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
