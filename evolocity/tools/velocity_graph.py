@@ -7,6 +7,7 @@ from ..preprocessing.neighbors import (
 )
 from ..preprocessing.utils import sum_var
 from .utils import scale
+from .velocity_model import velocity_model
 
 from Bio import pairwise2
 from Bio.SubsMat import MatrixInfo as matlist
@@ -279,8 +280,8 @@ class VelocityGraph:
 
 def velocity_graph(
         adata,
-        vocabulary,
-        model,
+        model_name='esm1b',
+        mkey='model',
         score='other',
         scale_dist=False,
         seqs=None,
@@ -304,6 +305,13 @@ def velocity_graph(
     if score not in valid_scores:
         raise ValueError('Score must be one of {}'
                          .format(', '.join(valid_scores)))
+
+    if mkey not in adata.uns or model_name != adata.uns[mkey].name_:
+        velocity_model(
+            adata,
+            model_name=model_name,
+            mkey=mkey,
+        )
 
     vgraph = VelocityGraph(
         adata,
