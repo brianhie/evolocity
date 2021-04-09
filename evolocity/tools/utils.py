@@ -329,26 +329,6 @@ def merge_groups(adata, key, map_groups, key_added=None, map_colors=None):
         adata.uns[f"{key_added}_colors"] = new_colors
 
 
-def cutoff_small_velocities(
-    adata, vkey="velocity", key_added="velocity_cut", frac_of_max=0.5, use_raw=False
-):
-    x = adata.layers["spliced"] if use_raw else adata.layers["Ms"]
-    y = adata.layers["unspliced"] if use_raw else adata.layers["Mu"]
-
-    x_max = x.max(0).A[0] if issparse(x) else x.max(0)
-    y_max = y.max(0).A[0] if issparse(y) else y.max(0)
-
-    xy_norm = x / np.clip(x_max, 1e-3, None) + y / np.clip(y_max, 1e-3, None)
-    W = xy_norm >= np.percentile(xy_norm, 98, axis=0) * frac_of_max
-
-    adata.layers[key_added] = csr_matrix(W).multiply(adata.layers[vkey]).tocsr()
-
-    from .evolocity_tools import velocity_graph
-    from .velocity_embedding import velocity_embedding
-
-    velocity_graph(adata, vkey=key_added, approx=True)
-    velocity_embedding(adata, vkey=key_added)
-
 
 def make_unique_list(key, allow_array=False):
     from pandas import unique, Index
@@ -490,17 +470,6 @@ def convolve(adata, x):
     Y = np.ones(x.shape) * np.nan
     Y[:, idx_valid] = conn.dot(x[:, idx_valid])
     return Y
-
-
-def get_extrapolated_state(adata, vkey="velocity", dt=1, use_raw=None, dropna=True):
-    """Get extrapolated node state."""
-    S = adata.layers["spliced" if use_raw else "Ms"]
-    if dropna:
-        St = S + dt * adata.layers[vkey]
-        St = St[:, np.isfinite(np.sum(St, 0))]
-    else:
-        St = S + dt * np.nan_to_num(adata.layers[vkey])
-    return St
 
 
 # TODO: Generalize to use arbitrary modality i.e., not only layers

@@ -1,7 +1,6 @@
 from .. import settings
 from .. import logging as logg
-from ..preprocessing.moments import get_connectivities
-from ..preprocessing.neighbors import verify_neighbors
+from ..preprocessing.neighbors import get_connectivities, verify_neighbors
 from .transition_matrix import transition_matrix
 from .utils import scale, groups_to_bool, strings_to_categoricals, get_plasticity_score
 

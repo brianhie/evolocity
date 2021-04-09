@@ -236,8 +236,6 @@ def scatter(
                 if legend_loc is None:
                     legend_loc = "best"
                 if legend_loc and legend_loc != "none":
-                    multikey = [key.replace("Ms", "spliced") for key in multikey]
-                    multikey = [key.replace("Mu", "unspliced") for key in multikey]
                     ax.legend(multikey, fontsize=legend_fontsize, loc=legend_loc)
 
                 savefig_or_show(dpi=dpi, save=save, show=show)
@@ -316,54 +314,7 @@ def scatter(
 
             ax, show = get_ax(ax, show, figsize, dpi, projection)
 
-            # phase portrait: get x and y from .layers (e.g. spliced vs. unspliced)
-            if basis in adata.var_names:
-                if title is None:
-                    title = basis
-                if x is None and y is None:
-                    x = default_xkey(adata, use_raw=use_raw)
-                    y = default_ykey(adata, use_raw=use_raw)
-                elif x is None or y is None:
-                    raise ValueError("Both x and y have to specified.")
-                if isinstance(x, str) and isinstance(y, str):
-                    layers_keys = list(adata.layers.keys()) + ["X"]
-                    if any([key not in layers_keys for key in [x, y]]):
-                        raise ValueError("Could not find x or y in layers.")
-
-                    if xlabel is None:
-                        xlabel = x
-                    if ylabel is None:
-                        ylabel = y
-
-                    x = get_obs_vector(adata, basis, layer=x, use_raw=use_raw)
-                    y = get_obs_vector(adata, basis, layer=y, use_raw=use_raw)
-
-                if legend_loc is None:
-                    legend_loc = "none"
-
-                if use_raw and perc is not None:
-                    ub = np.percentile(x, 99.9 if not isinstance(perc, int) else perc)
-                    ax.set_xlim(right=ub * 1.05)
-                    ub = np.percentile(y, 99.9 if not isinstance(perc, int) else perc)
-                    ax.set_ylim(top=ub * 1.05)
-
-                # velocity model fits (full dynamics and steady-state ratios)
-                if any(["gamma" in key or "alpha" in key for key in adata.var.keys()]):
-                    plot_velocity_fits(
-                        adata,
-                        basis,
-                        vkey,
-                        use_raw,
-                        linewidth,
-                        linecolor,
-                        legend_loc_lines,
-                        legend_fontsize,
-                        add_assignments,
-                        ax=ax,
-                    )
-
-            # embedding: set x and y to embedding coordinates
-            elif is_embedding:
+            if is_embedding:
                 X_emb = adata.obsm[f"X_{basis}"][:, get_components(components, basis)]
                 x, y = X_emb[:, 0], X_emb[:, 1]
                 # todo: 3d plotting

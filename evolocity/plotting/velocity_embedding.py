@@ -184,33 +184,19 @@ def velocity_embedding(
             "linewidth": 0.1,
             "width": None,
         }
-        if basis in adata.var_names:
-            if use_raw:
-                x = adata[:, basis].layers["spliced"]
-                y = adata[:, basis].layers["unspliced"]
-            else:
-                x = adata[:, basis].layers["Ms"]
-                y = adata[:, basis].layers["Mu"]
-            dx = adata[:, basis].layers[vkey]
-            dy = np.zeros(adata.n_obs)
-            if f"{vkey}_u" in adata.layers.keys():
-                dy = adata[:, basis].layers[f"{vkey}_u"]
-            X = np.stack([np.ravel(x), np.ravel(y)]).T
-            V = np.stack([np.ravel(dx), np.ravel(dy)]).T
-        else:
-            x = None if X is None else X[:, 0]
-            y = None if X is None else X[:, 1]
-            comps = get_components(components, basis, projection)
-            X = _adata.obsm[f"X_{basis}"][:, comps] if X is None else X[:, :2]
-            V = _adata.obsm[f"{vkey}_{basis}"][:, comps] if V is None else V[:, :2]
+        x = None if X is None else X[:, 0]
+        y = None if X is None else X[:, 1]
+        comps = get_components(components, basis, projection)
+        X = _adata.obsm[f"X_{basis}"][:, comps] if X is None else X[:, :2]
+        V = _adata.obsm[f"{vkey}_{basis}"][:, comps] if V is None else V[:, :2]
 
-            hl, hw, hal = default_arrow(arrow_size)
-            if arrow_length is not None:
-                scale = 1 / arrow_length
-            if scale is None:
-                scale = 1
-            quiver_kwargs.update({"scale": scale, "width": 0.0005, "headlength": hl})
-            quiver_kwargs.update({"headwidth": hw, "headaxislength": hal})
+        hl, hw, hal = default_arrow(arrow_size)
+        if arrow_length is not None:
+            scale = 1 / arrow_length
+        if scale is None:
+            scale = 1
+        quiver_kwargs.update({"scale": scale, "width": 0.0005, "headlength": hl})
+        quiver_kwargs.update({"headwidth": hw, "headaxislength": hal})
 
         for arg in list(kwargs):
             if arg in quiver_kwargs:

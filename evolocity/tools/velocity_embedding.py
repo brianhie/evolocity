@@ -162,18 +162,6 @@ def velocity_embedding(
                 probs = TA[i, indices] if densify else T[i].data
                 V_emb[i] = probs.dot(dX) - probs.mean() * dX.sum(0)
 
-        if retain_scale:
-            X = (
-                adata.layers["Ms"]
-                if "Ms" in adata.layers.keys()
-                else adata.layers["spliced"]
-            )
-            delta = T.dot(X[:, vgenes]) - X[:, vgenes]
-            if issparse(delta):
-                delta = delta.A
-            cos_proj = (V * delta).sum(1) / norm(delta)
-            V_emb *= np.clip(cos_proj[:, None] * 10, 0, 1)
-
     if autoscale:
         V_emb /= 3 * quiver_autoscale(X_emb, V_emb)
 

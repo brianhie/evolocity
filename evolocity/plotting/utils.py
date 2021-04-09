@@ -1,6 +1,6 @@
 from .. import settings
 from .. import logging as logg
-from ..preprocessing.moments import get_connectivities
+from ..preprocessing.neighbors import get_connectivities
 from ..tools.utils import strings_to_categoricals
 from . import palettes
 
@@ -363,18 +363,11 @@ def default_legend_loc(adata, color, legend_loc):
 
 
 def default_xkey(adata, use_raw):
-    use_raw = "spliced" in adata.layers.keys() and (
-        use_raw or "Ms" not in adata.layers.keys()
-    )
-    return "spliced" if use_raw else "Ms" if "Ms" in adata.layers.keys() else "X"
+    return "X"
 
 
 def default_ykey(adata, use_raw):
-    use_raw = "unspliced" in adata.layers.keys() and (
-        use_raw or "Mu" not in adata.layers.keys()
-    )
-    return "unspliced" if use_raw else "Mu" if "Mu" in adata.layers.keys() else None
-
+    return None
 
 def default_arrow(size):
     if isinstance(size, (list, tuple)) and len(size) == 3:
@@ -474,12 +467,6 @@ def set_artist_frame(ax, length=0.2, figsize=None):
 
 
 def set_label(xlabel, ylabel, fontsize=None, basis=None, ax=None, **kwargs):
-    labels = np.array(["Ms", "Mu", "X"])
-    labels_new = np.array(["spliced", "unspliced", "expression"])
-    if xlabel in labels:
-        xlabel = labels_new[xlabel == labels][0]
-    if ylabel in labels:
-        ylabel = labels_new[ylabel == labels][0]
     if ax is None:
         ax = pl.gca()
     kwargs.update({"fontsize": fontsize})
@@ -648,7 +635,7 @@ def interpret_colorkey(adata, c=None, layer=None, perc=None, use_raw=None):
         ):  # by gene
             if layer in adata.layers.keys():
                 if perc is None and any(
-                    l in layer for l in ["spliced", "unspliced", "Ms", "Mu", "velocity"]
+                    l in layer for l in [ "velocity" ]
                 ):
                     perc = [1, 99]  # to ignore outliers in non-logarithmized layers
                 c = adata.obs_vector(c, layer=layer)
@@ -1096,57 +1083,6 @@ def plot_vlines(adata, basis, vkey, xkey, linewidth=1, linecolor=None, ax=None):
             f"steady-state ratio ({fit})" if len(fits) > 1 else "steady-state ratio"
         )
     return lines, fits
-
-
-def plot_velocity_fits(
-    adata,
-    basis,
-    vkey=None,
-    use_raw=None,
-    linewidth=None,
-    linecolor=None,
-    legend_loc=None,
-    legend_fontsize=None,
-    show_assignments=None,
-    ax=None,
-):
-    if ax is None:
-        ax = pl.gca()
-    if use_raw is None:
-        use_raw = "Ms" not in adata.layers.keys()
-
-    # linear fits
-    if vkey is None:
-        vkey = "dynamics" if "fit_alpha" in adata.var.keys() else "velocity"
-    xkey = "spliced" if use_raw else "Ms"
-    lines, fits = plot_vlines(adata, basis, vkey, xkey, linewidth, linecolor, ax=ax)
-
-    # full dynamic fits
-    from .simulation import show_full_dynamics
-
-    if "true_alpha" in adata.var.keys() and (
-        vkey is not None and "true_dynamics" in vkey
-    ):
-        line, fit = show_full_dynamics(adata, basis, "true", use_raw, linewidth, ax=ax)
-        fits.append(fit)
-        lines.append(line)
-    if "fit_alpha" in adata.var.keys() and (vkey is None or "dynamics" in vkey):
-        line, fit = show_full_dynamics(
-            adata,
-            basis,
-            "fit",
-            use_raw,
-            linewidth,
-            show_assignments=show_assignments,
-            ax=ax,
-        )
-        fits.append(fit)
-        lines.append(line)
-
-    if legend_loc in {True, None, "bottom right"}:
-        legend_loc = "lower right"
-    if len(fits) > 0 and legend_loc and legend_loc != "none":
-        ax.legend(handles=lines, labels=fits, fontsize=legend_fontsize, loc=legend_loc)
 
 
 def plot_density(

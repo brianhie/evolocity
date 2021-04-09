@@ -3,7 +3,8 @@ from tape import ProteinBertForMaskedLM, TAPETokenizer
 
 class TAPEModel(object):
     def __init__(self, name):
-        self.name_ = name
+        self.name_ = 'tape'
+        self.tape_name_ = name
 
         model = ProteinBertForMaskedLM.from_pretrained(name)
         model.eval()
