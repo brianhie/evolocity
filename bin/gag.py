@@ -180,6 +180,8 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
 
     keep_subtypes = {
@@ -190,12 +192,9 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         for subtype in adata.obs['subtype']
     ]
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
-
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.7)
     plot_umap(adata)
 
     cache_prefix = f'target/ev_cache/{namespace}_knn40'
@@ -256,7 +255,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     plt.close()
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3.7, smooth=1., linewidth=0.7,
+        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
         color='simple_subtype', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
@@ -271,7 +270,6 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         basis='umap', smooth=0.8, pf_smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True, use_ends=False,
     )
     plt.tight_layout(pad=1.1)
     plt.savefig(f'figures/evolocity__{namespace}_contour.png', dpi=500)

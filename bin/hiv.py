@@ -531,7 +531,6 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
         basis='umap', smooth=0.8, pf_smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True, use_ends=False,
     )
     plt.tight_layout(pad=1.1)
     plt.savefig(f'figures/evolocity__{namespace}_contour.png', dpi=500)

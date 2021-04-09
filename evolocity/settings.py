@@ -113,7 +113,7 @@ def set_rcParams_evolocity(fontsize=12, color_map=None, frameon=None):
     rcParams["savefig.dpi"] = 150
 
     # figure (mpl default: 0.125, 0.96, 0.15, 0.91)
-    rcParams["figure.figsize"] = (6, 4)
+    rcParams["figure.figsize"] = (4, 4)
     rcParams["figure.subplot.left"] = 0.18
     rcParams["figure.subplot.right"] = 0.96
     rcParams["figure.subplot.bottom"] = 0.15
@@ -167,7 +167,7 @@ def set_rcParams_evolocity(fontsize=12, color_map=None, frameon=None):
     rcParams["grid.color"] = ".8"
 
     # color map
-    rcParams["image.cmap"] = "RdBu_r" if color_map is None else color_map
+    rcParams["image.cmap"] = rcParams["image.cmap"] if color_map is None else color_map
 
     # frame (mpl default: True)
     frameon = False if frameon is None else frameon
@@ -246,7 +246,7 @@ def set_rcParams_scanpy(fontsize=12, color_map=None, frameon=None):
 def set_figure_params(
     style="evolocity",
     dpi=100,
-    dpi_save=150,
+    dpi_save=300,
     frameon=None,
     vector_friendly=True,
     transparent=True,

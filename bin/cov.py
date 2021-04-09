@@ -335,7 +335,6 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         basis='umap', smooth=1., pf_smooth=1.5, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True, use_ends=False,
     )
     plt.tight_layout(pad=1.1)
     plt.savefig(f'figures/evolocity__{namespace}_pseudotime.png', dpi=500)

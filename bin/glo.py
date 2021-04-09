@@ -375,7 +375,6 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         adata, basis='umap', smooth=0.6, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True, use_ends=False,
         save=f'_{namespace}_pseudotime.png', dpi=500
     )
 

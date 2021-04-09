@@ -326,7 +326,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     ## Visualize NP landscape ##
     ############################
 
-    adata_cache = f'target/ev_cache/{namespace}_adata.h5ad'
+    adata_cache = 'target/ev_cache/np_adata.h5ad'
     try:
         import anndata
         adata = anndata.read_h5ad(adata_cache)
@@ -356,11 +356,11 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
         sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=1.3)
+        sc.tl.umap(adata, min_dist=1.61)
 
         adata.write(adata_cache)
 
-    sc.set_figure_params(dpi_save=500)
+    evo.set_figure_params(dpi_save=500)
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -420,7 +420,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     # Grid visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=4., smooth=1.,
+        adata, basis='umap', min_mass=3., smooth=1.2,
         arrow_size=1., arrow_length=3.,
         color='year', show=False,
     )
@@ -434,7 +434,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     # Streamplot visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        adata, basis='umap', min_mass=4., smooth=1.2, density=1.5,
         color='year', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -450,7 +450,6 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         basis='umap', smooth=0.8, pf_smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True, use_ends=False,
     )
     plt.tight_layout(pad=1.1)
     draw_gong_path(ax, adata)
