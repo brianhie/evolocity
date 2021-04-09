@@ -12,7 +12,7 @@ setup(
     author="Brian Hie",
     author_email="brianhie@stanford.edu",
     description="Evolutionary velocity with protein language models",
-    license="BSD",
+    license="MIT",
     url="https://github.com/brianhie/evolocity",
     download_url="https://github.com/brianhie/evolocity",
     keywords=[
