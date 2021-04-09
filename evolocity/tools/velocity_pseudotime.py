@@ -66,6 +66,7 @@ class VPT(DPT):
 def velocity_pseudotime(
         adata,
         vkey='velocity',
+        pfkey='pseudotime',
         rank_transform=False,
         groupby=None,
         groups=None,

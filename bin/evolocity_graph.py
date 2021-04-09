@@ -472,10 +472,10 @@ def velocity_pseudotime(
         **kwargs,
 ):
     strings_to_categoricals(adata)
-    if root_key is None and 'root_cells' in adata.obs.keys():
-        root0 = adata.obs['root_cells'][0]
+    if root_key is None and 'root_nodes' in adata.obs.keys():
+        root0 = adata.obs['root_nodes'][0]
         if not np.isnan(root0) and not isinstance(root0, str):
-            root_key = 'root_cells'
+            root_key = 'root_nodes'
     if end_key is None and 'end_points' in adata.obs.keys():
         end0 = adata.obs['end_points'][0]
         if not np.isnan(end0) and not isinstance(end0, str):
@@ -498,7 +498,7 @@ def velocity_pseudotime(
             and np.max(adata.obs[root_key]) == np.min(adata.obs[root_key])
         ):
             scv.tl.terminal_states(adata, vkey, groupby, groups)
-            root_key, end_key = 'root_cells', 'end_points'
+            root_key, end_key = 'root_nodes', 'end_points'
         cell_subset = groups_to_bool(adata, groups=groups, groupby=groupby)
         data = adata.copy() if cell_subset is None else adata[cell_subset].copy()
         if 'allow_kendall_tau_shift' not in kwargs:

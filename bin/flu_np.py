@@ -454,12 +454,12 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     )
     plt.tight_layout(pad=1.1)
     draw_gong_path(ax, adata)
-    plt.savefig(f'figures/evolocity__{namespace}_pseudotime.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_contour.png', dpi=500)
     plt.close()
 
-    sc.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
-                  color_map=plt.cm.get_cmap('magma').reversed(),
-                  save=f'_{namespace}_origins.png')
+    sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
+               cmap=plt.cm.get_cmap('magma').reversed(),
+               save=f'_{namespace}_origins.png')
 
     sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
                save=f'_{namespace}_pseudotime.png')

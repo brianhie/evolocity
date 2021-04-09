@@ -1,5 +1,6 @@
 from mutation import *
 from evolocity_graph import *
+import evolocity as evo
 
 np.random.seed(1)
 random.seed(1)
@@ -259,7 +260,7 @@ def analyze_embedding(args, model, seqs, vocabulary):
 
     seq_clusters(adata)
 
-def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
+def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
 
     ############################
     ## Visualize HA landscape ##
@@ -305,9 +306,7 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-        velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0,)
+        evo.tl.velocity_graph(adata, vocabulary, model)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -316,66 +315,70 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    tool_onehot_msa(
+    evo.tl.onehot_msa(
         adata,
         dirname=f'target/evolocity_alignments/{namespace}',
         n_threads=40,
     )
-    tool_residue_scores(adata)
-    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
-    plot_residue_categories(
+    evo.tl.residue_scores(adata)
+    evo.pl.residue_scores(adata, save=f'_{namespace}_residue_scores.png')
+    evo.pl.residue_categories(
         adata,
         namespace=namespace,
     )
 
-    import scvelo as scv
-    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+    evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
                               use_negative_cosines=True,
                               retain_scale=False,
                               autoscale=True,)
-    scv.pl.velocity_embedding(
+    evo.pl.velocity_embedding(
         adata, basis='umap', color='Collection Date',
         save=f'_{namespace}_year_velo.png',
     )
 
     # Grid visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_grid(
+    ax = evo.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=1., smooth=1.,
         arrow_size=1., arrow_length=3.,
         color='Collection Date', show=False,
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_stream(
+    ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
         color='Collection Date', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_year_velostream.png', dpi=500)
     plt.close()
 
     # Evolocity pseudotime visualization.
 
-    plot_pseudotime(
-        adata, basis='umap', smooth=1., levels=100,
+    plt.figure()
+    ax = evo.pl.velocity_contour(
+        adata,
+        basis='umap', smooth=0.8, pf_smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=False, use_ends=True,
-        save=f'_{namespace}_pseudotime.png', dpi=500
+        rank_transform=True, use_ends=True,
     )
+    plt.tight_layout(pad=1.1)
+    draw_gong_path(ax, adata)
+    plt.savefig(f'figures/evolocity__{namespace}_contour.png', dpi=500)
+    plt.close()
 
-    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save=f'_{namespace}_origins.png', dpi=500)
+    sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
+               cmap=plt.cm.get_cmap('magma').reversed(),
+               save=f'_{namespace}_origins.png')
 
     sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
                save=f'_{namespace}_pseudotime.png')
@@ -411,156 +414,6 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
 
     adata.write(f'target/results/{namespace}_adata.h5ad')
 
-def evo_h3(args, model, seqs, vocabulary, namespace='h3'):
-    ############################
-    ## Visualize HA landscape ##
-    ############################
-
-    adata_cache = 'target/ev_cache/h3_adata.h5ad'
-    try:
-        import anndata
-        adata = anndata.read_h5ad(adata_cache)
-    except:
-        seqs = populate_embedding(args, model, seqs, vocabulary,
-                                  use_cache=True)
-
-        adata = seqs_to_anndata(seqs)
-
-        adata = adata[(adata.obs['Host Species'] == 'human') &
-                      (adata.obs['Subtype'] == 'H3')]
-
-        adata.write(adata_cache)
-
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
-    plot_umap(adata, namespace='h3')
-
-    #####################################
-    ## Compute evolocity and visualize ##
-    #####################################
-
-    cache_prefix = f'target/ev_cache/{namespace}_self_knn30'
-    try:
-        from scipy.sparse import load_npz
-        adata.uns["velocity_graph"] = load_npz(
-            '{}_vgraph.npz'.format(cache_prefix)
-        )
-        adata.uns["velocity_graph_neg"] = load_npz(
-            '{}_vgraph_neg.npz'.format(cache_prefix)
-        )
-        adata.obs["velocity_self_transition"] = np.load(
-            '{}_vself_transition.npy'.format(cache_prefix)
-        )
-        adata.layers["velocity"] = np.zeros(adata.X.shape)
-    except:
-        velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0, score='self')
-        from scipy.sparse import save_npz
-        save_npz('{}_vgraph.npz'.format(cache_prefix),
-                 adata.uns["velocity_graph"],)
-        save_npz('{}_vgraph_neg.npz'.format(cache_prefix),
-                 adata.uns["velocity_graph_neg"],)
-        np.save('{}_vself_transition.npy'.format(cache_prefix),
-                adata.obs["velocity_self_transition"],)
-
-    tool_onehot_msa(
-        adata,
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    tool_residue_scores(adata)
-    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
-    plot_residue_categories(
-        adata,
-        namespace=namespace,
-    )
-
-    import scvelo as scv
-    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
-                              self_transitions=True,
-                              use_negative_cosines=True,
-                              retain_scale=False,
-                              autoscale=True,)
-    scv.pl.velocity_embedding(
-        adata, basis='umap', color='Collection Date',
-        save=f'_{namespace}_year_velo.png',
-    )
-
-    # Grid visualization.
-    plt.figure()
-    ax = scv.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=1., smooth=1.,
-        arrow_size=1., arrow_length=3.,
-        color='Collection Date', show=False,
-    )
-    plt.tight_layout(pad=1.1)
-    plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
-    plt.close()
-
-    # Streamplot visualization.
-    plt.figure()
-    ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
-        color='Collection Date', show=False,
-    )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    plt.tight_layout(pad=1.1)
-    plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
-    plt.close()
-
-    # Evolocity pseudotime visualization.
-
-    plot_pseudotime(
-        adata, basis='umap', smooth=1., levels=100,
-        arrow_size=1., arrow_length=3., cmap='coolwarm',
-        c='#aaaaaa', show=False,
-        rank_transform=False, use_ends=True,
-        save=f'_{namespace}_pseudotime.png', dpi=500
-    )
-
-    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save=f'_{namespace}_origins.png', dpi=500)
-
-    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
-               save=f'_{namespace}_pseudotime.png')
-
-    nnan_idx = (np.isfinite(adata.obs['Collection Date']) &
-                np.isfinite(adata.obs['pseudotime']))
-
-    adata_nnan = adata[nnan_idx]
-
-    plt.figure()
-    sns.regplot(x='Collection Date', y='pseudotime',
-                     data=adata_nnan.obs, ci=None)
-    plt.savefig(f'figures/{namespace}_pseudotime-time.png', dpi=500)
-    plt.close()
-
-    tprint('Pseudotime-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
-                                 adata_nnan.obs['Collection Date'],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
-                                adata_nnan.obs['Collection Date'])))
-
-    nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
-                np.isfinite(adata_nnan.obs['pseudotime']))
-    tprint('Pseudotime-homology Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
-                                 adata_nnan.obs['homology'],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-homology Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'],
-                                adata.obs['homology'])))
-
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()
@@ -647,10 +500,4 @@ if __name__ == '__main__':
         namespace = 'h1'
         if args.model_name == 'tape':
             namespace += '_tape'
-        evo_h1(args, model, seqs, vocabulary, namespace=namespace)
-        exit()
-
-        namespace = 'h3'
-        if args.model_name == 'tape':
-            namespace += '_tape'
-        evo_h3(args, model, seqs, vocabulary, namespace=namespace)
+        evo_ha(args, model, seqs, vocabulary, namespace=namespace)

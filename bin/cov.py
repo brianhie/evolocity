@@ -341,7 +341,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     plt.savefig(f'figures/scvelo__{namespace}_pseudotime.png', dpi=500)
     plt.close()
 
-    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
+    scv.pl.scatter(adata, color=[ 'root_nodes', 'end_points' ],
                    cmap=plt.cm.get_cmap('magma').reversed(),
                    save=f'_{namespace}_origins.png', dpi=500)
 
