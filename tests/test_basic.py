@@ -22,25 +22,32 @@ def test_einsum():
 
 
 def test_pipeline():
-    adata = evo.tl.featurize_seqs(test_seqs)
+    adata = evo.pp.featurize_seqs(test_seqs)
+    evo.pp.neighbors(adata)
 
     evo.tl.velocity_graph(adata)
     evo.tl.velocity_embedding(adata)
 
     evo.pl.velocity_embedding(adata)
-    evo.pl.velocity_embedding_grid(adata)
-    evo.pl.velocity_embedding_stream(adata)
-    evo.pl.velocity_contour(adata)
 
     evo.tl.onehot_msa(adata)
-    evo.tl.resiude_scores(adata)
+    evo.tl.residue_scores(adata)
     evo.pl.residue_scores(adata)
     evo.pl.residue_categories(adata)
 
+    assert(adata.X.shape[0] == len(test_seqs))
+    assert('seq' in adata.obs)
+    assert('seqs_msa' in adata.obs)
+
 def test_pipeline_tape():
-    adata = evo.tl.featurize_seqs(test_seqs)
+    adata = evo.pp.featurize_seqs(test_seqs)
+    evo.pp.neighbors(adata)
 
     evo.tl.velocity_graph(adata, model_name='tape')
     evo.tl.velocity_embedding(adata)
 
     evo.pl.velocity_embedding(adata)
+
+    assert(adata.X.shape[0] == len(test_seqs))
+    assert('seq' in adata.obs)
+    assert(adata.uns['model'].name_ == 'tape')

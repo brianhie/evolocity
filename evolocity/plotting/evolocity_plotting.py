@@ -89,7 +89,7 @@ def draw_path(
 
 def residue_scores(
         adata,
-        percentile_keep=75,
+        percentile_keep=0.,
         basis='onehot',
         key='residue_scores',
         cmap='RdBu',
