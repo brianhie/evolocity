@@ -1,4 +1,5 @@
 from .utils import mkdir_p
+from ..logging import logging as logg
 
 from anndata import AnnData
 import numpy as np
@@ -73,6 +74,10 @@ def populate_embedding(
     sorted_seqs = np.array([ str(s) for s in sorted(seqs.keys()) ])
     n_batches = math.ceil(len(sorted_seqs) / float(batch_size))
     for batchi in range(n_batches):
+        if verbose:
+            logg.info('Embedding sequence batch {} / {}'
+                      .format(batchi + 1, n_batches))
+
         # Identify the batch.
         start = batchi * batch_size
         end = (batchi + 1) * batch_size
@@ -119,7 +124,16 @@ def seqs_to_anndata(seqs):
     obs['seq'] = []
     obs['seq_len'] = []
     for seq in seqs:
+        meta = seqs[seq][0]
         X.append(meta['embedding'])
+        for key in meta:
+            if key == 'embedding':
+                continue
+            if key not in obs:
+                obs[key] = []
+            obs[key].append(Counter([
+                meta[key] for meta in seqs[seq]
+            ]).most_common(1)[0][0])
         obs['n_seq'].append(len(seqs[seq]))
         obs['seq'].append(str(seq))
         obs['seq_len'].append(len(seq))
@@ -133,7 +147,6 @@ def seqs_to_anndata(seqs):
 
 def featurize_seqs(
     seqs,
-    use_rep='X',
     model_name='esm1b',
     mkey='model',
     embed_batch_size=3000,
@@ -144,6 +157,44 @@ def featurize_seqs(
     seqs = {
         str(seq): [ {} ] for seq in seqs
     }
+    seqs = populate_embedding(
+        model,
+        seqs,
+        use_cache=True
+        batch_size=embed_batch_size,
+    )
+
+    adata = seqs_to_anndata(seqs)
+
+    adata.uns[f'featurize_{mkey}'] = model
+    adata.uns[f'{mkey}'] = model
+
+    return adata
+
+def featurize_fasta(
+    fname,
+    model_name='esm1b',
+    mkey='model',
+    embed_batch_size=3000,
+    use_cache=True,
+):
+    model = get_model(model_name)
+
+    # Parse fasta.
+    from Bio import SeqIO
+    seqs = {}
+    with open(fname, 'r') as f:
+        for record in SeqIO.parse(f, 'fasta'):
+            fields = record.id.split('|')
+            meta = {
+                field.split('=')[0]: field.split('=')[1]
+                for field in fields
+            }
+            seq = str(record.seq)
+            if seq not in seqs:
+                seqs[seq] = []
+            seqs[seq].append(meta)
+
     seqs = populate_embedding(
         model,
         seqs,
