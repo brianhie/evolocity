@@ -147,10 +147,11 @@ def seqs_to_anndata(seqs):
 
 def featurize_seqs(
     seqs,
+    namespace=None,
     model_name='esm1b',
     mkey='model',
     embed_batch_size=3000,
-    use_cache=True,
+    use_cache=False,
 ):
     model = get_model(model_name)
 
@@ -160,7 +161,8 @@ def featurize_seqs(
     seqs = populate_embedding(
         model,
         seqs,
-        use_cache=True
+        namespace=namespace,
+        use_cache=use_cache,
         batch_size=embed_batch_size,
     )
 
@@ -173,6 +175,7 @@ def featurize_seqs(
 
 def featurize_fasta(
     fname,
+    namespace=None,
     model_name='esm1b',
     mkey='model',
     embed_batch_size=3000,
@@ -198,7 +201,8 @@ def featurize_fasta(
     seqs = populate_embedding(
         model,
         seqs,
-        use_cache=True
+        namespace=namespace,
+        use_cache=use_cache,
         batch_size=embed_batch_size,
     )
 

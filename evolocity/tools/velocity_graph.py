@@ -312,6 +312,8 @@ def velocity_graph(
             model_name=model_name,
             mkey=mkey,
         )
+    model = velocity_model[mkey]
+    vocabulary = model.vocabulary_
 
     vgraph = VelocityGraph(
         adata,
