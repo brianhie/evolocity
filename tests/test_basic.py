@@ -33,7 +33,6 @@ def test_pipeline():
     evo.tl.onehot_msa(adata)
     evo.tl.residue_scores(adata)
     evo.pl.residue_scores(adata)
-    evo.pl.residue_categories(adata)
 
     assert(adata.X.shape[0] == len(test_seqs))
     assert('seq' in adata.obs)

@@ -130,6 +130,7 @@ def residue_scores(
         plt.savefig('figures/evolocity_' + save)
         plt.close()
     else:
+        ax = plt.gca()
         return ax
 
 def residue_categories(
