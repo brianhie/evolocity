@@ -256,19 +256,19 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=0.4)
         adata.write(adata_cache)
 
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
-
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=0.4)
 
     evo.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.3)
     plot_umap(adata, namespace=namespace)
-    exit()
 
     #####################################
     ## Compute evolocity and visualize ##
