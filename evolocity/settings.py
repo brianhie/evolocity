@@ -249,7 +249,7 @@ def set_figure_params(
     dpi_save=300,
     frameon=None,
     vector_friendly=True,
-    transparent=True,
+    transparent=False,
     fontsize=12,
     figsize=None,
     color_map=None,
@@ -274,8 +274,8 @@ def set_figure_params(
         Add frames and axes labels to scatter plots.
     vector_friendly : `bool` (default: `True`)
         Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
-    transparent : `bool` (default: `True`)
-        Save figures with transparent back ground. Sets
+    transparent : `bool` (default: `False`)
+        Save figures with transparent background. Sets
         `rcParams['savefig.transparent']`.
     fontsize : `int` (default: 14)
         Set the fontsize for several `rcParams` entries.

@@ -266,8 +266,9 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
     sc.tl.louvain(adata, resolution=1.)
 
     evo.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
+    sc.tl.umap(adata, min_dist=0.3)
     plot_umap(adata, namespace=namespace)
+    exit()
 
     #####################################
     ## Compute evolocity and visualize ##
