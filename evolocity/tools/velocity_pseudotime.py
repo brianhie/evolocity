@@ -67,7 +67,7 @@ def velocity_pseudotime(
         adata,
         vkey='velocity',
         pfkey='pseudotime',
-        rank_transform=False,
+        rank_transform=True,
         groupby=None,
         groups=None,
         root_key=None,
