@@ -410,8 +410,6 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
            .format(*ss.pearsonr(adata.obs['pseudotime'],
                                 adata.obs['homology'])))
 
-    adata.write(f'target/results/{namespace}_adata.h5ad')
-
 
 if __name__ == '__main__':
     args = parse_args()

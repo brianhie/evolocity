@@ -87,8 +87,6 @@ def parse_meta(record, taxonomy):
         tax_group = 'chordata'
     if 'Mammalia' in lineage:
         tax_group = 'mammalia'
-    if 'Primate' in lineage:
-        tax_group = 'primate'
     assert(tax_group is not None)
 
     gene_id = gene_id.lower()
@@ -154,13 +152,6 @@ def setup(args):
         seqs = process(fnames)
         with open(cache_fname, 'wb') as of:
             pickle.dump(seqs, of)
-
-    #seq_lens = [ len(seq) for seq in seqs ]
-    #plt.figure()
-    #plt.hist(seq_lens, bins=150)
-    #plt.savefig('figures/glo_seq_len.png', dpi=300)
-    #plt.close()
-    #exit()
 
     seq_len = max([ len(seq) for seq in seqs ]) + 2
     vocab_size = len(AAs) + 2
@@ -297,17 +288,18 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=0.5)
         adata.write(adata_cache)
 
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=0.5)
 
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.8)
+    evo.set_figure_params(dpi_save=500)
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -352,23 +344,24 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
     ax = evo.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=1., smooth=1.,
         arrow_size=1., arrow_length=3.,
-        color='tax_group', show=False,
+        color='globin_type', show=False,
     )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/evolocity__{namespace}_taxonomy_velogrid.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_glotype_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=2., smooth=1.1, linewidth=1.,
-        color='tax_group', show=False,
+        adata, basis='umap', min_mass=4., smooth=1.5, linewidth=1.,
+        color='globin_type', show=False,
     )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/evolocity__{namespace}_taxonomy_velostream.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_glotype_velostream.png', dpi=500)
     plt.close()
 
     evo.pl.velocity_contour(
@@ -424,8 +417,6 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
     tprint('Pseudotime-homology Pearson r = {}, P = {}'
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
-
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()

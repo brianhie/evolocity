@@ -420,7 +420,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     # Grid visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=3., smooth=1.2,
+        adata, basis='umap', min_mass=3., smooth=1.,
         arrow_size=1., arrow_length=3.,
         color='year', show=False,
     )
@@ -434,7 +434,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     # Streamplot visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3., smooth=1.2, density=1.2,
+        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
         color='year', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')

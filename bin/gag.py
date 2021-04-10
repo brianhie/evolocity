@@ -302,8 +302,6 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
                .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                     adata.obs['homology'][nnan_idx])))
 
-    adata.write(f'target/results/{namespace}_adata.h5ad')
-
 if __name__ == '__main__':
     args = parse_args()
 

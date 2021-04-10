@@ -87,8 +87,6 @@ def parse_meta(record, taxonomy):
         tax_group = 'chordata'
     if 'Mammalia' in lineage:
         tax_group = 'mammalia'
-    if 'Primate' in lineage:
-        tax_group = 'primate'
     assert(tax_group is not None)
 
     return {
@@ -247,17 +245,18 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
 
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
+    evo.set_figure_params(dpi_save=500, figsize=(6, 4))
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -355,12 +354,11 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     sns.violinplot(data=adata.obs, x='tax_group', y='pseudotime',
                    order=[
                        'eukaryota',
-                       'fungi',
                        'viridiplantae',
+                       'fungi',
                        'arthropoda',
                        'chordata',
                        'mammalia',
-                       'primate',
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
@@ -379,8 +377,6 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     tprint('Pseudotime-homology Pearson r = {}, P = {}'
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
-
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()

@@ -150,7 +150,15 @@ def interpret_clusters(adata):
                 tprint('\t\t{}: {}'.format(val, count))
         tprint('')
 
-def plot_umap(adata, categories, namespace='cov'):
+def plot_umap(adata, namespace='cov'):
+    categories = [
+        'louvain',
+        'seqlen',
+        'timestamp',
+        'continent',
+        'n_seq',
+        'host',
+    ]
     for category in categories:
         sc.pl.umap(adata, color=category, edges=True,
                    save='_{}_{}.png'.format(namespace, category))
@@ -185,23 +193,6 @@ def seqs_to_anndata(seqs):
 
     return adata
 
-def analyze_embedding(args, model, seqs, vocabulary):
-    seqs = embed_seqs(args, model, seqs, vocabulary, use_cache=True)
-
-    sc.pp.neighbors(adata, n_neighbors=20, use_rep='X')
-    sc.tl.louvain(adata, resolution=1.)
-    sc.tl.umap(adata, min_dist=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    plot_umap(adata, [ 'host', 'group', 'continent', 'louvain' ])
-
-    interpret_clusters(adata)
-
-    adata_cov2 = adata[(adata.obs['louvain'] == '0') |
-                       (adata.obs['louvain'] == '2')]
-    plot_umap(adata_cov2, [ 'host', 'group', 'country' ],
-              namespace='cov7')
-
 def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     ###############################
     ## Visualize Spike landscape ##
@@ -227,23 +218,16 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
             adata.obs['timestamp'] >
             time.mktime(dparse('2019-11-30').timetuple())
         ]
+
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=0.4)
+
         adata.write(adata_cache)
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.4)
-    categories = [
-        'louvain',
-        'seqlen',
-        'timestamp',
-        'continent',
-        'n_seq',
-        'host',
-    ]
-    plot_umap(adata, categories, namespace=namespace)
+    evo.set_figure_params(dpi_save=500, figsize=(5, 4))
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -368,7 +352,6 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
            .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
                                 adata_nnan.obs['timestamp'])))
 
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()
@@ -386,6 +369,10 @@ if __name__ == '__main__':
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
                        if '<' not in tok and tok != '.' and tok != '-' }
+        args.checkpoint = args.model_name
+    elif args.model_name == 'tape':
+        vocabulary = { tok: model.alphabet_[tok]
+                       for tok in model.alphabet_ if '<' not in tok }
         args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)

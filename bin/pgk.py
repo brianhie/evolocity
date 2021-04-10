@@ -248,17 +248,18 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
 
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
 
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
+    evo.set_figure_params(dpi_save=500)
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -362,7 +363,6 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()

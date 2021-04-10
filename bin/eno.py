@@ -265,11 +265,8 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
 
     sc.tl.louvain(adata, resolution=1.)
 
-    sc.set_figure_params(dpi_save=500)
-    if 'homologous' in namespace:
-        sc.tl.umap(adata, min_dist=1.7)
-    else:
-        sc.tl.umap(adata, min_dist=0.5)
+    evo.set_figure_params(dpi_save=500)
+    sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -373,7 +370,6 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()

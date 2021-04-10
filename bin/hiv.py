@@ -298,7 +298,7 @@ def evo_keele2008(args, model, seqs, vocabulary):
     sc.tl.louvain(adata, resolution=1.)
     tl_densities(adata, n_keep=10)
 
-    sc.set_figure_params(dpi_save=500)
+    evo.set_figure_params(dpi_save=500)
     sc.tl.umap(adata, min_dist=1.)
     plot_umap_keele2008(adata)
 
@@ -452,11 +452,10 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
     ]
 
     sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-
     sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
     sc.tl.umap(adata, min_dist=0.5)
+
+    evo.set_figure_params(dpi_save=500)
     plot_umap(adata)
 
     cache_prefix = 'target/ev_cache/env_knn50'

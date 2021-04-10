@@ -1,4 +1,5 @@
 from .. import logging as logg
+from ..preprocessing.neighbors import get_neighs
 from ..tools.velocity_embedding import quiver_autoscale, velocity_embedding
 
 from anndata import AnnData

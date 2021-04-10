@@ -21,7 +21,7 @@ import scipy.stats as ss
 def velocity_contour(
         adata,
         pfkey='pseudotime',
-        rank_transform=False,
+        rank_transform=True,
         use_ends=False,
         fill=True,
         levels=10,
