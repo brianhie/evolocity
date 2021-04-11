@@ -364,91 +364,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
     # Evolocity pseudotime visualization.
 
     plt.figure()
-<<<<<<< HEAD
-    sns.regplot(x='Collection Date', y='pseudotime',
-                     data=adata_nnan.obs, ci=None)
-    plt.savefig(f'figures/{namespace}_pseudotime-time.png', dpi=500)
-    plt.close()
-
-    tprint('Pseudotime-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
-                                 adata_nnan.obs['Collection Date'],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
-                                adata_nnan.obs['Collection Date'])))
-
-    nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
-                np.isfinite(adata_nnan.obs['pseudotime']))
-    tprint('Pseudotime-homology Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
-                                 adata_nnan.obs['homology'],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-homology Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'],
-                                adata.obs['homology'])))
-
-    adata.write(f'target/results/{namespace}_adata.h5ad')
-
-def evo_h3(args, model, seqs, vocabulary, namespace='h3'):
-    ############################
-    ## Visualize HA landscape ##
-    ############################
-
-    adata_cache = 'target/ev_cache/h3_adata.h5ad'
-    try:
-        import anndata
-        adata = anndata.read_h5ad(adata_cache)
-    except:
-        seqs = populate_embedding(args, model, seqs, vocabulary,
-                                  use_cache=True)
-
-        adata = seqs_to_anndata(seqs)
-
-        adata = adata[(adata.obs['Host Species'] == 'human') &
-                      (adata.obs['Subtype'] == 'H3')]
-
-        adata.write(adata_cache)
-
-    sc.pp.neighbors(adata, n_neighbors=20, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
-    plot_umap(adata, namespace='h3')
-
-    #####################################
-    ## Compute evolocity and visualize ##
-    #####################################
-
-    cache_prefix = f'target/ev_cache/{namespace}_self_knn20'
-    try:
-        from scipy.sparse import load_npz
-        adata.uns["velocity_graph"] = load_npz(
-            '{}_vgraph.npz'.format(cache_prefix)
-        )
-        adata.uns["velocity_graph_neg"] = load_npz(
-            '{}_vgraph_neg.npz'.format(cache_prefix)
-        )
-        adata.obs["velocity_self_transition"] = np.load(
-            '{}_vself_transition.npy'.format(cache_prefix)
-        )
-        adata.layers["velocity"] = np.zeros(adata.X.shape)
-    except:
-        velocity_graph(adata, args, vocabulary, model)
-        from scipy.sparse import save_npz
-        save_npz('{}_vgraph.npz'.format(cache_prefix),
-                 adata.uns["velocity_graph"],)
-        save_npz('{}_vgraph_neg.npz'.format(cache_prefix),
-                 adata.uns["velocity_graph_neg"],)
-        np.save('{}_vself_transition.npy'.format(cache_prefix),
-                adata.obs["velocity_self_transition"],)
-
-    tool_onehot_msa(
-=======
     ax = evo.pl.velocity_contour(
->>>>>>> d8939135493b3d8263eef842b317c35d3b47d0ed
         adata,
         basis='umap', smooth=0.8, pf_smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
@@ -577,18 +493,7 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = 'h3'
-        if args.model_name == 'tape':
-            namespace += '_tape'
-<<<<<<< HEAD
-        evo_h3(args, model, seqs, vocabulary, namespace=namespace)
-        exit()
-
         namespace = 'h1'
         if args.model_name == 'tape':
             namespace += '_tape'
-        evo_h1(args, model, seqs, vocabulary, namespace=namespace)
-
-=======
         evo_ha(args, model, seqs, vocabulary, namespace=namespace)
->>>>>>> d8939135493b3d8263eef842b317c35d3b47d0ed
