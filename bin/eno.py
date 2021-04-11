@@ -265,7 +265,7 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
         adata = adata[adata.obs['homology'] > 80.]
         sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=0.4)
+        sc.tl.umap(adata, min_dist=1.)
 
     evo.set_figure_params(dpi_save=500)
     plot_umap(adata, namespace=namespace)

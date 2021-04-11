@@ -441,6 +441,9 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
         seqs = populate_embedding(args, model, seqs, vocabulary,
                                   namespace='hiv', use_cache=True)
         adata = seqs_to_anndata(seqs)
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=0.5)
         adata.write(adata_cache)
 
     keep_subtypes = {
@@ -450,10 +453,6 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
         subtype if subtype in keep_subtypes else 'A'
         for subtype in adata.obs['subtype']
     ]
-
-    sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-    sc.tl.louvain(adata, resolution=1.)
-    sc.tl.umap(adata, min_dist=0.5)
 
     evo.set_figure_params(dpi_save=500)
     plot_umap(adata)

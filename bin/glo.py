@@ -379,8 +379,8 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
     sns.violinplot(data=adata.obs, x='tax_group', y='pseudotime',
                    order=[
                        'eukaryota',
-                       'fungi',
                        'viridiplantae',
+                       'fungi',
                        'arthropoda',
                        'chordata',
                        'mammalia',

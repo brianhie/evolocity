@@ -263,7 +263,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
 
-    evo.set_figure_params(dpi_save=500)
+    evo.set_figure_params(dpi_save=500, figsize=(6, 6))
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -318,7 +318,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     # Streamplot visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=1., smooth=1., density=0.7,
+        adata, basis='umap', min_mass=2., smooth=1., density=1.,
         color='tax_kingdom', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -343,10 +343,13 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
                save=f'_{namespace}_origins.png')
 
     plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudotime')
+    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudotime',
+                   order=[
+                       'archaea', 'bacteria', 'eukaryota',
+                   ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.png', dpi=500)
+    plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.svg', dpi=500)
     plt.close()
 
     sc.pl.umap(adata, color='pseudotime', edges=True,  edges_color='#cccccc',

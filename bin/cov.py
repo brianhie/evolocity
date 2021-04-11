@@ -221,7 +221,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
 
         sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=0.4)
+        sc.tl.umap(adata, min_dist=1.)
 
         adata.write(adata_cache)
 
