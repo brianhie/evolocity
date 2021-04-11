@@ -1,5 +1,6 @@
 from mutation import *
 from evolocity_graph import *
+import evolocity as evo
 
 np.random.seed(1)
 random.seed(1)
@@ -179,6 +180,9 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
 
     keep_subtypes = {
@@ -189,12 +193,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         for subtype in adata.obs['subtype']
     ]
 
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.7)
+    evo.set_figure_params(dpi_save=500)
     plot_umap(adata)
 
     cache_prefix = f'target/ev_cache/{namespace}_knn40'
@@ -211,7 +210,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        velocity_graph(adata, args, vocabulary, model)
+        evo.tl.velocity_graph(adata, model_name=args.model_name)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -220,65 +219,67 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    import scvelo as scv
-    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+    evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
                               use_negative_cosines=True,
                               retain_scale=False,
                               autoscale=True,)
-    scv.pl.velocity_embedding(
+    evo.pl.velocity_embedding(
         adata, basis='umap', color='year',
         save=f'_{namespace}_year_velo.png',
     )
 
     # Grid visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_grid(
+    ax = evo.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=1., smooth=1.,
         arrow_size=1., arrow_length=3.,
         color='year', show=False,
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velogrid.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_stream(
+    ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
         color='year', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_year_velostream.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_year_velostream.png', dpi=500)
     plt.close()
     plt.figure()
-    ax = scv.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3.7, smooth=1., linewidth=0.7,
+    ax = evo.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
         color='simple_subtype', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_subtype_velostream.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_subtype_velostream.png', dpi=500)
     plt.close()
 
-    plot_pseudotime(
-        adata, basis='umap', min_mass=1., smooth=0.5, levels=100,
-        rank_transform=True,
+    plt.figure()
+    ax = evo.pl.velocity_contour(
+        adata,
+        basis='umap', smooth=0.8, pf_smooth=1., levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        save=f'_{namespace}_pseudotime.png', dpi=500
     )
+    plt.tight_layout(pad=1.1)
+    plt.savefig(f'figures/evolocity__{namespace}_contour.png', dpi=500)
+    plt.close()
 
-    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save=f'_{namespace}_origins.png', dpi=500)
-    scv.pl.scatter(adata, color='pseudotime',
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save=f'_{namespace}_pseudotime.png', dpi=500)
+    sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
+               cmap=plt.cm.get_cmap('magma').reversed(),
+               save=f'_{namespace}_origins.png')
+    sc.pl.umap(adata, color='pseudotime',
+               color_map=plt.cm.get_cmap('magma').reversed(),
+               save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['year']) &
                 np.isfinite(adata.obs['pseudotime']))
@@ -300,8 +301,6 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         tprint('Pseudotime-homology Pearson r = {}, P = {}'
                .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                     adata.obs['homology'][nnan_idx])))
-
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()

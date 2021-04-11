@@ -16,3 +16,8 @@ class TAPEModel(object):
         self.alphabet_ = self.tokenizer_.vocab
         self.alphabet_['J'] = self.alphabet_['<unk>']
         self.unk_idx_ = self.tokenizer_.vocab['<unk>']
+
+        self.vocabulary_ = {
+            tok: self.alphabet_[tok]
+            for tok in self.alphabet_ if '<' not in tok
+        }

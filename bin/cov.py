@@ -1,5 +1,6 @@
 from mutation import *
 from evolocity_graph import *
+import evolocity as evo
 
 np.random.seed(1)
 random.seed(1)
@@ -149,7 +150,15 @@ def interpret_clusters(adata):
                 tprint('\t\t{}: {}'.format(val, count))
         tprint('')
 
-def plot_umap(adata, categories, namespace='cov'):
+def plot_umap(adata, namespace='cov'):
+    categories = [
+        'louvain',
+        'seqlen',
+        'timestamp',
+        'continent',
+        'n_seq',
+        'host',
+    ]
     for category in categories:
         sc.pl.umap(adata, color=category, edges=True,
                    save='_{}_{}.png'.format(namespace, category))
@@ -184,23 +193,6 @@ def seqs_to_anndata(seqs):
 
     return adata
 
-def analyze_embedding(args, model, seqs, vocabulary):
-    seqs = embed_seqs(args, model, seqs, vocabulary, use_cache=True)
-
-    sc.pp.neighbors(adata, n_neighbors=20, use_rep='X')
-    sc.tl.louvain(adata, resolution=1.)
-    sc.tl.umap(adata, min_dist=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    plot_umap(adata, [ 'host', 'group', 'continent', 'louvain' ])
-
-    interpret_clusters(adata)
-
-    adata_cov2 = adata[(adata.obs['louvain'] == '0') |
-                       (adata.obs['louvain'] == '2')]
-    plot_umap(adata_cov2, [ 'host', 'group', 'country' ],
-              namespace='cov7')
-
 def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     ###############################
     ## Visualize Spike landscape ##
@@ -226,23 +218,16 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
             adata.obs['timestamp'] >
             time.mktime(dparse('2019-11-30').timetuple())
         ]
+
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
+
         adata.write(adata_cache)
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
 
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=0.4)
-    categories = [
-        'louvain',
-        'seqlen',
-        'timestamp',
-        'continent',
-        'n_seq',
-        'host',
-    ]
-    plot_umap(adata, categories, namespace=namespace)
+    evo.set_figure_params(dpi_save=500, figsize=(5, 4))
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -262,7 +247,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        velocity_graph(adata, args, vocabulary, model)
+        evo.tl.velocity_graph(adata, model_name=args.model_name)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -274,39 +259,38 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     wt_fname = 'data/cov/cov2_spike_wt.fasta'
     wt_seq = str(SeqIO.read(wt_fname, 'fasta').seq)
 
-    tool_onehot_msa(
+    evo.tl.onehot_msa(
         adata,
         reference=list(adata.obs['seq']).index(wt_seq),
         dirname=f'target/evolocity_alignments/{namespace}',
         n_threads=40,
     )
-    tool_residue_scores(adata)
-    plot_residue_scores(
+    evo.tl.residue_scores(adata)
+    evo.pl.residue_scores(
         adata,
         percentile_keep=0,
         save=f'_{namespace}_residue_scores.png',
     )
-    plot_residue_categories(
+    evo.pl.residue_categories(
         adata,
         positions=[ 17, 416, 483, 500, 613, 680, ],
         namespace=namespace,
         reference=list(adata.obs['seq']).index(wt_seq),
     )
 
-    import scvelo as scv
-    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+    evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
                               use_negative_cosines=True,
                               retain_scale=False,
                               autoscale=True,)
-    scv.pl.velocity_embedding(
+    evo.pl.velocity_embedding(
         adata, basis='umap', color='timestamp',
         save=f'_{namespace}_time_velo.png',
     )
 
     # Grid visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_grid(
+    ax = evo.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=1., smooth=1.2,
         arrow_size=1., arrow_length=3.,
         color='timestamp', show=False,
@@ -314,36 +298,35 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_time_velogrid.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_time_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_stream(
+    ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=1., smooth=1., density=1.2,
         color='timestamp', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_time_velostream.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_time_velostream.png', dpi=500)
     plt.close()
 
     plt.figure()
-    ax = plot_pseudotime(
+    ax = evo.pl.velocity_contour(
         adata,
         basis='umap', smooth=1., pf_smooth=1.5, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        rank_transform=True, use_ends=False,
     )
     plt.tight_layout(pad=1.1)
-    plt.savefig(f'figures/scvelo__{namespace}_pseudotime.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_pseudotime.png', dpi=500)
     plt.close()
 
-    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save=f'_{namespace}_origins.png', dpi=500)
+    sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
+               cmap=plt.cm.get_cmap('magma').reversed(),
+               save=f'_{namespace}_origins.png')
 
     sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
                save=f'_{namespace}_pseudotime.png')
@@ -369,7 +352,6 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
            .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
                                 adata_nnan.obs['timestamp'])))
 
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()
@@ -387,6 +369,10 @@ if __name__ == '__main__':
         vocabulary = { tok: model.alphabet_.tok_to_idx[tok]
                        for tok in model.alphabet_.tok_to_idx
                        if '<' not in tok and tok != '.' and tok != '-' }
+        args.checkpoint = args.model_name
+    elif args.model_name == 'tape':
+        vocabulary = { tok: model.alphabet_[tok]
+                       for tok in model.alphabet_ if '<' not in tok }
         args.checkpoint = args.model_name
     elif args.checkpoint is not None:
         model.model_.load_weights(args.checkpoint)

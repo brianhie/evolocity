@@ -1,5 +1,6 @@
 from mutation import *
 from evolocity_graph import *
+import evolocity as evo
 
 np.random.seed(1)
 random.seed(1)
@@ -86,8 +87,6 @@ def parse_meta(record, taxonomy):
         tax_group = 'chordata'
     if 'Mammalia' in lineage:
         tax_group = 'mammalia'
-    if 'Primate' in lineage:
-        tax_group = 'primate'
     assert(tax_group is not None)
 
     return {
@@ -246,17 +245,18 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
 
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
+    evo.set_figure_params(dpi_save=500, figsize=(6, 4))
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -277,9 +277,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
-        velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0,)
+        evo.tl.velocity_graph(adata, model_name=args.model_name)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -288,93 +286,83 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    tool_onehot_msa(
-        adata,
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    tool_residue_scores(adata)
-    plot_residue_scores(adata, save=f'_{namespace}_residue_scores.png')
-
-    import scvelo as scv
-    scv.tl.velocity_embedding(adata, basis='umap', scale=1.,
+    evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
                               use_negative_cosines=True,
                               retain_scale=False,
                               autoscale=True,)
-    scv.pl.velocity_embedding(
+    evo.pl.velocity_embedding(
         adata, basis='umap', color='tax_group',
         save=f'_{namespace}_taxonomy_velo.png',
     )
 
     # Grid visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_grid(
+    ax = evo.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=1., smooth=1.,
         arrow_size=1., arrow_length=3.,
         color='tax_group', show=False,
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_taxonomy_velogrid.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_taxonomy_velogrid.png', dpi=500)
     plt.close()
 
     # Streamplot visualization.
     plt.figure()
-    ax = scv.pl.velocity_embedding_stream(
+    ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=1., smooth=1., linewidth=1.,
         color='tax_group', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/scvelo__{namespace}_taxonomy_velostream.png', dpi=500)
+    plt.savefig(f'figures/evolocity__{namespace}_taxonomy_velostream.png', dpi=500)
     plt.close()
 
-    ax = plot_path(
+    ax = evo.pl.draw_path(
         adata,
         source_idx=list(adata.obs['gene_id']).index('CYC_HUMAN'),
         target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
     )
-    ax = plot_path(
+    ax = evo.pl.draw_path(
         adata,
         source_idx=list(adata.obs['gene_id']).index('CYC_APIME'),
         target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
         ax=ax,
     )
-    ax = plot_path(
+    ax = evo.pl.draw_path(
         adata,
         source_idx=list(adata.obs['gene_id']).index('CYC_MAIZE'),
         target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
         ax=ax,
     )
 
-    plot_pseudotime(
+    evo.pl.velocity_contour(
         adata, basis='umap', min_mass=1., smooth=0.6, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False, ax=ax,
         rank_transform=True,
-        save=f'_{namespace}_pseudotime.png', dpi=500
+        save=f'_{namespace}_contour.png', dpi=500
     )
 
-    scv.pl.scatter(adata, color=[ 'root_cells', 'end_points' ],
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save=f'_{namespace}_origins.png', dpi=500)
+    sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
+               cmap=plt.cm.get_cmap('magma').reversed(),
+               save=f'_{namespace}_origins.png')
 
     plt.figure()
     sns.violinplot(data=adata.obs, x='tax_group', y='pseudotime',
                    order=[
                        'eukaryota',
-                       'fungi',
                        'viridiplantae',
+                       'fungi',
                        'arthropoda',
                        'chordata',
                        'mammalia',
-                       'primate',
                    ])
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.png', dpi=500)
+    plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.svg', dpi=500)
     plt.close()
 
     sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
@@ -389,8 +377,6 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     tprint('Pseudotime-homology Pearson r = {}, P = {}'
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
-
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()
