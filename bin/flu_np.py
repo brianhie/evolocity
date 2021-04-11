@@ -359,7 +359,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     sc.tl.louvain(adata, resolution=1.)
 
     sc.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
+    sc.tl.umap(adata, min_dist=1.5)
     plot_umap(adata, namespace=namespace)
     sc.pl.umap(adata, color='gong2013_step', save=f'_{namespace}_gong2013.png',
                edges=True,)
@@ -408,7 +408,6 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         n_plot=10,
         reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
     )
-    exit()
 
     import scvelo as scv
     scv.tl.velocity_embedding(adata, basis='umap', scale=1.,

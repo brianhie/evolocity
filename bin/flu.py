@@ -306,9 +306,7 @@ def evo_h1(args, model, seqs, vocabulary, namespace='h1'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
-        velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0,)
+        velocity_graph(adata, args, vocabulary, model)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -432,7 +430,7 @@ def evo_h3(args, model, seqs, vocabulary, namespace='h3'):
 
         adata.write(adata_cache)
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+    sc.pp.neighbors(adata, n_neighbors=20, use_rep='X')
 
     sc.tl.louvain(adata, resolution=1.)
 
@@ -444,7 +442,7 @@ def evo_h3(args, model, seqs, vocabulary, namespace='h3'):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_self_knn30'
+    cache_prefix = f'target/ev_cache/{namespace}_self_knn20'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -458,8 +456,7 @@ def evo_h3(args, model, seqs, vocabulary, namespace='h3'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0, score='self')
+        velocity_graph(adata, args, vocabulary, model)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -645,13 +642,14 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = 'h1'
-        if args.model_name == 'tape':
-            namespace += '_tape'
-        evo_h1(args, model, seqs, vocabulary, namespace=namespace)
-        #exit()
-
         namespace = 'h3'
         if args.model_name == 'tape':
             namespace += '_tape'
         evo_h3(args, model, seqs, vocabulary, namespace=namespace)
+        exit()
+
+        namespace = 'h1'
+        if args.model_name == 'tape':
+            namespace += '_tape'
+        evo_h1(args, model, seqs, vocabulary, namespace=namespace)
+
