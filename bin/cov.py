@@ -225,7 +225,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
 
         adata.write(adata_cache)
 
-
+    tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 4))
     plot_umap(adata, namespace=namespace)
 

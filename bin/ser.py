@@ -263,6 +263,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
 
+    tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(6, 6))
     plot_umap(adata, namespace=namespace)
 

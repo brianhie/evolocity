@@ -256,6 +256,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
 
+    tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(6, 4))
     plot_umap(adata, namespace=namespace)
 

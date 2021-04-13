@@ -454,6 +454,7 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
         for subtype in adata.obs['subtype']
     ]
 
+    tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
     plot_umap(adata)
 

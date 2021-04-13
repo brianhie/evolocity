@@ -360,6 +360,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
         adata.write(adata_cache)
 
+    tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 5))
     plot_umap(adata, namespace=namespace)
 
