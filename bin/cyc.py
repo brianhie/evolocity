@@ -313,7 +313,9 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=1., smooth=1., linewidth=1.,
-        color='tax_group', show=False,
+        color='tax_group', legend_loc=False, show=False,
+        palette=[ '#1f77b4', '#ff7f0e', '#8c564b',
+                  '#d62728', '#9467bd', '#2ca02c', ],
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
@@ -351,22 +353,22 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
                cmap=plt.cm.get_cmap('magma').reversed(),
                save=f'_{namespace}_origins.png')
 
-    plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_group', y='pseudotime',
-                   order=[
-                       'eukaryota',
-                       'viridiplantae',
-                       'fungi',
-                       'arthropoda',
-                       'chordata',
-                       'mammalia',
-                   ])
+    plt.figure(figsize=(4, 6))
+    sns.boxplot(data=adata.obs, x='tax_group', y='pseudotime',
+                order=[
+                    'eukaryota',
+                    'viridiplantae',
+                    'fungi',
+                    'arthropoda',
+                    'chordata',
+                    'mammalia',
+                ])
     plt.xticks(rotation=60)
     plt.tight_layout()
     plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.svg', dpi=500)
     plt.close()
 
-    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &

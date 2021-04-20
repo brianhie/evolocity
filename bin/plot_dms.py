@@ -5,7 +5,7 @@ def load_model(model_name):
     with open(f'results/dms/dms_{model_name}.log') as f:
         for line in f:
             line = line.rstrip().split(' | ')[-1]
-            
+
             if line.startswith('Results for '):
                 curr_prot = line.split('/')[-1].split('.')[0]
                 continue
@@ -43,8 +43,15 @@ if __name__ == '__main__':
         hue='model_name',
         ci=None,
     )
+    sns.stripplot(
+        data=df,
+        x='protein',
+        y='corr',
+        hue='model_name',
+        dodge=True,
+    )
     plt.xticks(rotation=45, ha='right')
     plt.ylabel('|Spearman r|')
     plt.tight_layout()
-    plt.savefig('figures/plot_dms.png', dpi=500)
+    plt.savefig('figures/plot_dms.svg')
     plt.close()

@@ -140,7 +140,7 @@ def process(fnames):
             meta['seq_len'] = len(record.seq)
             seqs[record.seq].append(meta)
 
-    seqs = training_distances(seqs, namespace=args.namespace)
+    #seqs = training_distances(seqs, namespace=args.namespace)
 
     return seqs
 
@@ -264,7 +264,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
         sc.tl.umap(adata, min_dist=1.)
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
-    evo.set_figure_params(dpi_save=500, figsize=(6, 6))
+    evo.set_figure_params(dpi_save=500)
     plot_umap(adata, namespace=namespace)
 
     #####################################
@@ -309,7 +309,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     ax = evo.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=1., smooth=1.,
         arrow_size=1., arrow_length=3.,
-        color='tax_group', show=False,
+        color='tax_kingdom', show=False,
     )
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
@@ -320,7 +320,7 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=2., smooth=1., density=1.,
-        color='tax_kingdom', show=False,
+        color='tax_kingdom', legend_loc=False, show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
@@ -340,21 +340,23 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     plt.close()
 
     sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
+               edges=True,  edges_color='#cccccc',
                cmap=plt.cm.get_cmap('magma').reversed(),
                save=f'_{namespace}_origins.png')
 
-    plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudotime',
-                   order=[
-                       'archaea', 'bacteria', 'eukaryota',
-                   ])
+    plt.figure(figsize=(3, 6))
+    sns.boxplot(data=adata.obs, x='tax_kingdom', y='pseudotime',
+                order=[
+                    'archaea', 'bacteria', 'eukaryota',
+                ])
     plt.xticks(rotation=60)
     plt.tight_layout()
     plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.svg', dpi=500)
     plt.close()
 
-    sc.pl.umap(adata, color='pseudotime', edges=True,  edges_color='#cccccc',
-               cmap='magma', save=f'_{namespace}_pseudotime.png')
+    sc.pl.umap(adata, color='pseudotime',
+               edges=True,  edges_color='#cccccc',
+               cmap='inferno', save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudotime']))

@@ -208,6 +208,8 @@ def plot_umap(adata, namespace='np'):
                edges=True,)
     sc.pl.umap(adata, color='subtype', save=f'_{namespace}_subtype.png',
                edges=True,)
+    sc.pl.umap(adata, color='simple_subtype',
+               save=f'_{namespace}_simple_subtype.png', edges=True,)
     sc.pl.umap(adata, color='host', save=f'_{namespace}_host.png',
                edges=True,)
     sc.pl.umap(adata, color='resist_adamantane',
@@ -282,8 +284,35 @@ def draw_gong_path(ax, adata):
                      length_includes_head=True,
                      color='#888888', zorder=5)
 
-    ax.scatter(gong_x, gong_y, s=15, c=gong_c, cmap='Oranges',
+    ax.scatter(gong_x, gong_y, s=50, c=gong_c, cmap='Oranges',
                edgecolors='black', linewidths=0.5, zorder=10)
+
+def analyze_edges(adata, model, vocabulary, namespace='np'):
+    from evolocity.tools.velocity_graph import VelocityGraph
+
+    vgraph = VelocityGraph(adata, adata.obs['seq'])
+    n_obs = adata.X.shape[0]
+
+    vgraph.compute_likelihoods(vocabulary, model)
+
+    dirname = f'target/{namespace}'
+    mkdir_p(dirname)
+    with open(f'{dirname}/{namespace}_edges.txt', 'w') as of:
+        for i in tqdm(range(n_obs)):
+            score_fn = likelihood_muts
+            neighs_idx = get_iterative_indices(
+                vgraph.indices, i, vgraph.n_recurse_neighbors, vgraph.max_neighs
+            )
+            for j in neighs_idx:
+                val = score_fn(
+                    vgraph.seqs[i], vgraph.seqs[j],
+                    args, vocabulary, model,
+                    seq_cache=vgraph.seq_probs, verbose=vgraph.verbose,
+                )
+                fields = [
+                    i, j, adata.obs['year'][i], adata.obs['year'][j], val
+                ]
+                of.write('\t'.join([ str(field) for field in fields ]) + '\n')
 
 def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
@@ -322,6 +351,18 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     tprint('Sum of local scores: {}'.format(sum(df.muts)))
     tprint('Sum of self scores: {}'.format(sum(df.self_score)))
 
+    x = list(range(len(df) + 1))
+    y = [ 0 ] + list(np.cumsum(df['muts']))
+    plt.figure(figsize=(8, 3))
+    plt.scatter(x, y, s=50, c=x, cmap='Oranges',
+                edgecolors='black', linewidths=0.5, zorder=10)
+    plt.plot(x, y, c='#aaaaaa')
+    plt.ylim([ -5, 12 ])
+    plt.axhline(c='black', linestyle='--')
+    plt.savefig('figures/np_gong_path.svg')
+    plt.close()
+    tprint('Gong et al. Spearman r = {}, P = {}'.format(*ss.spearmanr(x, y)))
+
     ############################
     ## Visualize NP landscape ##
     ############################
@@ -359,6 +400,18 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         sc.tl.umap(adata, min_dist=1.)
 
         adata.write(adata_cache)
+
+    #if namespace == 'np':
+    #    analyze_edges(adata, model, vocabulary)
+    #    exit()
+
+    keep_subtypes = {
+        'H1N1', 'H2N2', 'H3N2', 'H5N1', 'H7N9',
+    }
+    adata.obs['simple_subtype'] = [
+        subtype if subtype in keep_subtypes else 'other/unknown'
+        for subtype in adata.obs['subtype']
+    ]
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 5))
@@ -422,7 +475,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.figure()
     ax = evo.pl.velocity_embedding_grid(
         adata, basis='umap', min_mass=3., smooth=1.,
-        arrow_size=1., arrow_length=3.,
+        arrow_size=1., arrow_length=3., alpha=0.9,
         color='year', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -432,11 +485,23 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.savefig(f'figures/evolocity__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
+    plt.figure()
+    ax = evo.pl.velocity_embedding_grid(
+        adata, basis='umap', min_mass=3., smooth=1.,
+        arrow_size=1., arrow_length=3., alpha=1.,
+        color='pos373', show=False,
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/evolocity__{namespace}_pos373_velogrid.png', dpi=500)
+    plt.close()
+
     # Streamplot visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=4., smooth=1., density=1.2,
-        color='year', show=False,
+        color='year', show=False, colorbar=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
@@ -444,12 +509,37 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     draw_gong_path(ax, adata)
     plt.savefig(f'figures/evolocity__{namespace}_year_velostream.png', dpi=500)
     plt.close()
+    plt.figure()
+    ax = evo.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        color='pos104', show=False, legend_loc=False,
+        palette=[ '#888888', '#1f77b4', '#888888',
+                  '#888888', '#d62728', '#888888',
+                  '#2ca02c', '#9467bd', ],
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/evolocity__{namespace}_pos104_velostream.png', dpi=500)
+    plt.close()
+    plt.figure()
+    ax = evo.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        color='pos238', show=False, legend_loc=False,
+        palette=[ '#888888', '#1f77b4', '#d62728',
+                  '#2ca02c', '#9467bd', ],
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/evolocity__{namespace}_pos238_velostream.png', dpi=500)
+    plt.close()
 
     plt.figure()
     ax = evo.pl.velocity_contour(
         adata,
-        basis='umap', smooth=0.8, pf_smooth=1., levels=100,
-        arrow_size=1., arrow_length=3., cmap='coolwarm',
+        basis='umap', smooth=1., pf_smooth=1.5, levels=100,
+        arrow_size=2., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
     )
     plt.tight_layout(pad=1.1)
@@ -458,10 +548,11 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.close()
 
     sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
-               cmap=plt.cm.get_cmap('magma').reversed(),
+               color_map=plt.cm.get_cmap('magma').reversed(),
+               edges=True, edges_color='#aaaaaa',
                save=f'_{namespace}_origins.png')
 
-    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['year']) &

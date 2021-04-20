@@ -357,7 +357,10 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=4., smooth=1.5, linewidth=1.,
-        color='globin_type', show=False,
+        color='globin_type', legend_loc=False,
+        palette=[ '#1f77b4', '#ff7f0e', '#2ca02c',
+                  '#d62728', '#9467bd', '#888888', ],
+        show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
     plt.tight_layout(pad=1.1)
@@ -376,37 +379,43 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
                cmap=plt.cm.get_cmap('magma').reversed(),
                save=f'_{namespace}_origins.png')
 
+    tax_order = [
+        'eukaryota',
+        'viridiplantae',
+        'fungi',
+        'arthropoda',
+        'chordata',
+        'mammalia',
+        'primate',
+    ]
     plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_group', y='pseudotime',
-                   order=[
-                       'eukaryota',
-                       'viridiplantae',
-                       'fungi',
-                       'arthropoda',
-                       'chordata',
-                       'mammalia',
-                       'primate',
-                   ])
+    sns.violinplot(
+        data=adata.obs, x='tax_group', y='pseudotime',
+        order=tax_order, inner='quartile', scale='width',
+    )
     plt.xticks(rotation=60)
     plt.tight_layout()
     plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.svg')
     plt.close()
 
+    type_order = [
+        'neuroglobin',
+        'cytoglobin',
+        'myoglobin',
+        'hemoglobin_alpha',
+        'hemoglobin_beta',
+    ]
     plt.figure()
-    sns.violinplot(data=adata.obs, x='globin_type', y='pseudotime',
-                   order=[
-                       'neuroglobin',
-                       'cytoglobin',
-                       'myoglobin',
-                       'hemoglobin_alpha',
-                       'hemoglobin_beta',
-                   ])
+    sns.violinplot(
+        data=adata.obs, x='globin_type', y='pseudotime',
+        order=type_order, inner='quartile', scale='width',
+    )
     plt.xticks(rotation=60)
     plt.tight_layout()
     plt.savefig(f'figures/{namespace}_type_pseudotime.svg')
     plt.close()
 
-    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &

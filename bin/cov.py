@@ -160,7 +160,8 @@ def plot_umap(adata, namespace='cov'):
         'host',
     ]
     for category in categories:
-        sc.pl.umap(adata, color=category, edges=True,
+        sc.pl.umap(adata, color=category,
+                   edges=True, edges_color='#aaaaaa',
                    save='_{}_{}.png'.format(namespace, category))
 
 def seqs_to_anndata(seqs):
@@ -328,8 +329,8 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
                cmap=plt.cm.get_cmap('magma').reversed(),
                save=f'_{namespace}_origins.png')
 
-    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
-               save=f'_{namespace}_pseudotime.png')
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='inferno',
+               edges_color='#aaaaaa', save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['timestamp']) &
                 np.isfinite(adata.obs['pseudotime']))

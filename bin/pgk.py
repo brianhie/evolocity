@@ -316,7 +316,7 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=3., smooth=1.2, density=0.7,
-        color='tax_kingdom', show=False,
+        color='tax_kingdom', legend_loc=False, show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
@@ -339,19 +339,19 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
                cmap=plt.cm.get_cmap('magma').reversed(),
                save=f'_{namespace}_origins.png')
 
-    plt.figure()
-    sns.violinplot(data=adata.obs, x='tax_kingdom', y='pseudotime',
-                   order=[
-                       'archaea',
-                       'bacteria',
-                       'eukaryota',
-                   ])
+    plt.figure(figsize=(3, 6))
+    sns.boxplot(data=adata.obs, x='tax_kingdom', y='pseudotime',
+                order=[
+                    'archaea',
+                    'bacteria',
+                    'eukaryota',
+                ])
     plt.xticks(rotation=60)
     plt.tight_layout()
     plt.savefig(f'figures/{namespace}_taxonomy_pseudotime.svg')
     plt.close()
 
-    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &

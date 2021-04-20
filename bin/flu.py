@@ -184,23 +184,10 @@ def seq_clusters(adata):
                 of.write(seq + '\n\n')
 
 def plot_umap(adata, namespace='flu'):
-    if namespace == 'flu1918':
-        plt.figure()
-        ax = plt.gca()
-        sc.pl.umap(adata, color='Host Species', ax=ax, size=20)
-        ratio = 0.3
-        xleft, xright = ax.get_xlim()
-        ybottom, ytop = ax.get_ylim()
-        ax.set_aspect(abs((xright-xleft)/(ybottom-ytop))*ratio)
-        plt.savefig('figures/umap_{}_species.png'.format(namespace))
-        plt.close()
-    else:
-        sc.pl.umap(adata, color='Host Species',
-                   save='_{}_species.png'.format(namespace))
-
     sc.pl.umap(adata, color='Subtype',
                save='_{}_subtype.png'.format(namespace))
-    sc.pl.umap(adata, color='Collection Date', edges=True,
+    sc.pl.umap(adata, color='Collection Date',
+               edges=True, edges_color='#aaaaaa',
                save='_{}_date.png'.format(namespace))
     sc.pl.umap(adata, color='louvain',
                save='_{}_louvain.png'.format(namespace))
@@ -316,17 +303,17 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
-    evo.tl.onehot_msa(
-        adata,
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    evo.tl.residue_scores(adata)
-    evo.pl.residue_scores(adata, save=f'_{namespace}_residue_scores.png')
-    evo.pl.residue_categories(
-        adata,
-        namespace=namespace,
-    )
+    #evo.tl.onehot_msa(
+    #    adata,
+    #    dirname=f'target/evolocity_alignments/{namespace}',
+    #    n_threads=40,
+    #)
+    #evo.tl.residue_scores(adata)
+    #evo.pl.residue_scores(adata, save=f'_{namespace}_residue_scores.png')
+    #evo.pl.residue_categories(
+    #    adata,
+    #    namespace=namespace,
+    #)
 
     evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
@@ -341,10 +328,11 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
     # Grid visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=1., smooth=1.,
-        arrow_size=1., arrow_length=3.,
+        adata, basis='umap', min_mass=4., smooth=1.,
+        arrow_size=2., arrow_length=3.,
         color='Collection Date', show=False,
     )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
     plt.tight_layout(pad=1.1)
     plt.subplots_adjust(right=0.85)
     plt.savefig(f'figures/evolocity__{namespace}_year_velogrid.png', dpi=500)
@@ -353,7 +341,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
     # Streamplot visualization.
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
+        adata, basis='umap', min_mass=4., smooth=1., linewidth=0.7,
         color='Collection Date', show=False,
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
@@ -379,7 +367,8 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
                cmap=plt.cm.get_cmap('magma').reversed(),
                save=f'_{namespace}_origins.png')
 
-    sc.pl.umap(adata, color='pseudotime', edges=True, cmap='magma',
+    sc.pl.umap(adata, color='pseudotime', edges=True,
+               edges_color='#aaaaaa', cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
 
     nnan_idx = (np.isfinite(adata.obs['Collection Date']) &

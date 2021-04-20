@@ -182,19 +182,22 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         adata = seqs_to_anndata(seqs)
         sc.pp.neighbors(adata, n_neighbors=60, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=1.)
+        sc.tl.umap(adata, min_dist=0.9)
         adata.write(adata_cache)
 
     keep_subtypes = {
         'AE', 'B', 'C', 'BC', 'D',
     }
     adata.obs['simple_subtype'] = [
-        subtype if subtype in keep_subtypes else 'A'
-        for subtype in adata.obs['subtype']
+        subtype if subtype in keep_subtypes else (
+            'A' if 'A' in subtype else 'Other'
+        ) for subtype in adata.obs['subtype']
     ]
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
+    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+    sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata)
 
     cache_prefix = f'target/ev_cache/{namespace}_knn60'
@@ -256,7 +259,10 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     plt.figure()
     ax = evo.pl.velocity_embedding_stream(
         adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
-        color='simple_subtype', show=False,
+        color='simple_subtype', show=False, legend_loc='lower right',
+        palette=[ '#1f77b4', '#ff7f0e', '#2ca02c',
+                  '#d62728', '#9467bd', '#8c564b',
+                  '#888888'],
     )
     sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#dddddd')
     plt.tight_layout(pad=1.1)
@@ -276,11 +282,25 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     plt.close()
 
     sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
-               cmap=plt.cm.get_cmap('magma').reversed(),
-               save=f'_{namespace}_origins.png')
-    sc.pl.umap(adata, color='pseudotime',
+               edges=True, edges_color='#aaaaaa',
                color_map=plt.cm.get_cmap('magma').reversed(),
-               save=f'_{namespace}_pseudotime.png')
+               save=f'_{namespace}_origins.png')
+    sc.pl.umap(adata, color='pseudotime', edges=True, edges_color='#aaaaaa',
+               color_map='inferno', save=f'_{namespace}_pseudotime.png')
+
+    plt.figure(figsize=(3, 6))
+    sns.boxplot(data=adata.obs, x='simple_subtype', y='pseudotime',
+                order=[
+                    'A',
+                    'AE',
+                    'B',
+                    'C',
+                    'BC',
+                ])
+    plt.xticks(rotation=60)
+    plt.tight_layout()
+    plt.savefig(f'figures/{namespace}_subtype_pseudotime.svg', dpi=500)
+    plt.close()
 
     nnan_idx = (np.isfinite(adata.obs['year']) &
                 np.isfinite(adata.obs['pseudotime']))

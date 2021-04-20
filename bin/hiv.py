@@ -95,6 +95,9 @@ def process(args, fnames, meta_fnames):
             if record.seq not in seqs:
                 seqs[record.seq] = []
             seqs[record.seq].append(meta)
+
+    seqs = training_distances(seqs, namespace=args.namespace)
+
     return seqs
 
 def split_seqs(seqs, split_method='random'):
@@ -128,7 +131,15 @@ def setup(args):
     fnames = [ 'data/hiv/HIV-1_env_samelen.fa' ]
     meta_fnames = [ 'data/hiv/HIV-1_env_samelen.fa' ]
 
-    seqs = process(args, fnames, meta_fnames)
+    import pickle
+    cache_fname = 'target/ev_cache/env_seqs.pkl'
+    try:
+        with open(cache_fname, 'rb') as f:
+            seqs = pickle.load(f)
+    except:
+        seqs = process(args, fnames, meta_fnames)
+        with open(cache_fname, 'wb') as of:
+            pickle.dump(seqs, of)
 
     seq_len = max([ len(seq) for seq in seqs ]) + 2
     vocab_size = len(AAs) + 2
@@ -170,6 +181,7 @@ def plot_umap(adata):
     sc.pl.umap(adata, color='louvain', save='_hiv_louvain.png')
     sc.pl.umap(adata, color='subtype', save='_hiv_subtype.png')
     sc.pl.umap(adata, color='year', save='_hiv_year.png')
+    sc.pl.umap(adata, color='homology', save='_hiv_homology.png')
 
 def seqs_to_anndata(seqs):
     keys = set([ key for seq in seqs for meta in seqs[seq] for key in meta ])
@@ -458,7 +470,7 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
     evo.set_figure_params(dpi_save=500)
     plot_umap(adata)
 
-    cache_prefix = 'target/ev_cache/env_knn50'
+    cache_prefix = f'target/ev_cache/{namespace}_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -539,8 +551,23 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
                cmap=plt.cm.get_cmap('magma').reversed(),
                save=f'_{namespace}_origins.png')
     sc.pl.umap(adata, color='pseudotime',
-               color_map=plt.cm.get_cmap('magma').reversed(),
+               cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
+
+    plt.figure(figsize=(3, 6))
+    sns.violinplot(data=adata.obs, x='simple_subtype', y='pseudotime',
+                   order=[
+                       'A',
+                       'B',
+                       'C',
+                       'D',
+                       'AE',
+                       'BC',
+                   ], scale='width')
+    plt.xticks(rotation=60)
+    plt.tight_layout()
+    plt.savefig(f'figures/{namespace}_subtype_pseudotime.svg', dpi=500)
+    plt.close()
 
     nnan_idx = (np.isfinite(adata.obs['year']) &
                 np.isfinite(adata.obs['pseudotime']))
@@ -552,8 +579,24 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['year'][nnan_idx])))
 
+    if args.model_name != 'tape':
+        nnan_idx = (np.isfinite(adata.obs['homology']) &
+                    np.isfinite(adata.obs['pseudotime']))
+        tprint('Pseudotime-homology Spearman r = {}, P = {}'
+               .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
+                                     adata.obs['homology'][nnan_idx],
+                                     nan_policy='omit')))
+        tprint('Pseudotime-homology Pearson r = {}, P = {}'
+               .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
+                                    adata.obs['homology'][nnan_idx])))
+
+
 if __name__ == '__main__':
     args = parse_args()
+
+    namespace = args.namespace
+    if args.model_name == 'tape':
+        namespace += '_tape'
 
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
@@ -629,4 +672,4 @@ if __name__ == '__main__':
             raise ValueError('Embeddings not available for models: {}'
                              .format(', '.join(no_embed)))
 
-        evo_env(args, model, seqs, vocabulary)
+        evo_env(args, model, seqs, vocabulary, namespace=namespace)
