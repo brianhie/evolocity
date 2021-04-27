@@ -1,5 +1,5 @@
 # Evolocity
-## Evolutionary velocity with protein language models
+### Evolutionary velocity with protein language models
 
 Evolocity is a landscape-based method for ordering protein sequences in evolutionary time. Evolocity uses the local evolutionary predictions enabled by language models to enable global evolutionary insight.
 
