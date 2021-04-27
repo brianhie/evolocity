@@ -372,7 +372,7 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         adata, basis='umap', smooth=0.6, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        save=f'_{namespace}_pseudotime.png', dpi=500
+        save=f'_{namespace}_contour.png', dpi=500
     )
 
     sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
@@ -389,9 +389,9 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         'primate',
     ]
     plt.figure()
-    sns.violinplot(
+    sns.boxplot(
         data=adata.obs, x='tax_group', y='pseudotime',
-        order=tax_order, inner='quartile', scale='width',
+        order=tax_order,
     )
     plt.xticks(rotation=60)
     plt.tight_layout()
@@ -406,9 +406,9 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         'hemoglobin_beta',
     ]
     plt.figure()
-    sns.violinplot(
+    sns.boxplot(
         data=adata.obs, x='globin_type', y='pseudotime',
-        order=type_order, inner='quartile', scale='width',
+        order=type_order,
     )
     plt.xticks(rotation=60)
     plt.tight_layout()
@@ -417,6 +417,9 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
 
     sc.pl.umap(adata, color='pseudotime', edges=True, cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
+
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudotime']))

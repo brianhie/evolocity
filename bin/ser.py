@@ -358,6 +358,9 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
                edges=True,  edges_color='#cccccc',
                cmap='inferno', save=f'_{namespace}_pseudotime.png')
 
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
+
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudotime']))
     tprint('Pseudotime-homology Spearman r = {}, P = {}'

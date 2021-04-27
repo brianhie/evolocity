@@ -211,235 +211,6 @@ def seqs_to_anndata(seqs):
 
     return adata
 
-def analyze_embedding(args, model, seqs, vocabulary):
-    seqs = populate_embedding(args, model, seqs, vocabulary,
-                              use_cache=True)
-
-    adata = seqs_to_anndata(seqs)
-
-    sc.pp.neighbors(adata, n_neighbors=200, use_rep='X')
-    sc.tl.louvain(adata, resolution=1.)
-
-    sc.set_figure_params(dpi_save=500)
-    plot_umap(adata)
-
-    interpret_clusters(adata)
-
-def load_time_data():
-    accession_to_data = {}
-    with open('data/hiv/HIV-1_B_status_meta.txt') as f:
-        header = [ field.replace(' ', '_').lower()
-                   for field in f.readline().rstrip().split('\t') ]
-        for line in f:
-            fields = [ field.replace(' ', '_') if field else None
-                       for field in line.rstrip().split('\t') ]
-            accession = fields[1]
-            data = { h_field: l_field for h_field, l_field in zip(header, fields) }
-            if data['days_from_seroconversion'] == 'late' and \
-               not data['fiebig_stage']:
-                data['fiebig_stage'] = 'chronic'
-            accession_to_data[accession] = data
-
-    return accession_to_data, header
-
-def tl_densities(adata, n_keep=5):
-    dists = adata.obsp['distances']
-    assert(dists.shape[0] == adata.X.shape[0])
-    densities = []
-    for i in range(dists.shape[0]):
-        dists_i = dists[i]
-        dists_i = sorted(np.array(dists_i[dists_i.nonzero()]).ravel())
-        try:
-            densities.append(np.mean(dists_i[:n_keep]))
-        except:
-            densities.append(float('nan'))
-    adata.obs['density'] = densities
-
-def plot_umap_keele2008(adata):
-    sc.pl.umap(adata, color='corpus', save='_hiv_corpus.png')
-    sc.pl.umap(adata, color='subtype', save='_hiv_subtype.png')
-    sc.pl.umap(adata, color='status', save='_hiv_status.png')
-    sc.pl.umap(adata, color='patient_code', save='_hiv_patient.png')
-    sc.pl.umap(adata, color='louvain', save='_hiv_louvain.png')
-    sc.pl.umap(adata, color='density', save='_hiv_density.png',
-               vmax=0.7)
-
-def evo_keele2008(args, model, seqs, vocabulary):
-    #############################
-    ## Visualize Env landscape ##
-    #############################
-
-    accession_to_data, new_fields = load_time_data()
-
-    seqs = populate_embedding(
-        args, model, seqs, vocabulary, use_cache=True, namespace='hiv'
-    )
-    for seq in seqs:
-        for meta in seqs[seq]:
-            meta['corpus'] = 'lanl'
-            if meta['accession'] in accession_to_data:
-                data = accession_to_data[meta['accession']]
-                #meta.update(data)
-                meta['status'] = data['fiebig_stage']
-            else:
-                #for key in new_fields:
-                #    meta[key] = None
-                meta['status'] = None
-
-    from transfound import load_keele2008
-    seqs_keele = load_keele2008()
-    seqs_keele = populate_embedding(
-        args, model, seqs_keele, vocabulary,
-        use_cache=True, namespace='env_tf_keele2008'
-    )
-    for seq in seqs_keele:
-        if seq in seqs:
-            for meta in seqs[seq]:
-                for key in seqs_keele[seq][0]:
-                    meta[key] = seqs_keele[seq][0][key]
-            seqs[seq] += seqs_keele[seq]
-        else:
-            seqs[seq] = seqs_keele[seq]
-
-    adata = seqs_to_anndata(seqs)
-
-    adata = adata[adata.obs.subtype == 'B']
-
-    sc.pp.neighbors(adata, n_neighbors=10, use_rep='X')
-
-    sc.tl.louvain(adata, resolution=1.)
-    tl_densities(adata, n_keep=10)
-
-    evo.set_figure_params(dpi_save=500)
-    sc.tl.umap(adata, min_dist=1.)
-    plot_umap_keele2008(adata)
-
-    cache_prefix = 'target/ev_cache/env_knn10'
-    try:
-        from scipy.sparse import load_npz
-        adata.uns["velocity_graph"] = load_npz(
-            '{}_vgraph.npz'.format(cache_prefix)
-        )
-        adata.uns["velocity_graph_neg"] = load_npz(
-            '{}_vgraph_neg.npz'.format(cache_prefix)
-        )
-        adata.obs["velocity_self_transition"] = np.load(
-            '{}_vself_transition.npy'.format(cache_prefix)
-        )
-        adata.layers["velocity"] = np.zeros(adata.X.shape)
-    except:
-        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
-        velocity_graph(adata, args, vocabulary, model,
-                       n_recurse_neighbors=0,)
-        from scipy.sparse import save_npz
-        save_npz('{}_vgraph.npz'.format(cache_prefix),
-                 adata.uns["velocity_graph"],)
-        save_npz('{}_vgraph_neg.npz'.format(cache_prefix),
-                 adata.uns["velocity_graph_neg"],)
-        np.save('{}_vself_transition.npy'.format(cache_prefix),
-                adata.obs["velocity_self_transition"],)
-
-    evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
-                              self_transitions=True,
-                              use_negative_cosines=True,
-                              retain_scale=False,
-                              autoscale=True,)
-    evo.pl.velocity_embedding(
-        adata, basis='umap', color='year',
-        save='_env_year_velo.png',
-    )
-
-    # Grid visualization.
-    plt.figure()
-    ax = evo.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=1., smooth=1.,
-        arrow_size=1., arrow_length=3.,
-        color='year', show=False,
-    )
-    plt.tight_layout(pad=1.1)
-    plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/evolocity__env_year_velogrid.png', dpi=500)
-    plt.close()
-
-    # Streamplot visualization.
-    plt.figure()
-    ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=3., smooth=1., linewidth=0.7,
-        color='year', show=False,
-    )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    plt.tight_layout(pad=1.1)
-    plt.subplots_adjust(right=0.85)
-    plt.savefig('figures/evolocity__env_year_velostream.png', dpi=500)
-    plt.close()
-
-    plot_pseudotime(
-        adata, basis='umap', min_mass=1., smooth=0.5, levels=100,
-        rank_transform=True,
-        arrow_size=1., arrow_length=3., cmap='coolwarm',
-        c='#aaaaaa', show=False,
-        save='_env_pseudotime.png', dpi=500
-    )
-
-    adata.obs['root_nodes'][adata.obs['root_nodes'] < 1.] = 0
-    adata.obs['end_points'][adata.obs['end_points'] < 1.] = 0
-
-    evo.pl.scatter(adata, color=[ 'root_nodes', 'end_points' ],
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save='_env_origins.png', dpi=500)
-    evo.pl.scatter(adata, color='pseudotime',
-                   cmap=plt.cm.get_cmap('magma').reversed(),
-                   save='_env_pftime.png', dpi=500)
-
-    nnan_idx = (np.isfinite(adata.obs['year']) &
-                np.isfinite(adata.obs['pseudotime']))
-    tprint('Pseudotime-time Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
-                                 adata.obs['year'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-time Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
-                                adata.obs['year'][nnan_idx])))
-
-    nnan_idx = (np.isfinite(adata.obs['density']) &
-                np.isfinite(adata.obs['pseudotime']))
-    tprint('Pseudotime-density Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata.obs['pseudotime'][nnan_idx],
-                                 adata.obs['density'][nnan_idx],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-density Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
-                                adata.obs['density'][nnan_idx])))
-
-    pfs, statuses = [], []
-    for pf, status in zip(adata.obs['pseudotime'], adata.obs['status']):
-        if np.isfinite(pf) and status != 'None':
-            if status == 'chronic':
-                status = 7
-            pfs.append(pf)
-            statuses.append(int(status))
-    tprint('Pseudotime-status Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(pfs, statuses)))
-    tprint('Pseudotime-status Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(pfs, statuses)))
-    tprint('TF/chronic t-test {}, P = {}'.
-           format(*ss.ttest_ind(
-               adata[adata.obs['status'] == '1'].obs['pseudotime'],
-               adata[adata.obs['status'] == 'chronic'].obs['pseudotime'],
-           )))
-
-    adata_keele = adata[(adata.obs['status'] != 'None')]
-    plt.figure()
-    sns.violinplot(x='status', y='pseudotime', data=adata_keele.obs)
-    plt.ylabel('pseudotime')
-    plt.savefig('figures/evolocity__env_fitness_status.png', dpi=500)
-    plt.close()
-    plt.figure()
-    sns.violinplot(x='status', y='density', data=adata_keele.obs)
-    plt.savefig('figures/evolocity__env_density_status.png', dpi=500)
-    plt.close()
-
-
 def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
     #############################
     ## Visualize Env landscape ##
@@ -462,8 +233,9 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
         'AE', 'B', 'C', 'BC', 'D',
     }
     adata.obs['simple_subtype'] = [
-        subtype if subtype in keep_subtypes else 'A'
-        for subtype in adata.obs['subtype']
+        subtype if subtype in keep_subtypes else (
+            'A' if 'A' in subtype else 'Other'
+        ) for subtype in adata.obs['subtype']
     ]
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
@@ -555,15 +327,14 @@ def evo_env(args, model, seqs, vocabulary, namespace='hiv_env'):
                save=f'_{namespace}_pseudotime.png')
 
     plt.figure(figsize=(3, 6))
-    sns.violinplot(data=adata.obs, x='simple_subtype', y='pseudotime',
-                   order=[
-                       'A',
-                       'B',
-                       'C',
-                       'D',
-                       'AE',
-                       'BC',
-                   ], scale='width')
+    sns.boxplot(data=adata.obs, x='simple_subtype', y='pseudotime',
+                order=[
+                    'A',
+                    'AE',
+                    'B',
+                    'C',
+                    'BC',
+                ])
     plt.xticks(rotation=60)
     plt.tight_layout()
     plt.savefig(f'figures/{namespace}_subtype_pseudotime.svg', dpi=500)

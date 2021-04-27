@@ -108,8 +108,10 @@ def likelihood_compare(seq1, seq2, vocabulary, model,
 
     return likelihoods[1] - likelihoods[0]
 
-def likelihood_muts(seq1, seq2, vocabulary, model,
-                    seq_cache={}, verbose=False):
+def likelihood_muts(
+        seq1, seq2, vocabulary, model,
+        seq_cache={}, verbose=False, natural_aas=None,
+):
     # Align, prefer matches to gaps.
     alignment = pairwise2.align.globalms(
         seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
@@ -128,7 +130,11 @@ def likelihood_muts(seq1, seq2, vocabulary, model,
                 continue
             if other_seq[a_idx] == '-':
                 deletions.append(orig_idx)
-            elif other_seq[a_idx] != ch:
+            if natural_aas is not None and \
+               (ch.upper() not in natural_aas or \
+                other_seq[a_idx].upper() not in natural_aas):
+                continue
+            if other_seq[a_idx] != ch:
                 substitutions.append(orig_idx)
             orig_idx += 1
 
@@ -165,6 +171,7 @@ class VelocityGraph:
             n_recurse_neighbors=None,
             random_neighbors_at_max=None,
             mode_neighbors='distances',
+            include_set='natural_aas',
             verbose=False,
     ):
         self.adata = adata
@@ -182,6 +189,14 @@ class VelocityGraph:
                 self.n_recurse_neighbors = 1
             else:
                 self.n_recurse_neighbors = 2
+
+        if include_set == 'natural_aas':
+            self.include_set = set([
+                'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I',
+                'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V',
+            ])
+        else:
+            self.include_set = None
 
         if np.min((get_neighs(adata, 'distances') > 0).sum(1).A1) == 0:
             raise ValueError(
@@ -248,6 +263,7 @@ class VelocityGraph:
                     self.seqs[i], self.seqs[j],
                     vocabulary, model,
                     seq_cache=self.seq_probs, verbose=self.verbose,
+                    natural_aas=self.include_set,
                 ) for j in neighs_idx
             ])
 
@@ -281,6 +297,7 @@ def velocity_graph(
         n_recurse_neighbors=0,
         random_neighbors_at_max=None,
         mode_neighbors='distances',
+        include_set=None,
         copy=False,
         verbose=True,
 ):
@@ -316,6 +333,7 @@ def velocity_graph(
         n_recurse_neighbors=n_recurse_neighbors,
         random_neighbors_at_max=random_neighbors_at_max,
         mode_neighbors=mode_neighbors,
+        include_set=include_set,
         verbose=verbose,
     )
 

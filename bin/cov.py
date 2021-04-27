@@ -345,6 +345,9 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     plt.tight_layout()
     plt.close()
 
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
+
     tprint('Pseudotime-time Spearman r = {}, P = {}'
            .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
                                  adata_nnan.obs['timestamp'],

@@ -182,8 +182,14 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         adata = seqs_to_anndata(seqs)
         sc.pp.neighbors(adata, n_neighbors=60, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=0.9)
+        sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
+
+    if 'homologous' in namespace:
+        adata = adata[adata.obs['homology'] > 80.]
+        sc.pp.neighbors(adata, n_neighbors=60, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
 
     keep_subtypes = {
         'AE', 'B', 'C', 'BC', 'D',
@@ -196,8 +202,6 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
-    sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata)
 
     cache_prefix = f'target/ev_cache/{namespace}_knn60'
@@ -312,6 +316,9 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['year'][nnan_idx])))
 
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
+
     if args.model_name != 'tape':
         nnan_idx = (np.isfinite(adata.obs['homology']) &
                     np.isfinite(adata.obs['pseudotime']))
@@ -363,3 +370,7 @@ if __name__ == '__main__':
                              .format(', '.join(no_embed)))
 
         evo_gag(args, model, seqs, vocabulary, namespace=namespace)
+
+        if args.model_name != 'tape':
+            tprint('Restrict based on similarity to training:')
+            evo_gag(args, model, seqs, vocabulary, namespace='gag_homologous')

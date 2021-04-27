@@ -534,6 +534,18 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.subplots_adjust(right=0.85)
     plt.savefig(f'figures/evolocity__{namespace}_pos238_velostream.png', dpi=500)
     plt.close()
+    plt.figure()
+    ax = evo.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        color='pos455', show=False, legend_loc=False,
+        palette=[ '#888888', '#1f77b4', '#ff7f0e',
+                  '#d62728', '#9467bd', ],
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/evolocity__{namespace}_pos455_velostream.png', dpi=500)
+    plt.close()
 
     plt.figure()
     ax = evo.pl.velocity_contour(
@@ -576,6 +588,9 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.tight_layout()
     plt.close()
 
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
+
     tprint('Pseudotime-time Spearman r = {}, P = {}'
            .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
                                  adata_nnan.obs['year'],
@@ -584,17 +599,17 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
            .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
                                 adata_nnan.obs['year'])))
 
-    nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
-                np.isfinite(adata_nnan.obs['pseudotime']))
-    tprint('Pseudotime-homology Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
-                                 adata_nnan.obs['homology'],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-homology Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'],
-                                adata.obs['homology'])))
+    if args.model_name != 'tape':
+        nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
+                    np.isfinite(adata_nnan.obs['pseudotime']))
+        tprint('Pseudotime-homology Spearman r = {}, P = {}'
+               .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                     adata_nnan.obs['homology'],
+                                     nan_policy='omit')))
+        tprint('Pseudotime-homology Pearson r = {}, P = {}'
+               .format(*ss.pearsonr(adata.obs['pseudotime'],
+                                    adata.obs['homology'])))
 
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()

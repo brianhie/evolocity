@@ -7,9 +7,6 @@ python bin/flu.py tape --evolocity > ha_tape_evolocity.log 2>&1
 python bin/gag.py esm1b --evolocity > gag_esm1b_evolocity.log 2>&1
 python bin/gag.py tape --evolocity > gag_tape_evolocity.log 2>&1
 
-python bin/hiv.py esm1b --evolocity > env_esm1b_evolocity.log 2>&1
-python bin/hiv.py tape --evolocity > env_tape_evolocity.log 2>&1
-
 python bin/cov.py esm1b --evolocity > spike_esm1b_evolocity.log 2>&1
 python bin/cov.py tape --evolocity > spike_tape_evolocity.log 2>&1
 

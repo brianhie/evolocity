@@ -1250,12 +1250,12 @@ def plot_ancestral(
         df_name = df[df[name_key] == name]
 
         plt.figure()
-        sns.violinplot(
+        sns.boxplot(
             data=df_name, x=meta_key, y=score_key,
         )
         plt.axhline(y=0, c='#CCCCCC', linestyle='dashed')
         name_sanitized = name.replace('/', '-')
-        plt.savefig(f'figures/{namespace}_ancestral_{name_sanitized}.png',
+        plt.savefig(f'figures/{namespace}_ancestral_{name_sanitized}.svg',
                     dpi=500)
         plt.close()
 
