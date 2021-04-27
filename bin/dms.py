@@ -47,16 +47,7 @@ def dms_results(fname, args, model, vocabulary):
     for mut in df['variant']:
         pos, aa_mut = int(mut[1:-1]) - 1, mut[-1]
         seq_mut = wt_seq[:pos] + aa_mut + wt_seq[(pos + 1):]
-        if '_ha_' in fname or '_np_aichi68' in fname or '_np_pr8' in fname:
-            # Site-specific DMS.
-            scores_pred.append(
-                np.exp(y_pred[pos + 1, (
-                    vocabulary[aa_mut]
-                    if aa_mut in vocabulary else
-                    model.unk_idx_
-                )])
-            )
-        elif aa_mut == wt_seq[pos]:
+        if aa_mut == wt_seq[pos]:
             scores_pred.append(0)
         else:
             scores_pred.append(
@@ -120,11 +111,7 @@ if __name__ == '__main__':
         'data/dms/dms_hsp82.csv',
         'data/dms/dms_infa.csv',
         'data/dms/dms_mapk1.csv',
-        'data/dms/dms_np_aichi68.csv',
-        'data/dms/dms_np_mxa.csv',
-        'data/dms/dms_np_pr8.csv',
         'data/dms/dms_p53.csv',
-        'data/dms/dms_pa.csv',
         'data/dms/dms_pab1.csv',
         'data/dms/dms_pten.csv',
         'data/dms/dms_sumo1.csv',

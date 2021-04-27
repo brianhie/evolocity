@@ -15,6 +15,7 @@ python bin/cyc.py tape --evolocity > cyc_tape_evolocity.log 2>&1
 
 python bin/glo.py esm1b --evolocity > glo_esm1b_evolocity.log 2>&1
 python bin/glo.py tape --evolocity > glo_tape_evolocity.log 2>&1
+python bin/glo.py esm1b --ancestral > glo_esm1b_ancestral.log 2>&1
 
 python bin/pgk.py esm1b --evolocity > pgk_esm1b_evolocity.log 2>&1
 python bin/pgk.py tape --evolocity > pgk_tape_evolocity.log 2>&1
