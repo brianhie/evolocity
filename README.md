@@ -3,7 +3,7 @@
 
 Evolocity is a landscape-based method for ordering protein sequences in evolutionary time. Evolocity uses the local evolutionary predictions enabled by language models to enable global evolutionary insight.
 
-Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA-velocity and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), an extremely convenient library for storing and organizing biological data.
+Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA-velocity and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), an extremely convenient way to store and organizing biological data.
 
 This repository also contains the analysis code and links to the data for the paper "Evolutionary velocity with protein language models" by Brian Hie, Kevin Yang, and Peter Kim.
 
