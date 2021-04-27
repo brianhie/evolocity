@@ -28,8 +28,9 @@ You can download the [relevant datasets](DATA_URL) (including training and valid
 ```bash
 wget DATA_URL
 tar xvf data.tar.gz
+ln -s data/target/ target
 ```
-within the same directory as this repository.
+within the same directory as this repository. Be sure to move the `target/` directory one level up.
 
 #### Dependencies
 
