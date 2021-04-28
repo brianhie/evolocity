@@ -1,6 +1,6 @@
 # Evolocity
 
-Evolocity is constructs protein sequence landscapes and uses language models to order sequences in this landscape in evolutionary time. Evolocity uses the local evolutionary predictions enabled by language models to enable global evolutionary insight.
+Evolocity constructs protein sequence landscapes and uses language models to order sequences in this landscape in evolutionary time. Evolocity uses the local evolutionary predictions enabled by language models to enable global evolutionary insight.
 
 Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA velocity and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), an extremely convenient way to store and organizing biological data.
 
