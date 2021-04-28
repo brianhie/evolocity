@@ -77,9 +77,9 @@ which will create new log files and figures in a new `figures/` directory.
 
 Phylogenetic tree reconstruction of ancient proteins can be done with the command
 ```bash
-bash bin/phylo_eno.sh
-bash bin/phylo_pgk.sh
-bash bin/phylo_ser.sh
+bash bin/phylo_eno.sh > phylo_eno.log 2>&1
+bash bin/phylo_pgk.sh > phylo_pgk.log 2>&1
+bash bin/phylo_ser.sh > phylo_ser.log 2>&1
 ```
 
 Deep mutational scan benchmarking can be done with the command
