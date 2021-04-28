@@ -1,10 +1,8 @@
 # Evolocity
 
-Evolocity constructs protein sequence landscapes and uses language models to order sequences in this landscape in evolutionary time. Evolocity uses the local evolutionary predictions enabled by language models to enable global evolutionary insight.
+Evolocity constructs ordered protein sequence landscapes by using the local evolutionary predictions enabled by language models to enable global evolutionary insight. Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA velocity and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), an extremely convenient way to store and organizing biological data.
 
-Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA velocity and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), an extremely convenient way to store and organizing biological data.
-
-This repository also contains the analysis code and links to the data for the paper "Evolutionary velocity with protein language models" by Brian Hie, Kevin Yang, and Peter Kim.
+Evolocity is described in the paper "Evolutionary velocity with protein language models" by Brian Hie, Kevin Yang, and Peter Kim. This repository also contains the analysis code and links to the data for reproducing the results in the paper.
 
 ## Documentation
 
@@ -16,6 +14,32 @@ You should be able to install evolocity using `pip`:
 ```bash
 python -m pip install evolocity
 ```
+
+## API example
+
+Below is a quick example of using evolocity to load and analyze sequences in a FASTA file.
+```python
+import evolocity as evo
+import scanpy as sc
+
+# Load sequences and compute language model embeddings.
+fasta_fname = 'data.fasta'
+adata = evo.pp.featurize_fasta(fasta_fname)
+
+# Construct sequence similarity network.
+evo.pp.neighbors(adata)
+
+# Run evolocity analysis.
+evo.tl.velocity_graph(adata, model_name='esm1b')
+
+# Embed network and velocities in two-dimensions and plot.
+sc.tl.umap(adata)
+evo.tl.velocity_embedding(adata, basis='umap')
+evo.pl.velocity_embedding_grid(adata)
+evo.pl.velocity_embedding_stream(adata)
+```
+
+More detailed documentation is provided [here]().
 
 ## Experiments
 

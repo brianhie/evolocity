@@ -1,16 +1,12 @@
 Overview
 ========
 
-
-Schema is a general algorithm for integrating heterogeneous data
-modalities. While it has been specially designed for multi-modal
-single-cell biological datasets, it should work in other multi-modal
-contexts too.
+Evolocity is an algorithm for
 
 .. image:: ../_static/Schema-Overview-v2.png
    :width: 648
-   :alt: 'Overview of Schema'
- 
+   :alt: 'Evolocity overview'
+
 Schema is designed for single-cell assays where multiple modalities have
 been *simultaneously* measured for each cell. For example, this could be
 simultaneously-asayed ("paired") scRNA-seq and scATAC-seq data, or a
@@ -28,7 +24,7 @@ ID etc.). With this data, Schema can help perform analyses like:
     expressed genes (DEGs) specific to a spatial pattern.
 
   * **Improved visualizations**: tune t-SNE or UMAP plots to more clearly
-    arrange cells along a desired manifold. 
+    arrange cells along a desired manifold.
 
   * Simultaneously account for batch effects while also integrating
     other modalities.
@@ -44,7 +40,7 @@ for cells to be similar under that modality. For example, Euclidean
 distances between L2-normalized expression vectors are a proxy for
 coexpression. Across the three graphs in the figure (**B**), the dashed and
 dotted lines indicate distances between the same pairs of
-observations. 
+observations.
 
 Schema learns a new distance metric between points, informed
 jointly by all the modalities. In Schema, we start by designating one
@@ -65,7 +61,7 @@ Advantages
 ~~~~~~~~~~
 
 In generating a shared-space representation, Schema is similar to
-statistical approaches like CCA (canonical correlation analysis) and 
+statistical approaches like CCA (canonical correlation analysis) and
 deep-learning methods like autoencoders (which map multiple
 representations into a shared latent space). Each of these approaches offers a
 different set of trade-offs. Schema, for instance, requires the output
@@ -75,7 +71,7 @@ allows it to offer the following advantages:
   * **Interpretability**: Schema identifies which features of the primary
     modality were important in maximizing its agreement with the secondary
     modalities. If the features corresponded to genes (or principal components),
-    this can directly be interpreted in terms of gene importances. 
+    this can directly be interpreted in terms of gene importances.
 
   * **Regularization**: single-cell data can be sparse and noisy. As we
     discuss in our `paper`_, unconstrained approaches like CCA and
@@ -91,7 +87,7 @@ allows it to offer the following advantages:
     number of secondary modalities supported and their relative weights. Also, arbitrary
     distance metrics (i.e., kernels) are supported for the secondary modalities.
 
-    
+
 Quick Start
 ~~~~~~~~~~~
 
@@ -107,15 +103,15 @@ Install via pip
 
     import schema
     adata = schema.datasets.fly_brain()  # adata has scRNA-seq data & cell age
-    
+
     sqp = schema.SchemaQP( min_desired_corr=0.99, # require 99% agreement with original scRNA-seq distances
 		           params= {'decomposition_model': 'nmf', 'num_top_components': 20} )
-		    
+
     #correlate the gene expression with the 'age' parameter
     mod_X = sqp.fit_transform( adata.X, # primary modality
                                [ adata.obs['age'] ], # list of secondary modalities
 			       [ 'numeric' ] )  # datatypes of secondary modalities
-			       
+
     gene_wts = sqp.feature_weights() # get a ranking of gene wts important to the alignment
 
 

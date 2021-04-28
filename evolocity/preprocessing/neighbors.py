@@ -12,9 +12,9 @@ from .. import settings
 
 def neighbors(
     adata,
-    n_neighbors=30,
+    n_neighbors=50,
     n_pcs=None,
-    use_rep=None,
+    use_rep='X',
     use_highly_variable=True,
     knn=True,
     random_state=0,
@@ -47,7 +47,7 @@ def neighbors(
         Number of principal components to use.
         If not specified, the full space is used of a pre-computed PCA,
         or 30 components are used when PCA is computed internally.
-    use_rep : `None`, `'X'` or any key for `.obsm` (default: None)
+    use_rep : `None`, `'X'` or any key for `.obsm` (default: `'X'`)
         Use the indicated representation. If `None`, the representation is chosen
         automatically: for .n_vars < 50, .X is used, otherwise ‘X_pca’ is used.
     use_highly_variable: `bool` (default: True)

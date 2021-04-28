@@ -32,7 +32,7 @@ def velocity_embedding(
     data,
     basis=None,
     vkey="velocity",
-    scale=10,
+    scale=1,
     self_transitions=True,
     use_negative_cosines=True,
     direct_pca_projection=None,
@@ -62,7 +62,7 @@ def velocity_embedding(
         Which embedding to use.
     vkey: `str` (default: `'velocity'`)
         Name of velocity estimates to be used.
-    scale: `int` (default: 10)
+    scale: `int` (default: 1)
         Scale parameter of gaussian kernel for transition matrix.
     self_transitions: `bool` (default: `True`)
         Whether to allow self transitions, based on the confidences of transitioning to
