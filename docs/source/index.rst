@@ -6,7 +6,7 @@
    :hidden:
 
    installation
-   api/index
+   api
    recipes/index
    visualization/index
    datasets

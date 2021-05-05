@@ -277,9 +277,6 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
 
-    sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
-    sc.tl.umap(adata, min_dist=1.)
-
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
     plot_umap(adata, namespace=namespace)
@@ -288,7 +285,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
     ## Compute evolocity and visualize ##
     #####################################
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn30'
+    cache_prefix = f'target/ev_cache/{namespace}_knn50'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(

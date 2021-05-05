@@ -8,9 +8,12 @@ Evolocity constructs ordered protein sequence landscapes by using the local evol
    :width: 648
    :alt: 'Evolocity overview'
 
-Evolocity uses different languge model likelihoods to estimate directionality between two biological sequences. Then, over an entire sequence similarity network, this procedure is used to direct network edges. Finally, network diffusion analysis can identify roots, order sequences in pseudotime, and identify mutations driving the velocity.
+Evolocity uses different languge model likelihoods to estimate directionality between two biological sequences.
+Then, over an entire sequence similarity network, this procedure is used to direct network edges.
+Finally, network diffusion analysis can identify roots, order sequences in pseudotime, and identify mutations driving the velocity.
 
-Evolocity is a fork of the `scVelo <https://github.com/theislab/scvelo>`_ tool for RNA velocity and relies on many aspects of the `Scanpy <https://scanpy.readthedocs.io/en/stable/>`_ library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of `anndata <https://anndata.readthedocs.io/en/latest/>`_, an extremely convenient way to store and organizing biological data.
+Evolocity is a fork of the `scVelo <https://github.com/theislab/scvelo>`_ tool for RNA velocity and relies on many aspects of the `Scanpy <https://scanpy.readthedocs.io/en/stable/>`_ library for high-dimensional biological data analysis.
+Like Scanpy and scVelo, evolocity makes use of `anndata <https://anndata.readthedocs.io/en/latest/>`_, an extremely convenient way to store and organizing biological data.
 
 
 Quick Start

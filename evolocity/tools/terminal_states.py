@@ -36,25 +36,6 @@ def eigs(T, k=10, eps=1e-3, perc=None, random_state=None, v0=None):
     return eigvals, eigvecs
 
 
-def verify_roots(adata, roots, modality="Ms"):
-    if "gene_count_corr" in adata.var.keys():
-        p = get_plasticity_score(adata, modality)
-        p_ub, root_ub = p > 0.5, roots > 0.9
-        n_right_assignments = np.sum(root_ub * p_ub) / np.sum(p_ub)
-        n_false_assignments = np.sum(root_ub * np.invert(p_ub)) / np.sum(
-            np.invert(p_ub)
-        )
-        n_randn_assignments = np.mean(root_ub)
-        if n_right_assignments > 3 * n_randn_assignments:  # mu + 2*mu (std=mu)
-            roots *= p_ub
-        elif (
-            n_false_assignments > n_randn_assignments
-            or n_right_assignments < n_randn_assignments
-        ):
-            logg.warn("Uncertain or fuzzy root node identification. Please verify.")
-    return roots
-
-
 def write_to_obs(adata, key, vals, node_subset=None):
     if node_subset is None:
         adata.obs[key] = vals
@@ -153,7 +134,6 @@ def terminal_states(
         eigvecs_roots = eigs(T, eps=eps, perc=[2, 98], random_state=random_state)[1]
         roots = csr_matrix.dot(connectivities, eigvecs_roots).sum(1)
         roots = scale(np.clip(roots, 0, np.percentile(roots, 98)))
-        roots = verify_roots(_adata, roots, modality)
         write_to_obs(adata, "root_nodes", roots, node_subset)
 
         T = transition_matrix(_adata, vkey=vkey, backward=False, **kwargs)

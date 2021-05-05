@@ -10,7 +10,7 @@ Install evolocity from PyPI_ using::
 
     pip install -U evolocity
 
-``-U`` is short for ``--upgrade``.
+where ``-U`` is short for ``--upgrade``.
 If you get a ``Permission denied`` error, use ``pip install -U evolocity --user`` instead.
 
 Dependencies
