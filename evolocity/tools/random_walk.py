@@ -1,55 +1,20 @@
 from .. import settings
 from .. import logging as logg
-from ..preprocessing.neighbors import get_connectivities, verify_neighbors
+from ..preprocessing.neighbors import verify_neighbors
 from .transition_matrix import transition_matrix
-from .utils import scale, groups_to_bool, strings_to_categoricals, get_plasticity_score
+from .utils import groups_to_bool, strings_to_categoricals
 
-from scipy.sparse import linalg, csr_matrix, issparse
 import numpy as np
 
 
-def eigs(T, k=10, eps=1e-3, perc=None, random_state=None, v0=None):
-    if random_state is not None:
-        np.random.seed(random_state)
-        v0 = np.random.rand(min(T.shape))
-    try:
-        # find k eigs with largest real part, and sort in descending order of eigenvals
-        eigvals, eigvecs = linalg.eigs(T.T, k=k, which="LR", v0=v0)
-        p = np.argsort(eigvals)[::-1]
-        eigvals = eigvals.real[p]
-        eigvecs = eigvecs.real[:, p]
-
-        # select eigenvectors with eigenvalue of 1 - eps.
-        idx = eigvals >= 1 - eps
-        eigvals = eigvals[idx]
-        eigvecs = np.absolute(eigvecs[:, idx])
-
-        if perc is not None:
-            lbs, ubs = np.percentile(eigvecs, perc, axis=0)
-            eigvecs[eigvecs < lbs] = 0
-            eigvecs = np.clip(eigvecs, 0, ubs)
-            eigvecs /= eigvecs.max(0)
-
-    except:
-        eigvals, eigvecs = np.empty(0), np.zeros(shape=(T.shape[0], 0))
-
-    return eigvals, eigvecs
-
-
-def write_to_obs(adata, key, vals, node_subset=None):
-    if node_subset is None:
-        adata.obs[key] = vals
-    else:
-        vals_all = (
-            adata.obs[key].copy() if key in adata.obs.keys() else np.zeros(adata.n_obs)
-        )
-        vals_all[node_subset] = vals
-        adata.obs[key] = vals_all
-
-
-def terminal_states(
+def random_walk(
     data,
-    vkey="velocity",
+    root_node=0,
+    walk_length=10,
+    n_walks=1,
+    forward_walk=True,
+    path_key='rw_paths',
+    vkey='velocity',
     groupby=None,
     groups=None,
     self_transitions=False,
@@ -108,7 +73,7 @@ def terminal_states(
     adata = data.copy() if copy else data
     verify_neighbors(adata)
 
-    logg.info("computing terminal states", r=True)
+    logg.info("running random walks", r=True)
 
     strings_to_categoricals(adata)
     if groupby is not None:
@@ -125,34 +90,40 @@ def terminal_states(
         groups = cat if cat is not None else groups
         node_subset = groups_to_bool(adata, groups=groups, groupby=groupby)
         _adata = adata if groups is None else adata[node_subset]
-        connectivities = get_connectivities(_adata, "distances")
 
-        T = transition_matrix(_adata, vkey=vkey, backward=True, **kwargs)
-        eigvecs_roots = eigs(T, eps=eps, perc=[2, 98], random_state=random_state)[1]
-        roots = csr_matrix.dot(connectivities, eigvecs_roots).sum(1)
-        roots = scale(np.clip(roots, 0, np.percentile(roots, 98)))
-        write_to_obs(adata, "root_nodes", roots, node_subset)
+        if not node_subset[root_node]:
+            logg.warn(
+                "Root node not in grouped subset, skipping."
+            )
+            continue
+        root_node_group = sum(node_subset[:root_node])
 
-        T = transition_matrix(_adata, vkey=vkey, backward=False, **kwargs)
-        eigvecs_ends = eigs(T, eps=eps, perc=[2, 98], random_state=random_state)[1]
-        ends = csr_matrix.dot(connectivities, eigvecs_ends).sum(1)
-        ends = scale(np.clip(ends, 0, np.percentile(ends, 98)))
-        write_to_obs(adata, "end_points", ends, node_subset)
+        T = transition_matrix(_adata, vkey=vkey, backward=(not forward_walk), **kwargs)
+        n_nodes = _adata.X.shape[0]
+        assert(T.shape[0] == T.shape[1] == n_nodes)
+        paths = np.zeros((n_walks, walk_length + 1))
+        paths[:, 0] = root_node_group
 
-        n_roots, n_ends = eigvecs_roots.shape[1], eigvecs_ends.shape[1]
-        groups_str = f" ({groups})" if isinstance(groups, str) else ""
-        roots_str = f"{n_roots} {'regions' if n_roots > 1 else 'region'}"
-        ends_str = f"{n_ends} {'regions' if n_ends > 1 else 'region'}"
+        for t in range(walk_length):
+            paths[:, t + 1] = [
+                np.random.choice(n_nodes, p=T[paths[w, t], :].toarray().ravel())
+                #np.random.choice(np.argwhere(T[paths[w, t], :].toarray().ravel() > 0.).ravel())
+                for w in range(n_walks)
+            ]
 
-        logg.info(
-            f"    identified {roots_str} of root nodes "
-            f"and {ends_str} of end points {groups_str}."
-        )
+        group_map = np.argwhere(node_subset).ravel()
+        paths = np.vstack([
+            group_map[np.array(paths[w], dtype=np.int32)] for w in range(n_walks)
+        ])
+
+        group_path_key = path_key
+        if cat is not None:
+            group_path_key += f'_{cat}'
+        adata.uns[group_path_key] = paths
 
     logg.info("    finished", time=True, end=" " if settings.verbosity > 2 else "\n")
     logg.hint(
         "added\n"
-        "    'root_nodes', root nodes of Markov diffusion process (adata.obs)\n"
-        "    'end_points', end points of Markov diffusion process (adata.obs)"
+        f"    '{path_key}', random walk paths (adata.uns)\n"
     )
     return adata if copy else None

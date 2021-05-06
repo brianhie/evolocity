@@ -347,21 +347,13 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
                                       'self_score' ])
+    gong_x = list(range(len(df) + 1))
+    gong_y = [ 0 ] + list(np.cumsum(df['muts']))
     tprint('Sum of full scores: {}'.format(sum(df.full)))
     tprint('Sum of local scores: {}'.format(sum(df.muts)))
     tprint('Sum of self scores: {}'.format(sum(df.self_score)))
-
-    x = list(range(len(df) + 1))
-    y = [ 0 ] + list(np.cumsum(df['muts']))
-    plt.figure(figsize=(8, 3))
-    plt.scatter(x, y, s=50, c=x, cmap='Oranges',
-                edgecolors='black', linewidths=0.5, zorder=10)
-    plt.plot(x, y, c='#aaaaaa')
-    plt.ylim([ -5, 12 ])
-    plt.axhline(c='black', linestyle='--')
-    plt.savefig('figures/np_gong_path.svg')
-    plt.close()
-    tprint('Gong et al. Spearman r = {}, P = {}'.format(*ss.spearmanr(x, y)))
+    tprint('Gong et al. Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(gong_x, gong_y)))
 
     ############################
     ## Visualize NP landscape ##
@@ -443,6 +435,43 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
                  adata.uns["velocity_graph_neg"],)
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
+
+    rw_root = list(adata.obs['seq']).index(nodes[0][1])
+
+    evo.tl.random_walk(
+        adata,
+        root_node=rw_root,
+        walk_length=len(nodes) - 1,
+        n_walks=5000,
+        groupby='subtype',
+        groups='H3N2',
+        scale=1.,
+    )
+
+    terminal_clusters = { '1', '3', '8', '9' }
+    paths = adata.uns['rw_paths']
+
+    plt.figure(figsize=(8, 3))
+    plt.scatter(gong_x, gong_y, s=50, c=gong_x, cmap='Oranges',
+                edgecolors='black', linewidths=0.5, zorder=10)
+    plt.plot(gong_x, gong_y, c='#444444', zorder=9)
+    for p in range(paths.shape[0]):
+        if adata.obs['louvain'][paths[p][-1]] in terminal_clusters:
+            walk_v = []
+            for idx, seq in enumerate(paths[p]):
+                if idx == 0:
+                    walk_v.append(0)
+                    continue
+                seq_prev = paths[p][idx - 1]
+                walk_v.append(adata.uns['velocity_graph'][seq_prev, seq] +
+                              adata.uns['velocity_graph_neg'][seq_prev, seq])
+            plt.plot(gong_x, np.cumsum(walk_v), c='black', alpha=0.1, zorder=5)
+    #plt.ylim([ -5, 12 ])
+    plt.axhline(c='black', linestyle='--')
+    plt.savefig('figures/np_gong_path.svg')
+    plt.close()
+
+    exit()
 
     evo.tl.onehot_msa(
         adata,
