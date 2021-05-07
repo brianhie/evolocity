@@ -3,12 +3,10 @@ References
 
 **Code**: `Github`_ repo
 
-**Paper**: If you use Schema, please consider citing *Schema: metric learning enables interpretable synthesis of heterogeneous single-cell modalities* (http://doi.org/10.1101/834549)
+**Paper**: If you use evolocity, please consider citing `our paper <https://www.biorxiv.org>`_
 
-**Project Website**: http://schema.csail.mit.edu
-
-
-
-.. _Github: https://github.com/rs239/schema
+**Project Website**: X
 
 
+
+.. _Github: https://github.com/brianhie/evolocity
