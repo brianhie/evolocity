@@ -3,7 +3,7 @@ from pathlib import Path
 
 setup(
     name="evolocity",
-    version="0.0",
+    version="0.0.1",
     python_requires=">=3.6",
     install_requires=[
         l.strip() for l in Path("requirements.txt").read_text("utf-8").splitlines()
