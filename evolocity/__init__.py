@@ -9,6 +9,5 @@ from . import pl
 from . import datasets
 from . import logging
 from . import settings
-from . import utils
 
 from .settings import set_figure_params

@@ -50,3 +50,7 @@ def test_pipeline_tape():
     assert(adata.X.shape[0] == len(test_seqs))
     assert('seq' in adata.obs)
     assert(adata.uns['model'].name_ == 'tape')
+
+def test_pipeline_dataset():
+    adata = evo.datasets.cytochrome_c()
+    adata = evo.datasets.nucleoprotein()

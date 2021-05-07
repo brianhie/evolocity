@@ -20,7 +20,7 @@ def nucleoprotein():
 
     fname = 'target/ev_cache/np_adata.h5ad'
     url = f'{url_datadir}np_adata.h5ad'
-    adata = read(filename, backup_url=url, sparse=True, cache=True)
+    adata = read(fname, backup_url=url, sparse=True, cache=True)
 
     return adata
 
@@ -41,6 +41,6 @@ def cytochrome_c():
 
     fname = 'target/ev_cache/cyc_adata.h5ad'
     url = f'{url_datadir}cyc_adata.h5ad'
-    adata = read(filename, backup_url=url, sparse=True, cache=True)
+    adata = read(fname, backup_url=url, sparse=True, cache=True)
 
     return adata
