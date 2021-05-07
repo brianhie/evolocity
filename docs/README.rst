@@ -4,7 +4,7 @@ Evolocity
 
 Evolocity constructs ordered protein sequence landscapes by using the local evolutionary predictions enabled by language models to enable global evolutionary insight.
 
-.. image:: ../_static/Schema-Overview-v2.png
+.. image:: ../cyc_stream.PNG
    :width: 648
    :alt: 'Evolocity overview'
 
