@@ -23,7 +23,7 @@ python -m pip install evolocity
 
 ## Tutorials
 
-Tutorials are available in the [documentation]() and also on Google Colab for [influenza A nucleoprotein]() and [cytochrome c]().
+Tutorials are available in the [documentation]() and also on Google Colab for [influenza A nucleoprotein](https://colab.research.google.com/drive/143vxIqgIO1bWbC1FJ0q_Ja8eZN603uwM?usp=sharing) and [cytochrome c]().
 
 ## API example
 
