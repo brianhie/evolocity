@@ -1,8 +1,14 @@
 # Evolocity
 
+- [Documentation](#documentation)
+- [Installation](#installation)
+- [Tutorials](#tutorials)
+- [API example usage](#api-example)
+- [Testing](#testing)
+
 Evolocity constructs ordered protein sequence landscapes by using the local evolutionary predictions enabled by language models to enable global evolutionary insight. Evolocity is described in the paper "Evolutionary velocity with protein language models" by Brian Hie, Kevin Yang, and Peter Kim. This repository also contains the analysis code and links to the data for reproducing the results in the paper.
 
-Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA velocity and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), an extremely convenient way to store and organize biological data.
+Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA velocity by [Bergen et al.](https://www.nature.com/articles/s41587-020-0591-3) and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), an extremely convenient way to store and organize biological data.
 
 ## Documentation
 
@@ -14,6 +20,10 @@ You should be able to install evolocity using `pip`:
 ```bash
 python -m pip install evolocity
 ```
+
+## Tutorials
+
+Tutorials are available in the [documentation]() and also on Google Colab for [influenza A nucleoprotein]() and [cytochrome c]().
 
 ## API example
 
@@ -40,6 +50,14 @@ evo.pl.velocity_embedding_stream(adata)
 ```
 
 More detailed documentation is provided [here](DOC_URL).
+
+## Testing
+
+Unit tests require using [pytest](https://docs.pytest.org/en/latest/) and can be run with the command
+```
+python -m pytest tests/
+```
+from the top-level directory.
 
 ## Experiments
 
