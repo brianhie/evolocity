@@ -442,7 +442,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         adata,
         root_node=rw_root,
         walk_length=len(nodes) - 1,
-        n_walks=100000,
+        n_walks=30000,
         groupby='subtype',
         groups='H3N2',
         scale=2.,
@@ -454,7 +454,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.figure(figsize=(8, 3))
     plt.scatter(gong_x, gong_y, s=50, c=gong_x, cmap='Oranges',
                 edgecolors='black', linewidths=0.5, zorder=10)
-    plt.plot(gong_x, gong_y, c='#444444', zorder=9)
+    plt.plot(gong_x, gong_y, c='black', zorder=9)
     for p in range(paths.shape[0]):
         if adata.obs['louvain'][paths[p][-1]] in terminal_clusters:
             walk_v = []
@@ -463,15 +463,12 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
                     walk_v.append(0)
                     continue
                 seq_prev = paths[p][idx - 1]
-                walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])# +
-                              #adata.uns['velocity_graph_neg'][seq_prev, seq])
-            plt.plot(gong_x, np.cumsum(walk_v), c='black', alpha=0.1, zorder=5)
-    #plt.ylim([ -5, 12 ])
+                walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])
+            plt.plot(gong_x, np.cumsum(walk_v), c='#000080', alpha=0.1, zorder=5)
+    plt.ylim([ -2, 14 ])
     plt.axhline(c='black', linestyle='--')
     plt.savefig('figures/np_gong_path.svg')
     plt.close()
-
-    exit()
 
     evo.tl.onehot_msa(
         adata,
