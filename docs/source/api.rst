@@ -91,18 +91,8 @@ Datasets
 .. autosummary::
    :toctree: .
 
-   datasets.pancreas
-   datasets.dentategyrus
-   datasets.forebrain
-   datasets.simulation
-
-
-**Getters**
-
-.. autosummary::
-   :toctree: .
-
-   utils.get_transition_matrix
+   datasets.nucleoprotein
+   datasets.cytochrome_c
 
 
 Settings

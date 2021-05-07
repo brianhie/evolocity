@@ -31,21 +31,18 @@ logger = logging.getLogger(__name__)
 
 # -- Retrieve notebooks ------------------------------------------------
 
-#from urllib.request import urlretrieve
-#
-#notebooks_url = 'https://github.com/theislab/scvelo_notebooks/raw/master/'
-#notebooks = [
-#    'VelocityBasics.ipynb',
-#    'DynamicalModeling.ipynb',
-#    'DifferentialKinetics.ipynb',
-#    'Pancreas.ipynb',
-#    'DentateGyrus.ipynb',
-#]
-#for nb in notebooks:
-#    try:
-#        urlretrieve(notebooks_url + nb, nb)
-#    except:
-#        pass
+from urllib.request import urlretrieve
+
+notebooks_url = 'https://github.com/brianhie/evovdss/raw/master/'
+notebooks = [
+    'evolocity_nucleoprotein.ipynb',
+    'evolocity_cytochrome_c.ipynb',
+]
+for nb in notebooks:
+    try:
+        urlretrieve(notebooks_url + nb, nb)
+    except:
+        pass
 
 
 # -- General configuration ------------------------------------------------

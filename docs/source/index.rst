@@ -2,17 +2,21 @@
 
 
 .. toctree::
+   :caption: Main
    :maxdepth: 1
    :hidden:
 
    installation
    api
-   recipes/index
-   visualization/index
-   datasets
    references
 
+.. toctree::
+   :caption: Tutorials
+   :maxdepth: 1
+   :hidden:
 
+   evolocity_nucleoprotein
+   evolocity_cytochrome_c
 
 Indices and tables
 ==================
