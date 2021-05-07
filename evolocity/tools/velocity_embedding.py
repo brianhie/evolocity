@@ -42,7 +42,7 @@ def velocity_embedding(
     T=None,
     copy=False,
 ):
-    """Projects the single node velocities into any embedding.
+    """Projects the velocities into any embedding.
 
     Given normalized difference of the embedding positions
     :math:`\\tilde \\delta_{ij} = \\frac{x_j-x_i}{\\left\\lVert x_j-x_i \\right\\rVert}`.
@@ -51,7 +51,7 @@ def velocity_embedding(
 
     .. math::
         \\tilde \\nu_i = E_{\\tilde \\pi_{i\\cdot}} [\\tilde \\delta_{i \\cdot}]
-        = \\sum_{j \\neq i} \left( \\tilde \\pi_{ij} - \\frac1n \\right) \\tilde \\delta_{ij}.
+        = \\sum_{j \\neq i} \\left( \\tilde \\pi_{ij} - \\frac1n \\right) \\tilde \\delta_{ij}.
 
 
     Arguments

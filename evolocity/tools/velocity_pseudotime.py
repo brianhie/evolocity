@@ -66,7 +66,6 @@ class VPT(DPT):
 def velocity_pseudotime(
         adata,
         vkey='velocity',
-        pfkey='pseudotime',
         rank_transform=True,
         groupby=None,
         groups=None,
@@ -79,6 +78,54 @@ def velocity_pseudotime(
         return_model=None,
         **kwargs,
 ):
+    """Computes pseudotime based on the evolocity graph.
+
+    Velocity pseudotime is a random-walk based distance measures on the velocity graph.
+    After computing a distribution over root cells obtained from the velocity-inferred
+    transition matrix, it measures the average number of steps it takes to reach a cell
+    after start walking from one of the root cells. Contrarily to diffusion pseudotime,
+    it implicitly infers the root cells and is based on the directed velocity graph
+    instead of the similarity-based diffusion kernel.
+
+    Arguments
+    ---------
+    adata: :class:`~anndata.AnnData`
+        Annotated data matrix
+    vkey: `str` (default: `'velocity'`)
+        Name of velocity estimates to be used.
+    rank_transform: `bool` (default: `True`)
+        Perform final rank transformation.
+    groupby: `str`, `list` or `np.ndarray` (default: `None`)
+        Key of observations grouping to consider.
+    groups: `str`, `list` or `np.ndarray` (default: `None`)
+        Groups selected to find terminal states on. Must be an element of
+        adata.obs[groupby]. Only to be set, if each group is assumed to have a distinct
+        lineage with an independent root and end point.
+    root_key: `int` (default: `None`)
+        Index of root cell to be used.
+        Computed from velocity-inferred transition matrix if not specified.
+    end_key: `int` (default: `None`)
+        Index of end point to be used.
+        Computed from velocity-inferred transition matrix if not specified.
+    n_dcs: `int` (default: 10)
+        The number of diffusion components to use.
+    use_velocity_graph: `bool` (default: `True`)
+        Whether to use the velocity graph.
+        If False, it uses the similarity-based diffusion kernel.
+    save_diffmap: `bool` (default: `None`)
+        Whether to store diffmap coordinates.
+    return_model: `bool` (default: `None`)
+        Whether to return the vpt object for further inspection.
+    **kwargs:
+        Further arguments to pass to VPT (e.g. min_group_size, allow_kendall_tau_shift).
+
+    Returns
+    -------
+    Updates `adata` with the attributes
+    velocity_pseudotime: `.obs`
+        Velocity pseudotime obtained from velocity graph.
+    """
+
     strings_to_categoricals(adata)
     if root_key is None and 'root_nodes' in adata.obs.keys():
         root0 = adata.obs['root_nodes'][0]

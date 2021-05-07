@@ -20,7 +20,7 @@ import scipy.stats as ss
 
 def velocity_contour(
         adata,
-        pfkey='pseudotime',
+        ptkey='pseudotime',
         rank_transform=True,
         use_ends=False,
         fill=True,
@@ -29,7 +29,7 @@ def velocity_contour(
         vkey='velocity',
         density=None,
         smooth=None,
-        pf_smooth=None,
+        pt_smooth=None,
         min_mass=None,
         arrow_size=None,
         arrow_length=None,
@@ -74,7 +74,48 @@ def velocity_contour(
         ncols=None,
         **kwargs,
 ):
-    if pfkey not in adata.obs:
+    """Contour plot of pseudotime with velocity grid.
+
+    Arguments
+    ---------
+    adata: :class:`~anndata.AnnData`
+        Annotated data matrix.
+    ptkey: `str` (default: `pseudotime`)
+        Name of pseudotime values.
+    rank_transform: `bool` (default: `True`)
+        Perform final rank transformation.
+    use_ends: `bool` (default: `False`)
+        Use end terminal nodes in pseudotime computation.
+    levels: `int` (default: 10)
+        Number of contour levels.
+    pt_smooth: `float` (default: `None`)
+        Pseudotime two-dimensional smoothing.
+    density: `float` (default: 1)
+        Amount of velocities to show - 0 none to 1 all
+    arrow_size: `float` or triple `headlength, headwidth, headaxislength` (default: 1)
+        Size of arrows.
+    arrow_length: `float` (default: 1)
+        Length of arrows.
+    scale: `float` (default: 1)
+        Length of velocities in the embedding.
+    min_mass: `float` or `None` (default: `None`)
+        Minimum threshold for mass to be shown.
+        It can range between 0 (all velocities) and 100 (large velocities).
+    smooth: `float` (default: 0.5)
+        Multiplication factor for scale in Gaussian kernel around grid point.
+    n_neighbors: `int` (default: None)
+        Number of neighbors to consider around grid point.
+    X: `np.ndarray` (default: None)
+        embedding grid point coordinates
+    V: `np.ndarray` (default: None)
+        embedding grid velocity coordinates
+    {scatter}
+
+    Returns
+    -------
+        `matplotlib.Axis` if `show==False`
+    """
+    if ptkey not in adata.obs:
         velocity_pseudotime(
             adata,
             vkey=vkey,
@@ -83,10 +124,10 @@ def velocity_contour(
             use_velocity_graph=True,
             use_ends=use_ends,
         )
-        adata.obs[pfkey] = adata.obs[f'{vkey}_pseudotime']
+        adata.obs[ptkey] = adata.obs[f'{vkey}_pseudotime']
 
     smooth = 0.5 if smooth is None else smooth
-    pf_smooth = smooth if pf_smooth is None else pf_smooth
+    pt_smooth = smooth if pt_smooth is None else pt_smooth
 
     basis = default_basis(adata, **kwargs) \
             if basis is None \
@@ -131,7 +172,7 @@ def velocity_contour(
         )
 
     if vmin is None:
-        vmin = adata.obs[pfkey].min()
+        vmin = adata.obs[ptkey].min()
 
     contour_kwargs = {
         'levels': levels,
@@ -171,7 +212,7 @@ def velocity_contour(
         X_grid[:, 0], X_grid[:, 1], V_grid[:, 0], V_grid[:, 1], **quiver_kwargs
     )
 
-    PF_emb = np.array(adata.obs[pfkey]).reshape(-1, 1)
+    PF_emb = np.array(adata.obs[ptkey]).reshape(-1, 1)
     if offset is not None:
         PF_emb += offset
 
@@ -181,7 +222,7 @@ def velocity_contour(
             V_emb=PF_emb,
             density=density,
             autoscale=False,
-            smooth=pf_smooth,
+            smooth=pt_smooth,
             n_neighbors=n_neighbors,
             min_mass=0.,
             return_mesh=True,
@@ -200,7 +241,7 @@ def velocity_contour(
     ax.get_yaxis().set_visible(False)
 
     #cbar = plt.colorbar(contour)
-    #cbar.ax.set_ylabel(pfkey)
+    #cbar.ax.set_ylabel(ptkey)
 
     savefig_or_show(dpi=dpi, save=save, show=show)
     if show is False:

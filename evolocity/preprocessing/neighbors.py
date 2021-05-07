@@ -25,10 +25,10 @@ def neighbors(
     copy=False,
 ):
     """
-    Compute a neighborhood graph of observations.
+    Construct sequence similarity neighborhood graph.
 
     The neighbor graph methods (umap, hnsw, sklearn) only differ in runtime and
-    yield the same result as scanpy [Wolf18]_. Connectivities are computed with
+    yield the same result as scanpy. Connectivities are computed with
     adaptive kernel width as proposed in Haghverdi et al. 2016 (doi:10.1038/nmeth.3971).
 
     Parameters

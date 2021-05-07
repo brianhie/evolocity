@@ -23,25 +23,22 @@ def random_walk(
     copy=False,
     **kwargs,
 ):
-    """Computes terminal states (root and end points).
-
-    The end points and root nodes are obtained as stationary states of the
-    velocity-inferred transition matrix and its transposed, respectively,
-    which is given by left eigenvectors corresponding to an eigenvalue of 1, i.e.
-
-    .. math::
-        μ^{\\textrm{end}}=μ^{\\textrm{end}} \\pi, \quad
-        μ^{\\textrm{root}}=μ^{\\textrm{root}} \\pi^{\\small \\textrm{T}}.
-
-    .. code:: python
-
-        evo.tl.terminal_states(adata)
-        evo.pl.scatter(adata, color=['root_nodes', 'end_points'])
+    """Runs a random walk on the evolocity graph.
 
     Arguments
     ---------
     data: :class:`~anndata.AnnData`
         Annotated data matrix.
+    root_node: `int` (default: `0`)
+        Index of node at which to start random walk.
+    walk_length: `int` (default: `10`)
+        Number of steps in walk.
+    n_walks: `int` (default: `1`)
+        Number of walks to take.
+    forward_walk: `bool` (default: `True`)
+        Whether to go in the same or reverse direction of evolocity.
+    path_key: `str` (default: `'rw_paths'`)
+        Name at which to store the random walks.
     vkey: `str` (default: `'velocity'`)
         Name of velocity estimates to be used.
     groupby: `str`, `list` or `np.ndarray` (default: `None`)
@@ -60,15 +57,13 @@ def random_walk(
     copy: `bool` (default: `False`)
         Return a copy instead of writing to data.
     **kwargs:
-        Passed to evolocity.tl.transition_matrix(), e.g. basis, weight_diffusion.
+        Passed to evolocity.tl.transition_matrix(), e.g. scale, basis.
 
     Returns
     -------
     Returns or updates `data` with the attributes
-    root_nodes: `.obs`
-        sparse matrix with transition probabilities.
-    end_points: `.obs`
-        sparse matrix with transition probabilities.
+    rw_paths: `.uns`
+        rows of matrix correspond to random walks, columns correspond to steps
     """
     adata = data.copy() if copy else data
     verify_neighbors(adata)

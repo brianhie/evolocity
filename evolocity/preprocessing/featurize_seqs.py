@@ -147,12 +147,43 @@ def seqs_to_anndata(seqs):
 
 def featurize_seqs(
     seqs,
-    namespace=None,
     model_name='esm1b',
     mkey='model',
     embed_batch_size=3000,
     use_cache=False,
+    cache_namespace='protein',
 ):
+    """Embeds a list of sequences.
+
+    Takes a list of sequences and returns an :class:`~anndata.Anndata`
+    object with sequence embeddings in the `adata.X` matrix.
+
+    Arguments
+    ---------
+    seqs: `list`
+        List of protein sequences.
+    model_name: `str` (default: `'esm1b'`)
+        Language model used to compute likelihoods.
+    mkey: `str` (default: `'model'`)
+        Name at which language model is stored.
+    embed_batch_size: `int` (default: `3000`)
+        Batch size to embed sequences. Lower to fit into GPU memory.
+    use_cache: `bool` (default: `False`)
+        Cache embeddings to disk for faster future loading.
+    cache_namespace: `str` (default: `'protein'`)
+        Namespace at which to store cache.
+
+    Returns
+    -------
+    Returns an :class:`~anndata.Anndata` object with the attributes
+    `.X`
+        Matrix where rows correspond to sequences and columns are
+        language model embedding dimensions
+    seq: `.obs`
+        Sequences corresponding to rows in `adata.X`
+    model: `.uns`
+        language model
+    """
     model = get_model(model_name)
 
     seqs = {
@@ -161,7 +192,7 @@ def featurize_seqs(
     seqs = populate_embedding(
         model,
         seqs,
-        namespace=namespace,
+        namespace=cache_namespace,
         use_cache=use_cache,
         batch_size=embed_batch_size,
     )
@@ -175,12 +206,47 @@ def featurize_seqs(
 
 def featurize_fasta(
     fname,
-    namespace=None,
     model_name='esm1b',
     mkey='model',
     embed_batch_size=3000,
     use_cache=True,
+    cache_namespace=None,
 ):
+    """Embeds a FASTA file.
+
+    Takes a FASTA file containing sequences and returns an
+    :class:`~anndata.Anndata` object with sequence embeddings
+    in the `adata.X` matrix.
+
+    Assumes metadata is storred in FASTA record as `key=value`
+    pairs.
+
+    Arguments
+    ---------
+    fname: `str`
+        Path to FASTA file.
+    model_name: `str` (default: `'esm1b'`)
+        Language model used to compute likelihoods.
+    mkey: `str` (default: `'model'`)
+        Name at which language model is stored.
+    embed_batch_size: `int` (default: `3000`)
+        Batch size to embed sequences. Lower to fit into GPU memory.
+    use_cache: `bool` (default: `False`)
+        Cache embeddings to disk for faster future loading.
+    cache_namespace: `str` (default: `'protein'`)
+        Namespace at which to store cache.
+
+    Returns
+    -------
+    Returns an :class:`~anndata.Anndata` object with the attributes
+    `.X`
+        Matrix where rows correspond to sequences and columns are
+        language model embedding dimensions
+    seq: `.obs`
+        Sequences corresponding to rows in `adata.X`
+    model: `.uns`
+        language model
+    """
     model = get_model(model_name)
 
     # Parse fasta.
@@ -201,7 +267,7 @@ def featurize_fasta(
     seqs = populate_embedding(
         model,
         seqs,
-        namespace=namespace,
+        namespace=cache_namespace,
         use_cache=use_cache,
         batch_size=embed_batch_size,
     )

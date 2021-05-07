@@ -25,7 +25,7 @@ Preprocessing (pp)
    pp.featurize_seqs
    pp.featurize_fasta
 
-**Moments** (nearest neighbors graph construction)
+**Landscape** (nearest neighbors graph construction)
 
 .. autosummary::
    :toctree: .
@@ -52,14 +52,14 @@ Tools (tl)
    tl.terminal_states
    tl.velocity_pseudotime
 
-**Mutation interpretation (sequence alignment and position scoring)**
+**Interpretation**
 
 .. autosummary::
    :toctree: .
 
    tl.onehot_msa
    tl.residue_scores
-
+   tl.random_walk
 
 Plotting (pl)
 -------------

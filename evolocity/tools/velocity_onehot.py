@@ -15,6 +15,44 @@ def onehot_msa(
         n_threads=1,
         copy=False,
 ):
+    """Aligns and one-hot-encodes sequences.
+
+    By default, uses the MAFFT aligner (https://mafft.cbrc.jp/alignment/software/),
+    which can be installed via conda using
+
+    .. code:: bash
+
+        conda install -c bioconda mafft
+
+    Arguments
+    ---------
+    adata: :class:`~anndata.Anndata`
+        Annoated data matrix.
+    reference: `int` (default: None)
+        Index corresponding to a sequence in `adata` to be used as the main
+        reference sequence for the alignment.
+    key: `str` (default: `'onehot'`)
+        Name at which the embedding is stored.
+    seq_key: `str` (default: `'seq'`)
+        Name of sequences in `.obs`.
+    backend: `str` (default: `None` )
+        Sequence alignment tool.
+    dirname: `str` (default: `'target/evolocity_alignments'`)
+        Directory under which to place alignment files.
+    n_threads: `int` (default: 1)
+        Number of threads for sequence alignment.
+    copy: `bool` (default: `False`)
+        Return a copy instead of writing to adata.
+
+    Returns
+    -------
+    Returns or updates `adata` with the attributes
+    X_onehot: `.obsm`
+        one-hot embeddings
+    seqs_msa: `.obs`
+        aligned sequences
+    """
+
     # Write unaligned fasta.
 
     seqs = [
@@ -100,6 +138,29 @@ def residue_scores(
         key='residue_scores',
         copy=False,
 ):
+    """Score mutations by associated evolocity.
+
+    Requires running ``evo.tl.onehot_msa`` first.
+
+    Arguments:
+    ---------
+    adata: :class:`~anndata.Anndata`
+        Annoated data matrix.
+    basis: `str` (default: `'onehot'`)
+        Name of one-hot embedding
+    scale: `float` (default: `1.`)
+        Scale parameter of gaussian kernel for transition matrix.
+    key: `str` (default: `'residue_scores'`)
+        Name at which to place scores.
+    copy: `bool` (default: `False`)
+        Return a copy instead of writing to adata.
+
+    Returns
+    -------
+    Returns or updates `adata` with the attributes
+    residue_scores: `.uns`
+        per-residue velocity scores
+    """
     if f'X_{basis}' not in adata.obsm:
         raise ValueError(f'Could not find basis "{basis}", '
                          'consider running onehot_msa() first.')

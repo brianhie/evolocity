@@ -442,10 +442,10 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         adata,
         root_node=rw_root,
         walk_length=len(nodes) - 1,
-        n_walks=5000,
+        n_walks=100000,
         groupby='subtype',
         groups='H3N2',
-        scale=1.,
+        scale=2.,
     )
 
     terminal_clusters = { '1', '3', '8', '9' }
@@ -463,8 +463,8 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
                     walk_v.append(0)
                     continue
                 seq_prev = paths[p][idx - 1]
-                walk_v.append(adata.uns['velocity_graph'][seq_prev, seq] +
-                              adata.uns['velocity_graph_neg'][seq_prev, seq])
+                walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])# +
+                              #adata.uns['velocity_graph_neg'][seq_prev, seq])
             plt.plot(gong_x, np.cumsum(walk_v), c='black', alpha=0.1, zorder=5)
     #plt.ylim([ -5, 12 ])
     plt.axhline(c='black', linestyle='--')
