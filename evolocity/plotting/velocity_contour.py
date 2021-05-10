@@ -206,7 +206,7 @@ def velocity_contour(
         if arg in quiver_kwargs:
             quiver_kwargs.update({arg: kwargs[arg]})
         else:
-            scatter_kwargs.update({arg: kwargs[arg]})
+            contour_kwargs.update({arg: kwargs[arg]})
 
     ax.quiver(
         X_grid[:, 0], X_grid[:, 1], V_grid[:, 0], V_grid[:, 1], **quiver_kwargs

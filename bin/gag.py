@@ -180,19 +180,19 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
-        sc.pp.neighbors(adata, n_neighbors=60, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
 
     if 'homologous' in namespace:
         adata = adata[adata.obs['homology'] > 80.]
-        sc.pp.neighbors(adata, n_neighbors=60, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
 
     keep_subtypes = {
-        'AE', 'B', 'C', 'BC', 'D',
+        'AE', 'B', 'C', 'BC', 'D', 'E',
     }
     adata.obs['simple_subtype'] = [
         subtype if subtype in keep_subtypes else (
@@ -204,7 +204,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     evo.set_figure_params(dpi_save=500)
     plot_umap(adata)
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn60'
+    cache_prefix = f'target/ev_cache/{namespace}_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(

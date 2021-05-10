@@ -176,6 +176,8 @@ def plot_umap(adata, namespace='ser'):
                save='_{}_seqlen.png'.format(namespace))
     sc.pl.umap(adata, color='homology', edges=True, edges_color='#cccccc',
                save='_{}_homology.png'.format(namespace))
+    sc.pl.umap(adata, color='tax_kingdom', edges=True, edges_color='#cccccc',
+               save='_{}_kingdom.png'.format(namespace))
 
 def seqs_to_anndata(seqs):
     X, obs = [], {}
