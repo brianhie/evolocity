@@ -2,7 +2,7 @@ from utils import *
 
 def load_model(model_name):
     data = []
-    with open(f'results/dms/dms_{model_name}.log') as f:
+    with open(f'target/dms/dms_{model_name}.log') as f:
         for line in f:
             line = line.rstrip().split(' | ')[-1]
 
@@ -55,3 +55,5 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.savefig('figures/plot_dms.svg')
     plt.close()
+
+    print(df.to_csv())

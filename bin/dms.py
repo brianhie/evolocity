@@ -6,16 +6,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description='DMS sequence analysis')
     parser.add_argument('model_name', type=str,
                         help='Type of language model (e.g., hmm, lstm)')
-    parser.add_argument('--namespace', type=str, default='dms',
-                        help='Model namespace')
-    parser.add_argument('--dim', type=int, default=512,
-                        help='Embedding dimension')
-    parser.add_argument('--batch-size', type=int, default=1000,
-                        help='Training minibatch size')
-    parser.add_argument('--seed', type=int, default=1,
-                        help='Random seed')
-    parser.add_argument('--checkpoint', type=str, default=None,
-                        help='Model checkpoint')
     args = parser.parse_args()
     return args
 
