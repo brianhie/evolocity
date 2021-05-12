@@ -16,6 +16,8 @@ def parse_args():
                         help='Embedding dimension')
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed')
+    parser.add_argument('--ancestral', action='store_true',
+                        help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
     args = parser.parse_args()
@@ -167,6 +169,42 @@ def seqs_to_anndata(seqs):
         adata.obs[key] = obs[key]
 
     return adata
+
+def gag_siv_cpz(args, model, seqs, vocabulary, namespace='glo'):
+    path_fname = 'data/gag/gag_cpz.fa'
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    keep_subtypes = {
+        'AE', 'B', 'C', 'BC', 'D',
+    }
+
+    dist_data = []
+    for idx, (full_name, seq) in enumerate(nodes):
+        for uniprot_seq in seqs:
+            name = full_name.split('(')[-1].split(')')[0]
+            gag_type = Counter([
+                meta['subtype'] for meta in seqs[uniprot_seq]
+            ]).most_common(1)[0][0]
+            if gag_type not in keep_subtypes:
+                if 'A' in gag_type:
+                    gag_type = 'A'
+                else:
+                    continue
+            score = likelihood_muts(seq, uniprot_seq,
+                                    args, vocabulary, model,)
+            homology = fuzz.ratio(seq, uniprot_seq)
+            dist_data.append([ gag_type, name, score, homology, 'human' ])
+
+    df = pd.DataFrame(dist_data, columns=[
+        'gag_type', 'name', 'score', 'homology', 'host'
+    ])
+
+    plot_ancestral(df, meta_key='gag_type', namespace=namespace)
+    plot_ancestral(df, meta_key='name', name_key='gag_type', namespace=namespace)
+    plot_ancestral(df, meta_key='name', name_key='host', namespace=namespace)
 
 def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     #############################
@@ -359,6 +397,14 @@ if __name__ == '__main__':
         model.model_.load_weights(args.checkpoint)
         tprint('Model summary:')
         tprint(model.model_.summary())
+
+    if args.ancestral:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+
+        tprint('SIV analysis...')
+        gag_siv_cpz(args, model, seqs, vocabulary, namespace=namespace)
 
     if args.evolocity:
         if args.checkpoint is None and not args.train:

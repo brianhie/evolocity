@@ -14,20 +14,8 @@ def parse_args():
                         help='Model namespace')
     parser.add_argument('--dim', type=int, default=512,
                         help='Embedding dimension')
-    parser.add_argument('--batch-size', type=int, default=1000,
-                        help='Training minibatch size')
-    parser.add_argument('--n-epochs', type=int, default=20,
-                        help='Number of training epochs')
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed')
-    parser.add_argument('--checkpoint', type=str, default=None,
-                        help='Model checkpoint')
-    parser.add_argument('--train', action='store_true',
-                        help='Train model')
-    parser.add_argument('--train-split', action='store_true',
-                        help='Train model on portion of data')
-    parser.add_argument('--test', action='store_true',
-                        help='Test model')
     parser.add_argument('--ancestral', action='store_true',
                         help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
