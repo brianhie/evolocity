@@ -1,3 +1,4 @@
+from .random_walk import random_walk
 from .terminal_states import eigs, terminal_states
 from .transition_matrix import transition_matrix
 from .velocity_embedding import velocity_embedding

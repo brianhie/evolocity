@@ -269,8 +269,13 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         sc.tl.umap(adata, min_dist=1.)
         sc.tl.louvain(adata, resolution=1.)
-
         adata.write(adata_cache)
+
+    if 'homologous' in namespace:
+        adata = adata[adata.obs['homology'] > 80.]
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
@@ -302,18 +307,6 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
                  adata.uns["velocity_graph_neg"],)
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
-
-    #evo.tl.onehot_msa(
-    #    adata,
-    #    dirname=f'target/evolocity_alignments/{namespace}',
-    #    n_threads=40,
-    #)
-    #evo.tl.residue_scores(adata)
-    #evo.pl.residue_scores(adata, save=f'_{namespace}_residue_scores.png')
-    #evo.pl.residue_categories(
-    #    adata,
-    #    namespace=namespace,
-    #)
 
     evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
@@ -382,6 +375,9 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
     plt.savefig(f'figures/{namespace}_pseudotime-time.png', dpi=500)
     plt.close()
 
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
+
     tprint('Pseudotime-time Spearman r = {}, P = {}'
            .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
                                  adata_nnan.obs['Collection Date'],
@@ -390,15 +386,16 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
            .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
                                 adata_nnan.obs['Collection Date'])))
 
-    nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
-                np.isfinite(adata_nnan.obs['pseudotime']))
-    tprint('Pseudotime-homology Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
-                                 adata_nnan.obs['homology'],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-homology Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'],
-                                adata.obs['homology'])))
+    if args.model_name != 'tape':
+        nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
+                    np.isfinite(adata_nnan.obs['pseudotime']))
+        tprint('Pseudotime-homology Spearman r = {}, P = {}'
+               .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                     adata_nnan.obs['homology'],
+                                     nan_policy='omit')))
+        tprint('Pseudotime-homology Pearson r = {}, P = {}'
+               .format(*ss.pearsonr(adata.obs['pseudotime'],
+                                    adata.obs['homology'])))
 
 
 if __name__ == '__main__':
@@ -487,3 +484,7 @@ if __name__ == '__main__':
         if args.model_name == 'tape':
             namespace += '_tape'
         evo_ha(args, model, seqs, vocabulary, namespace=namespace)
+
+        if args.model_name != 'tape':
+            tprint('Restrict based on similarity to training:')
+            evo_ha(args, model, seqs, vocabulary, namespace='h1_homologous')

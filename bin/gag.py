@@ -16,6 +16,8 @@ def parse_args():
                         help='Embedding dimension')
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed')
+    parser.add_argument('--ancestral', action='store_true',
+                        help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
     args = parser.parse_args()
@@ -168,6 +170,42 @@ def seqs_to_anndata(seqs):
 
     return adata
 
+def gag_siv_cpz(args, model, seqs, vocabulary, namespace='glo'):
+    path_fname = 'data/gag/gag_cpz.fa'
+    nodes = [
+        (record.id, str(record.seq))
+        for record in SeqIO.parse(path_fname, 'fasta')
+    ]
+
+    keep_subtypes = {
+        'AE', 'B', 'C', 'BC', 'D',
+    }
+
+    dist_data = []
+    for idx, (full_name, seq) in enumerate(nodes):
+        for uniprot_seq in seqs:
+            name = full_name.split('(')[-1].split(')')[0]
+            gag_type = Counter([
+                meta['subtype'] for meta in seqs[uniprot_seq]
+            ]).most_common(1)[0][0]
+            if gag_type not in keep_subtypes:
+                if 'A' in gag_type:
+                    gag_type = 'A'
+                else:
+                    continue
+            score = likelihood_muts(seq, uniprot_seq,
+                                    args, vocabulary, model,)
+            homology = fuzz.ratio(seq, uniprot_seq)
+            dist_data.append([ gag_type, name, score, homology, 'human' ])
+
+    df = pd.DataFrame(dist_data, columns=[
+        'gag_type', 'name', 'score', 'homology', 'host'
+    ])
+
+    plot_ancestral(df, meta_key='gag_type', namespace=namespace)
+    plot_ancestral(df, meta_key='name', name_key='gag_type', namespace=namespace)
+    plot_ancestral(df, meta_key='name', name_key='host', namespace=namespace)
+
 def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     #############################
     ## Visualize Gag landscape ##
@@ -180,13 +218,19 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     except:
         seqs = populate_embedding(args, model, seqs, vocabulary, use_cache=True)
         adata = seqs_to_anndata(seqs)
-        sc.pp.neighbors(adata, n_neighbors=60, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=0.9)
+        sc.tl.umap(adata, min_dist=1.)
         adata.write(adata_cache)
 
+    if 'homologous' in namespace:
+        adata = adata[adata.obs['homology'] > 80.]
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
+
     keep_subtypes = {
-        'AE', 'B', 'C', 'BC', 'D',
+        'AE', 'B', 'C', 'BC', 'D', 'E',
     }
     adata.obs['simple_subtype'] = [
         subtype if subtype in keep_subtypes else (
@@ -196,11 +240,9 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
-    sc.tl.umap(adata, min_dist=1.)
     plot_umap(adata)
 
-    cache_prefix = f'target/ev_cache/{namespace}_knn60'
+    cache_prefix = f'target/ev_cache/{namespace}_knn40'
     try:
         from scipy.sparse import load_npz
         adata.uns["velocity_graph"] = load_npz(
@@ -312,6 +354,9 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['year'][nnan_idx])))
 
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
+
     if args.model_name != 'tape':
         nnan_idx = (np.isfinite(adata.obs['homology']) &
                     np.isfinite(adata.obs['pseudotime']))
@@ -353,6 +398,14 @@ if __name__ == '__main__':
         tprint('Model summary:')
         tprint(model.model_.summary())
 
+    if args.ancestral:
+        if args.checkpoint is None and not args.train:
+            raise ValueError('Model must be trained or loaded '
+                             'from checkpoint.')
+
+        tprint('SIV analysis...')
+        gag_siv_cpz(args, model, seqs, vocabulary, namespace=namespace)
+
     if args.evolocity:
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
@@ -363,3 +416,7 @@ if __name__ == '__main__':
                              .format(', '.join(no_embed)))
 
         evo_gag(args, model, seqs, vocabulary, namespace=namespace)
+
+        if args.model_name != 'tape':
+            tprint('Restrict based on similarity to training:')
+            evo_gag(args, model, seqs, vocabulary, namespace='gag_homologous')

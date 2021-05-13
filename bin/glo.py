@@ -14,20 +14,8 @@ def parse_args():
                         help='Model namespace')
     parser.add_argument('--dim', type=int, default=512,
                         help='Embedding dimension')
-    parser.add_argument('--batch-size', type=int, default=1000,
-                        help='Training minibatch size')
-    parser.add_argument('--n-epochs', type=int, default=20,
-                        help='Number of training epochs')
     parser.add_argument('--seed', type=int, default=1,
                         help='Random seed')
-    parser.add_argument('--checkpoint', type=str, default=None,
-                        help='Model checkpoint')
-    parser.add_argument('--train', action='store_true',
-                        help='Train model')
-    parser.add_argument('--train-split', action='store_true',
-                        help='Train model on portion of data')
-    parser.add_argument('--test', action='store_true',
-                        help='Test model')
     parser.add_argument('--ancestral', action='store_true',
                         help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
@@ -372,7 +360,7 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         adata, basis='umap', smooth=0.6, levels=100,
         arrow_size=1., arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
-        save=f'_{namespace}_pseudotime.png', dpi=500
+        save=f'_{namespace}_contour.png', dpi=500
     )
 
     sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
@@ -389,9 +377,9 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         'primate',
     ]
     plt.figure()
-    sns.violinplot(
+    sns.boxplot(
         data=adata.obs, x='tax_group', y='pseudotime',
-        order=tax_order, inner='quartile', scale='width',
+        order=tax_order,
     )
     plt.xticks(rotation=60)
     plt.tight_layout()
@@ -406,9 +394,9 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         'hemoglobin_beta',
     ]
     plt.figure()
-    sns.violinplot(
+    sns.boxplot(
         data=adata.obs, x='globin_type', y='pseudotime',
-        order=type_order, inner='quartile', scale='width',
+        order=type_order,
     )
     plt.xticks(rotation=60)
     plt.tight_layout()
@@ -417,6 +405,9 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
 
     sc.pl.umap(adata, color='pseudotime', edges=True, cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
+
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudotime']))

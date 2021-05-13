@@ -108,8 +108,10 @@ def likelihood_compare(seq1, seq2, vocabulary, model,
 
     return likelihoods[1] - likelihoods[0]
 
-def likelihood_muts(seq1, seq2, vocabulary, model,
-                    seq_cache={}, verbose=False):
+def likelihood_muts(
+        seq1, seq2, vocabulary, model,
+        seq_cache={}, verbose=False, natural_aas=None,
+):
     # Align, prefer matches to gaps.
     alignment = pairwise2.align.globalms(
         seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
@@ -128,7 +130,11 @@ def likelihood_muts(seq1, seq2, vocabulary, model,
                 continue
             if other_seq[a_idx] == '-':
                 deletions.append(orig_idx)
-            elif other_seq[a_idx] != ch:
+            if natural_aas is not None and \
+               (ch.upper() not in natural_aas or \
+                other_seq[a_idx].upper() not in natural_aas):
+                continue
+            if other_seq[a_idx] != ch:
                 substitutions.append(orig_idx)
             orig_idx += 1
 
@@ -160,11 +166,11 @@ class VelocityGraph:
             adata,
             seqs,
             score='other',
-            scale_dist=False,
             vkey='velocity',
             n_recurse_neighbors=None,
             random_neighbors_at_max=None,
             mode_neighbors='distances',
+            include_set='natural_aas',
             verbose=False,
     ):
         self.adata = adata
@@ -174,14 +180,20 @@ class VelocityGraph:
 
         self.score = score
 
-        self.scale_dist = scale_dist
-
         self.n_recurse_neighbors = n_recurse_neighbors
         if self.n_recurse_neighbors is None:
             if mode_neighbors == 'connectivities':
                 self.n_recurse_neighbors = 1
             else:
                 self.n_recurse_neighbors = 2
+
+        if include_set == 'natural_aas':
+            self.include_set = set([
+                'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I',
+                'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V',
+            ])
+        else:
+            self.include_set = None
 
         if np.min((get_neighs(adata, 'distances') > 0).sum(1).A1) == 0:
             raise ValueError(
@@ -248,13 +260,9 @@ class VelocityGraph:
                     self.seqs[i], self.seqs[j],
                     vocabulary, model,
                     seq_cache=self.seq_probs, verbose=self.verbose,
+                    natural_aas=self.include_set,
                 ) for j in neighs_idx
             ])
-
-            if self.scale_dist:
-                dist = self.adata.X[neighs_idx] - self.adata.X[i, None]
-                dist = np.sqrt((dist ** 2).sum(1))
-                val *= self.scale_dist * dist
 
             vals.extend(val)
             rows.extend(np.ones(len(neighs_idx)) * i)
@@ -275,15 +283,66 @@ def velocity_graph(
         model_name='esm1b',
         mkey='model',
         score='other',
-        scale_dist=False,
         seqs=None,
         vkey='velocity',
         n_recurse_neighbors=0,
         random_neighbors_at_max=None,
         mode_neighbors='distances',
+        include_set=None,
         copy=False,
         verbose=True,
 ):
+    """Computes velocity scores at each edge in the graph.
+
+    At each edge connecting two sequences :math:`(x^{(a)}, x^{(b)})`,
+    computes a score
+
+    .. math::
+        v_{ab} = \\frac{1}{|\\mathcal{M}|} \\sum_{i \in \\mathcal{M}}
+        \\left[ \\log p\\left( x_i^{(b)} | x^{(a)} \\right) -
+        \\log p\\left( x_i^{(a)} | x^{(b)} \\right) \\right]
+
+    where :math:`\\mathcal{M} = \\left\\{ i : x_i^{(a)} \\neq x_i^{(b)} \\right\\}`
+    is the set of positions at which the amino acid residues disagree.
+
+    Arguments
+    ---------
+    adata: :class:`~anndata.Anndata`
+        Annoated data matrix.
+    model_name: `str` (default: `'esm1b'`)
+        Language model used to compute likelihoods.
+    mkey: `str` (default: `'model'`)
+        Name at which language model is stored.
+    score: `str` (default: `'other'`)
+        Type of velocity score.
+    seqs: `list` (default: `'None'`)
+        List of sequences; defaults to those in `adata.obs['seq']`.
+    vkey: `str` (default: `'velocity'`)
+        Name of velocity estimates to be used.
+    n_recurse_neighbors: `int` (default: `0`)
+        Number of recursions for neighbors search.
+    random_neighbors_at_max: `int` or `None` (default: `None`)
+        If number of iterative neighbors for an individual node is higher than this
+        threshold, a random selection of such are chosen as reference neighbors.
+    mode_neighbors: `str` (default: `'distances'`)
+        Determines the type of KNN graph used. Options are 'distances' or
+        'connectivities'. The latter yields a symmetric graph.
+    include_set: `set` (default: `None`)
+        Set of characters to explicitly include.
+    verbose: `bool` (default: `True`)
+        Print logging output.
+    copy: `bool` (default: `False`)
+        Return a copy instead of writing to adata.
+
+    Returns
+    -------
+    Returns or updates `adata` with the attributes
+    model: `.uns`
+        language model
+    velocity_graph: `.uns`
+        sparse matrix with transition probabilities
+    """
+
     adata = adata.copy() if copy else adata
     verify_neighbors(adata)
 
@@ -311,11 +370,11 @@ def velocity_graph(
         adata,
         seqs,
         score=score,
-        scale_dist=scale_dist,
         vkey=vkey,
         n_recurse_neighbors=n_recurse_neighbors,
         random_neighbors_at_max=random_neighbors_at_max,
         mode_neighbors=mode_neighbors,
+        include_set=include_set,
         verbose=verbose,
     )
 

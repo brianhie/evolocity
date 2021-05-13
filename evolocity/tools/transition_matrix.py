@@ -22,7 +22,6 @@ def transition_matrix(
     threshold=None,
     use_negative_cosines=False,
     weight_diffusion=0,
-    scale_diffusion=1,
     weight_indirect_neighbors=None,
     n_neighbors=None,
     vgraph=None,
@@ -59,8 +58,6 @@ def transition_matrix(
         If True, negatively similar transitions are taken into account.
     weight_diffusion: `float` (default: 0)
         Relative weight to be given to diffusion kernel (Brownian motion)
-    scale_diffusion: `float` (default: 1)
-        Scale of diffusion kernel.
     weight_indirect_neighbors: `float` between `0` and `1` or `None` (default: `None`)
         Weight to be assigned to indirect neighbors (i.e. neighbors of higher degrees).
     n_neighbors:`int` (default: None)

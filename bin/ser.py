@@ -176,6 +176,8 @@ def plot_umap(adata, namespace='ser'):
                save='_{}_seqlen.png'.format(namespace))
     sc.pl.umap(adata, color='homology', edges=True, edges_color='#cccccc',
                save='_{}_homology.png'.format(namespace))
+    sc.pl.umap(adata, color='tax_kingdom', edges=True, edges_color='#cccccc',
+               save='_{}_kingdom.png'.format(namespace))
 
 def seqs_to_anndata(seqs):
     X, obs = [], {}
@@ -357,6 +359,9 @@ def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
     sc.pl.umap(adata, color='pseudotime',
                edges=True,  edges_color='#cccccc',
                cmap='inferno', save=f'_{namespace}_pseudotime.png')
+
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
 
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudotime']))

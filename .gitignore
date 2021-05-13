@@ -16,3 +16,5 @@ dist/
 plots*
 target*
 temp*
+docs/build
+docs/source/evolocity*

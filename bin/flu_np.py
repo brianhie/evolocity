@@ -347,21 +347,13 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
                                       'self_score' ])
+    gong_x = list(range(len(df) + 1))
+    gong_y = [ 0 ] + list(np.cumsum(df['muts']))
     tprint('Sum of full scores: {}'.format(sum(df.full)))
     tprint('Sum of local scores: {}'.format(sum(df.muts)))
     tprint('Sum of self scores: {}'.format(sum(df.self_score)))
-
-    x = list(range(len(df) + 1))
-    y = [ 0 ] + list(np.cumsum(df['muts']))
-    plt.figure(figsize=(8, 3))
-    plt.scatter(x, y, s=50, c=x, cmap='Oranges',
-                edgecolors='black', linewidths=0.5, zorder=10)
-    plt.plot(x, y, c='#aaaaaa')
-    plt.ylim([ -5, 12 ])
-    plt.axhline(c='black', linestyle='--')
-    plt.savefig('figures/np_gong_path.svg')
-    plt.close()
-    tprint('Gong et al. Spearman r = {}, P = {}'.format(*ss.spearmanr(x, y)))
+    tprint('Gong et al. Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(gong_x, gong_y)))
 
     ############################
     ## Visualize NP landscape ##
@@ -443,6 +435,40 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
                  adata.uns["velocity_graph_neg"],)
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
+
+    rw_root = list(adata.obs['seq']).index(nodes[0][1])
+
+    evo.tl.random_walk(
+        adata,
+        root_node=rw_root,
+        walk_length=len(nodes) - 1,
+        n_walks=30000,
+        groupby='subtype',
+        groups='H3N2',
+        scale=2.,
+    )
+
+    terminal_clusters = { '1', '3', '8', '9' }
+    paths = adata.uns['rw_paths']
+
+    plt.figure(figsize=(8, 3))
+    plt.scatter(gong_x, gong_y, s=50, c=gong_x, cmap='Oranges',
+                edgecolors='black', linewidths=0.5, zorder=10)
+    plt.plot(gong_x, gong_y, c='black', zorder=9)
+    for p in range(paths.shape[0]):
+        if adata.obs['louvain'][paths[p][-1]] in terminal_clusters:
+            walk_v = []
+            for idx, seq in enumerate(paths[p]):
+                if idx == 0:
+                    walk_v.append(0)
+                    continue
+                seq_prev = paths[p][idx - 1]
+                walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])
+            plt.plot(gong_x, np.cumsum(walk_v), c='#000080', alpha=0.1, zorder=5)
+    plt.ylim([ -2, 14 ])
+    plt.axhline(c='black', linestyle='--')
+    plt.savefig('figures/np_gong_path.svg')
+    plt.close()
 
     evo.tl.onehot_msa(
         adata,
@@ -534,6 +560,18 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.subplots_adjust(right=0.85)
     plt.savefig(f'figures/evolocity__{namespace}_pos238_velostream.png', dpi=500)
     plt.close()
+    plt.figure()
+    ax = evo.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        color='pos455', show=False, legend_loc=False,
+        palette=[ '#888888', '#1f77b4', '#ff7f0e',
+                  '#d62728', '#9467bd', ],
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    plt.savefig(f'figures/evolocity__{namespace}_pos455_velostream.png', dpi=500)
+    plt.close()
 
     plt.figure()
     ax = evo.pl.velocity_contour(
@@ -576,6 +614,9 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.tight_layout()
     plt.close()
 
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
+
     tprint('Pseudotime-time Spearman r = {}, P = {}'
            .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
                                  adata_nnan.obs['year'],
@@ -584,17 +625,17 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
            .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
                                 adata_nnan.obs['year'])))
 
-    nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
-                np.isfinite(adata_nnan.obs['pseudotime']))
-    tprint('Pseudotime-homology Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
-                                 adata_nnan.obs['homology'],
-                                 nan_policy='omit')))
-    tprint('Pseudotime-homology Pearson r = {}, P = {}'
-           .format(*ss.pearsonr(adata.obs['pseudotime'],
-                                adata.obs['homology'])))
+    if args.model_name != 'tape':
+        nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
+                    np.isfinite(adata_nnan.obs['pseudotime']))
+        tprint('Pseudotime-homology Spearman r = {}, P = {}'
+               .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                     adata_nnan.obs['homology'],
+                                     nan_policy='omit')))
+        tprint('Pseudotime-homology Pearson r = {}, P = {}'
+               .format(*ss.pearsonr(adata.obs['pseudotime'],
+                                    adata.obs['homology'])))
 
-    adata.write(f'target/results/{namespace}_adata.h5ad')
 
 if __name__ == '__main__':
     args = parse_args()

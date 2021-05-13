@@ -354,6 +354,9 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
     sc.pl.umap(adata, color='pseudotime', edges=True, cmap='inferno',
                save=f'_{namespace}_pseudotime.png')
 
+    with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
+        of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
+
     nnan_idx = (np.isfinite(adata.obs['homology']) &
                 np.isfinite(adata.obs['pseudotime']))
     tprint('Pseudotime-homology Spearman r = {}, P = {}'
