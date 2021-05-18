@@ -1,7 +1,6 @@
-# Evolocity
-
-
 <img src="docs/cyc_stream.PNG" alt="Evolocity" height="250px" align="left"/>
+
+# Evolocity
 
 Evolocity constructs ordered protein sequence landscapes by using the local evolutionary predictions enabled by language models to enable global evolutionary insight. Evolocity is described in the paper "Evolutionary velocity with protein language models" by Brian Hie, Kevin Yang, and Peter Kim. This repository also contains the analysis code and links to the data for reproducing the results in the paper.
 
