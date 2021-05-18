@@ -399,7 +399,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
             dirname=f'target/evolocity_alignments/{namespace}',
             n_threads=40,
         )
-        sc.pp.pca(adata)
+        sc.pp.pca(adata, n_comps=100)
         sc.pp.neighbors(adata, n_neighbors=40, use_rep='X_pca')
         sc.tl.umap(adata)
 
