@@ -393,6 +393,16 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
         adata.write(adata_cache)
 
+    if '_onehot' in namespace:
+        evo.tl.onehot_msa(
+            adata,
+            dirname=f'target/evolocity_alignments/{namespace}',
+            n_threads=40,
+        )
+        sc.pp.pca(adata)
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X_pca')
+        sc.tl.umap(adata)
+
     #if namespace == 'np':
     #    analyze_edges(adata, model, vocabulary)
     #    exit()
@@ -438,37 +448,38 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     rw_root = list(adata.obs['seq']).index(nodes[0][1])
 
-    evo.tl.random_walk(
-        adata,
-        root_node=rw_root,
-        walk_length=len(nodes) - 1,
-        n_walks=30000,
-        groupby='subtype',
-        groups='H3N2',
-        scale=2.,
-    )
+    if '_onehot' not in namespace:
+        evo.tl.random_walk(
+            adata,
+            root_node=rw_root,
+            walk_length=len(nodes) - 1,
+            n_walks=30000,
+            groupby='subtype',
+            groups='H3N2',
+            scale=2.,
+        )
 
-    terminal_clusters = { '1', '3', '8', '9' }
-    paths = adata.uns['rw_paths']
+        terminal_clusters = { '1', '3', '8', '9' }
+        paths = adata.uns['rw_paths']
 
-    plt.figure(figsize=(8, 3))
-    plt.scatter(gong_x, gong_y, s=50, c=gong_x, cmap='Oranges',
-                edgecolors='black', linewidths=0.5, zorder=10)
-    plt.plot(gong_x, gong_y, c='black', zorder=9)
-    for p in range(paths.shape[0]):
-        if adata.obs['louvain'][paths[p][-1]] in terminal_clusters:
-            walk_v = []
-            for idx, seq in enumerate(paths[p]):
-                if idx == 0:
-                    walk_v.append(0)
-                    continue
-                seq_prev = paths[p][idx - 1]
-                walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])
-            plt.plot(gong_x, np.cumsum(walk_v), c='#000080', alpha=0.1, zorder=5)
-    plt.ylim([ -2, 14 ])
-    plt.axhline(c='black', linestyle='--')
-    plt.savefig('figures/np_gong_path.svg')
-    plt.close()
+        plt.figure(figsize=(8, 3))
+        plt.scatter(gong_x, gong_y, s=50, c=gong_x, cmap='Oranges',
+                    edgecolors='black', linewidths=0.5, zorder=10)
+        plt.plot(gong_x, gong_y, c='black', zorder=9)
+        for p in range(paths.shape[0]):
+            if adata.obs['louvain'][paths[p][-1]] in terminal_clusters:
+                walk_v = []
+                for idx, seq in enumerate(paths[p]):
+                    if idx == 0:
+                        walk_v.append(0)
+                        continue
+                    seq_prev = paths[p][idx - 1]
+                    walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])
+                plt.plot(gong_x, np.cumsum(walk_v), c='#000080', alpha=0.1, zorder=5)
+        plt.ylim([ -2, 14 ])
+        plt.axhline(c='black', linestyle='--')
+        plt.savefig(f'figures/{namespace}_gong_path.svg')
+        plt.close()
 
     evo.tl.onehot_msa(
         adata,
@@ -598,22 +609,6 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     adata_nnan = adata[nnan_idx]
 
-    plt.figure()
-    sns.regplot(x='year', y='pseudotime', ci=None, logistic=True,
-                data=adata_nnan[adata_nnan.obs['subtype'] == 'H1N1'].obs)
-    plt.ylim([ -0.01, 1.01 ])
-    plt.savefig(f'figures/{namespace}_h1n1_pseudotime-time.png', dpi=500)
-    plt.tight_layout()
-    plt.close()
-
-    plt.figure()
-    sns.regplot(x='year', y='pseudotime', ci=None, logistic=True,
-                data=adata_nnan[adata_nnan.obs['subtype'] == 'H3N2'].obs)
-    plt.ylim([ -0.01, 1.01 ])
-    plt.savefig(f'figures/{namespace}_h3n2_pseudotime-time.png', dpi=500)
-    plt.tight_layout()
-    plt.close()
-
     with open(f'target/ev_cache/{namespace}_pseudotime.txt', 'w') as of:
         of.write('\n'.join([ str(x) for x in adata.obs['pseudotime'] ]) + '\n')
 
@@ -688,3 +683,5 @@ if __name__ == '__main__':
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
         epi_gong2013(args, model, seqs, vocabulary, namespace=namespace)
+
+        epi_gong2013(args, model, seqs, vocabulary, namespace='np_onehot')

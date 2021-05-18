@@ -23,3 +23,10 @@ if __name__ == '__main__':
         tprint(prot)
         tprint('Spearman r = {}, P = {}'.format(*ss.spearmanr(x_esm1b, x_tape)))
         tprint('')
+
+        if prot == 'np':
+            fname_onehot = f'target/ev_cache/{prot}_onehot_pseudotime.txt'
+            x_onehot = np.loadtxt(fname_onehot)
+            tprint(prot + ' onehot')
+            tprint('Spearman r = {}, P = {}'.format(*ss.spearmanr(x_esm1b, x_onehot)))
+            tprint('')
