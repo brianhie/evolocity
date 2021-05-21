@@ -108,15 +108,17 @@ def likelihood_compare(seq1, seq2, vocabulary, model,
 
     return likelihoods[1] - likelihoods[0]
 
+def align_seqs(seq1, seq2):
+    # Align, prefer matches to gaps.
+    return pairwise2.align.globalms(
+        seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
+    )[0]
+
 def likelihood_muts(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    # Align, prefer matches to gaps.
-    alignment = pairwise2.align.globalms(
-        seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
-    )[0]
-    a_seq1, a_seq2, _, _, _ = alignment
+    a_seq1, a_seq2, _, _, _ = align_seqs(seq1, seq2)
 
     # Map alignment to original indices.
     del1, sub1, del2, sub2 = [], [], [], []
@@ -143,6 +145,26 @@ def likelihood_muts(
         pos1=sub1, pos2=sub2, seq_cache=seq_cache, verbose=verbose,
     )
 
+def likelihood_blosum62(
+        seq1, seq2, vocabulary, model,
+        seq_cache={}, verbose=False, natural_aas=None,
+):
+    from Bio.SubsMat import MatrixInfo as matlist
+    matrix = matlist.blosum62
+
+    a_seq1, a_seq2, _, _, _ = align_seqs(seq1, seq2)
+
+    scores = []
+    for ch1, ch2 in zip(a_seq1, a_seq2):
+        if ch1 == ch2:
+            continue
+        if (ch1, ch2) in matrix:
+            scores.append(matrix[(ch1, ch2)])
+        elif (ch2, ch1) in matrix:
+            scores.append(matrix[(ch2, ch1)])
+
+    return np.mean(scores)
+
 def vals_to_csr(vals, rows, cols, shape, split_negative=False):
     graph = coo_matrix((vals, (rows, cols)), shape=shape)
 
@@ -165,7 +187,7 @@ class VelocityGraph:
             self,
             adata,
             seqs,
-            score='other',
+            score='lm',
             vkey='velocity',
             n_recurse_neighbors=None,
             random_neighbors_at_max=None,
@@ -222,12 +244,15 @@ class VelocityGraph:
         else:
             iterator = self.seqs
 
+        if self.score == 'blosum62':
+            return
+
         for seq in iterator:
             y_pred = predict_sequence_prob(
                 seq, vocabulary, model, verbose=self.verbose
             )
 
-            if self.score == 'other':
+            if self.score == 'lm':
                 self.seq_probs[seq] = np.array([
                     y_pred[i + 1, (
                         vocabulary[seq[i]]
@@ -253,7 +278,12 @@ class VelocityGraph:
                 self.indices, i, self.n_recurse_neighbors, self.max_neighs
             )
 
-            score_fn = likelihood_muts
+            if self.score == 'lm':
+                score_fn = likelihood_muts
+            elif self.score == 'blosum62':
+                score_fn = likelihood_blosum62
+            else:
+                raise ValueError('Invalid score {}'.format(self.score))
 
             val = np.array([
                 score_fn(
@@ -282,7 +312,7 @@ def velocity_graph(
         adata,
         model_name='esm1b',
         mkey='model',
-        score='other',
+        score='lm',
         seqs=None,
         vkey='velocity',
         n_recurse_neighbors=0,
@@ -313,7 +343,7 @@ def velocity_graph(
         Language model used to compute likelihoods.
     mkey: `str` (default: `'model'`)
         Name at which language model is stored.
-    score: `str` (default: `'other'`)
+    score: `str` (default: `'lm'`)
         Type of velocity score.
     seqs: `list` (default: `'None'`)
         List of sequences; defaults to those in `adata.obs['seq']`.
@@ -352,7 +382,7 @@ def velocity_graph(
         raise ValueError('Number of sequences should correspond to '
                          'number of observations.')
 
-    valid_scores = { 'other' }
+    valid_scores = { 'lm', 'blosum62' }
     if score not in valid_scores:
         raise ValueError('Score must be one of {}'
                          .format(', '.join(valid_scores)))

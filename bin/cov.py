@@ -356,6 +356,11 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
            .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
                                 adata_nnan.obs['timestamp'])))
 
+    seqlens = [ len(seq) for seq in adata.obs['seq'] ]
+    tprint('Pseudotime-length Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'], seqlens,
+                                 nan_policy='omit')))
+
 
 if __name__ == '__main__':
     args = parse_args()

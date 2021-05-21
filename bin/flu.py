@@ -386,6 +386,13 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
            .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
                                 adata_nnan.obs['Collection Date'])))
 
+    seqlens = [ len(seq) for seq in adata_nnan.obs['seq'] ]
+    tprint('Pseudotime-length Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'], seqlens,
+                                 nan_policy='omit')))
+    tprint('Pseudotime-length Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata_nnan.obs['pseudotime'], seqlens)))
+
     if args.model_name != 'tape':
         nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
                     np.isfinite(adata_nnan.obs['pseudotime']))

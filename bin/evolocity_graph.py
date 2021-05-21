@@ -148,6 +148,30 @@ def likelihood_muts(seq1, seq2, args, vocabulary, model,
         pos1=sub1, pos2=sub2, seq_cache=seq_cache, verbose=verbose,
     )
 
+def likelihood_blosum62(
+        seq1, seq2, args, vocabulary, model,
+        seq_cache={}, verbose=False, natural_aas=None,
+):
+    from Bio.SubsMat import MatrixInfo as matlist
+    matrix = matlist.blosum62
+
+    # Align, prefer matches to gaps.
+    alignment = pairwise2.align.globalms(
+        seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
+    )[0]
+    a_seq1, a_seq2, _, _, _ = alignment
+
+    scores = []
+    for ch1, ch2 in zip(a_seq1, a_seq2):
+        if ch1 == ch2:
+            continue
+        if (ch1, ch2) in matrix:
+            scores.append(matrix[(ch1, ch2)])
+        elif (ch2, ch1) in matrix:
+            scores.append(matrix[(ch2, ch1)])
+
+    return np.mean(scores)
+
 def likelihood_self(seq1, seq2, args, vocabulary, model,
                     seq_cache={}, verbose=False):
     # Align, prefer matches to gaps.

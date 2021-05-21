@@ -384,6 +384,12 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
+    seqlens = [ len(seq) for seq in adata.obs['seq'] ]
+    tprint('Pseudotime-length Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'], seqlens,
+                                 nan_policy='omit')))
+
+
 if __name__ == '__main__':
     args = parse_args()
 

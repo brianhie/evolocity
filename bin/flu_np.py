@@ -299,7 +299,10 @@ def analyze_edges(adata, model, vocabulary, namespace='np'):
     mkdir_p(dirname)
     with open(f'{dirname}/{namespace}_edges.txt', 'w') as of:
         for i in tqdm(range(n_obs)):
-            score_fn = likelihood_muts
+            if '_blosum' in namespace:
+                score_fn = likelihood_blosum62
+            else:
+                score_fn = likelihood_muts
             neighs_idx = get_iterative_indices(
                 vgraph.indices, i, vgraph.n_recurse_neighbors, vgraph.max_neighs
             )
@@ -403,10 +406,6 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         sc.pp.neighbors(adata, n_neighbors=40, use_rep='X_pca')
         sc.tl.umap(adata)
 
-    #if namespace == 'np':
-    #    analyze_edges(adata, model, vocabulary)
-    #    exit()
-
     keep_subtypes = {
         'H1N1', 'H2N2', 'H3N2', 'H5N1', 'H7N9',
     }
@@ -437,7 +436,9 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        evo.tl.velocity_graph(adata, model_name=args.model_name)
+        evo.tl.velocity_graph(adata, model_name=args.model_name,
+                              score=('lm' if '_blosum' not in namespace else
+                                     'blosum62'))
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -446,9 +447,11 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
+    #analyze_edges(adata, model, vocabulary, namespace=namespace)
+
     rw_root = list(adata.obs['seq']).index(nodes[0][1])
 
-    if '_onehot' not in namespace:
+    if '_onehot' not in namespace and '_blosum' not in namespace:
         evo.tl.random_walk(
             adata,
             root_node=rw_root,
@@ -475,7 +478,8 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
                         continue
                     seq_prev = paths[p][idx - 1]
                     walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])
-                plt.plot(gong_x, np.cumsum(walk_v), c='#000080', alpha=0.1, zorder=5)
+                plt.plot(gong_x, np.cumsum(walk_v),
+                         c='#000080', alpha=0.1, zorder=5)
         plt.ylim([ -2, 14 ])
         plt.axhline(c='black', linestyle='--')
         plt.savefig(f'figures/{namespace}_gong_path.svg')
@@ -522,17 +526,18 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.savefig(f'figures/evolocity__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
-    plt.figure()
-    ax = evo.pl.velocity_embedding_grid(
-        adata, basis='umap', min_mass=3., smooth=1.,
-        arrow_size=1., arrow_length=3., alpha=1.,
-        color='pos373', show=False,
-    )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    plt.tight_layout(pad=1.1)
-    plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/evolocity__{namespace}_pos373_velogrid.png', dpi=500)
-    plt.close()
+    if '_onehot' not in namespace and '_blosum' not in namespace:
+        plt.figure()
+        ax = evo.pl.velocity_embedding_grid(
+            adata, basis='umap', min_mass=3., smooth=1.,
+            arrow_size=1., arrow_length=3., alpha=1.,
+            color='pos373', show=False,
+        )
+        sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+        plt.tight_layout(pad=1.1)
+        plt.subplots_adjust(right=0.85)
+        plt.savefig(f'figures/evolocity__{namespace}_pos373_velogrid.png', dpi=500)
+        plt.close()
 
     # Streamplot visualization.
     plt.figure()
@@ -546,43 +551,47 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     draw_gong_path(ax, adata)
     plt.savefig(f'figures/evolocity__{namespace}_year_velostream.png', dpi=500)
     plt.close()
-    plt.figure()
-    ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
-        color='pos104', show=False, legend_loc=False,
-        palette=[ '#888888', '#1f77b4', '#888888',
-                  '#888888', '#d62728', '#888888',
-                  '#2ca02c', '#9467bd', ],
-    )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    plt.tight_layout(pad=1.1)
-    plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/evolocity__{namespace}_pos104_velostream.png', dpi=500)
-    plt.close()
-    plt.figure()
-    ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
-        color='pos238', show=False, legend_loc=False,
-        palette=[ '#888888', '#1f77b4', '#d62728',
-                  '#2ca02c', '#9467bd', ],
-    )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    plt.tight_layout(pad=1.1)
-    plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/evolocity__{namespace}_pos238_velostream.png', dpi=500)
-    plt.close()
-    plt.figure()
-    ax = evo.pl.velocity_embedding_stream(
-        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
-        color='pos455', show=False, legend_loc=False,
-        palette=[ '#888888', '#1f77b4', '#ff7f0e',
-                  '#d62728', '#9467bd', ],
-    )
-    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    plt.tight_layout(pad=1.1)
-    plt.subplots_adjust(right=0.85)
-    plt.savefig(f'figures/evolocity__{namespace}_pos455_velostream.png', dpi=500)
-    plt.close()
+    if '_onehot' not in namespace and '_blosum' not in namespace:
+        plt.figure()
+        ax = evo.pl.velocity_embedding_stream(
+            adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+            color='pos104', show=False, legend_loc=False,
+            palette=[ '#888888', '#1f77b4', '#888888',
+                      '#888888', '#d62728', '#888888',
+                      '#2ca02c', '#9467bd', ],
+        )
+        sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+        plt.tight_layout(pad=1.1)
+        plt.subplots_adjust(right=0.85)
+        plt.savefig(f'figures/evolocity__{namespace}_pos104_velostream.png',
+                    dpi=500)
+        plt.close()
+        plt.figure()
+        ax = evo.pl.velocity_embedding_stream(
+            adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+            color='pos238', show=False, legend_loc=False,
+            palette=[ '#888888', '#1f77b4', '#d62728',
+                      '#2ca02c', '#9467bd', ],
+        )
+        sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+        plt.tight_layout(pad=1.1)
+        plt.subplots_adjust(right=0.85)
+        plt.savefig(f'figures/evolocity__{namespace}_pos238_velostream.png',
+                    dpi=500)
+        plt.close()
+        plt.figure()
+        ax = evo.pl.velocity_embedding_stream(
+            adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+            color='pos455', show=False, legend_loc=False,
+            palette=[ '#888888', '#1f77b4', '#ff7f0e',
+                      '#d62728', '#9467bd', ],
+        )
+        sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+        plt.tight_layout(pad=1.1)
+        plt.subplots_adjust(right=0.85)
+        plt.savefig(f'figures/evolocity__{namespace}_pos455_velostream.png',
+                    dpi=500)
+        plt.close()
 
     plt.figure()
     ax = evo.pl.velocity_contour(
@@ -619,6 +628,14 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     tprint('Pseudotime-time Pearson r = {}, P = {}'
            .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
                                 adata_nnan.obs['year'])))
+
+    tprint('Pseudotime-length Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata_nnan.obs['pseudotime'],
+                                 adata_nnan.obs['seqlen'],
+                                 nan_policy='omit')))
+    tprint('Pseudotime-length Pearson r = {}, P = {}'
+           .format(*ss.pearsonr(adata_nnan.obs['pseudotime'],
+                                adata_nnan.obs['seqlen'])))
 
     if args.model_name != 'tape':
         nnan_idx = (np.isfinite(adata_nnan.obs['homology']) &
@@ -682,6 +699,15 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
+        tprint('NP analysis:')
         epi_gong2013(args, model, seqs, vocabulary, namespace=namespace)
 
-        epi_gong2013(args, model, seqs, vocabulary, namespace='np_onehot')
+        #tprint('NP with one-hot features analysis:')
+        #epi_gong2013(args, model, seqs, vocabulary, namespace='np_onehot')
+        #
+        #tprint('NP with BLOSUM scores analysis:')
+        #epi_gong2013(args, model, seqs, vocabulary, namespace='np_blosum62')
+        #
+        #tprint('NP with one-hot/BLOSUM scores analysis:')
+        #epi_gong2013(args, model, seqs, vocabulary,
+        #             namespace='np_onehot_blosum62')

@@ -419,6 +419,12 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
            .format(*ss.pearsonr(adata.obs['pseudotime'][nnan_idx],
                                 adata.obs['homology'][nnan_idx])))
 
+    seqlens = [ len(seq) for seq in adata.obs['seq'] ]
+    tprint('Pseudotime-length Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(adata.obs['pseudotime'], seqlens,
+                                 nan_policy='omit')))
+
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -448,9 +454,6 @@ if __name__ == '__main__':
         model.model_.load_weights(args.checkpoint)
         tprint('Model summary:')
         tprint(model.model_.summary())
-
-    if args.train or args.train_split or args.test:
-        train_test(args, model, seqs, vocabulary, split_seqs)
 
     if args.ancestral:
         if args.checkpoint is None and not args.train:

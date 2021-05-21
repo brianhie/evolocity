@@ -1,8 +1,10 @@
 from utils import *
 
 if __name__ == '__main__':
+    fname = sys.argv[1]
+
     df = pd.read_csv(
-        'target/np/np_edges.txt',
+        fname,
         delimiter='\t',
         names=[
             'node1',
