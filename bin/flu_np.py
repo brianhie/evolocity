@@ -451,7 +451,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     rw_root = list(adata.obs['seq']).index(nodes[0][1])
 
-    if '_onehot' not in namespace and '_blosum' not in namespace:
+    if namespace == 'np':
         evo.tl.random_walk(
             adata,
             root_node=rw_root,
@@ -526,7 +526,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.savefig(f'figures/evolocity__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
-    if '_onehot' not in namespace and '_blosum' not in namespace:
+    if namespace == 'np':
         plt.figure()
         ax = evo.pl.velocity_embedding_grid(
             adata, basis='umap', min_mass=3., smooth=1.,
@@ -551,7 +551,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     draw_gong_path(ax, adata)
     plt.savefig(f'figures/evolocity__{namespace}_year_velostream.png', dpi=500)
     plt.close()
-    if '_onehot' not in namespace and '_blosum' not in namespace:
+    if namespace == 'np':
         plt.figure()
         ax = evo.pl.velocity_embedding_stream(
             adata, basis='umap', min_mass=4., smooth=1., density=1.2,
