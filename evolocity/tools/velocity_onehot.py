@@ -8,6 +8,7 @@ import numpy as np
 def onehot_msa(
         adata,
         reference=None,
+        seq_id_fields=None,
         key='onehot',
         seq_key='seq',
         backend='mafft',
@@ -31,6 +32,8 @@ def onehot_msa(
     reference: `int` (default: None)
         Index corresponding to a sequence in `adata` to be used as the main
         reference sequence for the alignment.
+    seq_id_fields: `list` (default: None)
+        List of fields in `adata.obs` to store in FASTA IDs.
     key: `str` (default: `'onehot'`)
         Name at which the embedding is stored.
     seq_key: `str` (default: `'seq'`)
@@ -55,10 +58,13 @@ def onehot_msa(
 
     # Write unaligned fasta.
 
-    seqs = [
-        SeqRecord(Seq(seq), id='seq{}'.format(idx), description='')
-        for idx, seq in enumerate(adata.obs[seq_key])
-    ]
+    seqs = []
+    for idx, seq in enumerate(adata.obs[seq_key]):
+        seq_id = f'seq{idx}'
+        if seq_id_fields is not None:
+            for field in seq_id_fields:
+                seq_id += f'_{field}{adata.obs[field][idx]}'
+        seqs.append(SeqRecord(Seq(seq), id=seq_id, description=''))
 
     if dirname.endswith('/'):
         dirname = dirname.rstrip('/')
@@ -102,7 +108,7 @@ def onehot_msa(
     vocabulary = {}
 
     for i, record in enumerate(alignment):
-        assert(record.id == 'seq{}'.format(i))
+        assert(record.id.startswith('seq{}'.format(i)))
         aseq = str(record.seq)
         j = 0
         for char_idx, char in enumerate(aseq):

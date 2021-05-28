@@ -447,6 +447,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         np.save('{}_vself_transition.npy'.format(cache_prefix),
                 adata.obs["velocity_self_transition"],)
 
+    # Edge score stratification analysis.
     #analyze_edges(adata, model, vocabulary, namespace=namespace)
 
     rw_root = list(adata.obs['seq']).index(nodes[0][1])
@@ -489,6 +490,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         adata,
         reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
         dirname=f'target/evolocity_alignments/{namespace}',
+        seq_id_fields=[ 'subtype', 'year' ],
         n_threads=40,
     )
     evo.tl.residue_scores(adata)
@@ -550,6 +552,17 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.subplots_adjust(right=0.85)
     draw_gong_path(ax, adata)
     plt.savefig(f'figures/evolocity__{namespace}_year_velostream.png', dpi=500)
+    plt.close()
+    plt.figure()
+    ax = evo.pl.velocity_embedding_stream(
+        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+        color='simple_subtype', legend_loc=False, show=False,
+    )
+    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
+    plt.tight_layout(pad=1.1)
+    plt.subplots_adjust(right=0.85)
+    draw_gong_path(ax, adata)
+    plt.savefig(f'figures/evolocity__{namespace}_subtype_velostream.png', dpi=500)
     plt.close()
     if namespace == 'np':
         plt.figure()
