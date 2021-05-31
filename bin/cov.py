@@ -22,20 +22,6 @@ def parse_args():
                         help='Random seed')
     parser.add_argument('--checkpoint', type=str, default=None,
                         help='Model checkpoint')
-    parser.add_argument('--train', action='store_true',
-                        help='Train model')
-    parser.add_argument('--train-split', action='store_true',
-                        help='Train model on portion of data')
-    parser.add_argument('--test', action='store_true',
-                        help='Test model')
-    parser.add_argument('--embed', action='store_true',
-                        help='Analyze embeddings')
-    parser.add_argument('--semantics', action='store_true',
-                        help='Analyze mutational semantic change')
-    parser.add_argument('--combfit', action='store_true',
-                        help='Analyze combinatorial fitness')
-    parser.add_argument('--reinfection', action='store_true',
-                        help='Analyze reinfection cases')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
     args = parser.parse_args()
@@ -82,23 +68,17 @@ def process(fnames):
     seqs = {}
     for fname in fnames:
         for record in SeqIO.parse(fname, 'fasta'):
-            if len(record.seq) < 1000:
+            if len(record.seq) < 1263 or len(record.seq) > 1283:
                 continue
             if str(record.seq).count('X') > 0:
+                continue
+            if not record.seq.startswith('M') or not record.seq.endswith('HYT'):
                 continue
             if record.seq not in seqs:
                 seqs[record.seq] = []
             meta = parse_gisaid(record.description)
             meta['accession'] = record.description
             seqs[record.seq].append(meta)
-
-    with open('data/cov/cov_all.fa', 'w') as of:
-        for seq in seqs:
-            metas = seqs[seq]
-            for meta in metas:
-                of.write('>{}\n'.format(meta['accession']))
-                of.write('{}\n'.format(str(seq)))
-
     return seqs
 
 def split_seqs(seqs, split_method='random'):
@@ -117,7 +97,7 @@ def split_seqs(seqs, split_method='random'):
 
 def setup(args):
     fnames = [
-        'data/cov/spikeprot0322.fasta',
+        'data/cov/spikeprot0527.fasta',
     ]
 
     import pickle
@@ -152,9 +132,9 @@ def interpret_clusters(adata):
 
 def plot_umap(adata, namespace='cov'):
     categories = [
+        'timestamp',
         'louvain',
         'seqlen',
-        'timestamp',
         'continent',
         'n_seq',
         'host',
@@ -207,14 +187,6 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         seqs = populate_embedding(args, model, seqs, vocabulary,
                                   use_cache=True)
         adata = seqs_to_anndata(seqs)
-        adata = adata[adata.obs['seqlen'] >= 1263]
-        adata = adata[adata.obs['seqlen'] <= 1283]
-        adata = adata[[
-            seq.endswith('HYT') for seq in adata.obs['seq']
-        ]]
-        adata = adata[[
-            seq.startswith('M') for seq in adata.obs['seq']
-        ]]
         adata = adata[
             adata.obs['timestamp'] >
             time.mktime(dparse('2019-11-30').timetuple())
@@ -222,7 +194,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
 
         sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=1.)
+        sc.tl.umap(adata, min_dist=0.4)
 
         adata.write(adata_cache)
 
@@ -274,7 +246,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     )
     evo.pl.residue_categories(
         adata,
-        positions=[ 17, 416, 483, 500, 613, 680, ],
+        positions=[ 17, 153, 416, 451, 477, 483, 500, 613, 680, 949, ],
         namespace=namespace,
         reference=list(adata.obs['seq']).index(wt_seq),
     )
@@ -387,74 +359,6 @@ if __name__ == '__main__':
         model.model_.load_weights(args.checkpoint)
         tprint('Model summary:')
         tprint(model.model_.summary())
-
-    if args.train:
-        batch_train(args, model, seqs, vocabulary, batch_size=1000)
-
-    if args.train_split or args.test:
-        train_test(args, model, seqs, vocabulary, split_seqs)
-
-    if args.embed:
-        if args.checkpoint is None and not args.train:
-            raise ValueError('Model must be trained or loaded '
-                             'from checkpoint.')
-        no_embed = { 'hmm' }
-        if args.model_name in no_embed:
-            raise ValueError('Embeddings not available for models: {}'
-                             .format(', '.join(no_embed)))
-        analyze_embedding(args, model, seqs, vocabulary)
-
-    if args.semantics:
-        if args.checkpoint is None and not args.train:
-            raise ValueError('Model must be trained or loaded '
-                             'from checkpoint.')
-
-        from escape import load_baum2020, load_greaney2020
-        tprint('Baum et al. 2020...')
-        seq_to_mutate, seqs_escape = load_baum2020()
-        analyze_semantics(args, model, vocabulary,
-                          seq_to_mutate, seqs_escape, comb_batch=5000,
-                          beta=1., plot_acquisition=True,)
-        tprint('Greaney et al. 2020...')
-        seq_to_mutate, seqs_escape = load_greaney2020()
-        analyze_semantics(args, model, vocabulary,
-                          seq_to_mutate, seqs_escape, comb_batch=5000,
-                          min_pos=318, max_pos=540, # Restrict to RBD.
-                          beta=1., plot_acquisition=True,
-                          plot_namespace='cov2rbd')
-
-    if args.combfit:
-        from combinatorial_fitness import load_starr2020
-        tprint('Starr et al. 2020...')
-        wt_seqs, seqs_fitness = load_starr2020()
-        strains = sorted(wt_seqs.keys())
-        for strain in strains:
-            analyze_comb_fitness(args, model, vocabulary,
-                                 strain, wt_seqs[strain], seqs_fitness,
-                                 comb_batch=10000, beta=1.)
-
-    if args.reinfection:
-        from reinfection import load_to2020, load_ratg13, load_sarscov1
-        from plot_reinfection import plot_reinfection
-
-        tprint('To et al. 2020...')
-        wt_seq, mutants = load_to2020()
-        analyze_reinfection(args, model, seqs, vocabulary, wt_seq, mutants,
-                            namespace='to2020')
-        plot_reinfection(namespace='to2020')
-        null_combinatorial_fitness(args, model, seqs, vocabulary,
-                                   wt_seq, mutants, n_permutations=100000000,
-                                   namespace='to2020')
-
-        tprint('Positive controls...')
-        wt_seq, mutants = load_ratg13()
-        analyze_reinfection(args, model, seqs, vocabulary, wt_seq, mutants,
-                            namespace='ratg13')
-        plot_reinfection(namespace='ratg13')
-        wt_seq, mutants = load_sarscov1()
-        analyze_reinfection(args, model, seqs, vocabulary, wt_seq, mutants,
-                            namespace='sarscov1')
-        plot_reinfection(namespace='sarscov1')
 
     if args.evolocity:
         if args.checkpoint is None and not args.train:
