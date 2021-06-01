@@ -609,8 +609,8 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.figure()
     ax = evo.pl.velocity_contour(
         adata,
-        basis='umap', smooth=1., pt_smooth=1., levels=100,
-        density=0.8, arrow_size=2., arrow_length=3., cmap='coolwarm',
+        basis='umap', smooth=1., pt_smooth=0.8, levels=100,
+        density=0.6, arrow_size=4, arrow_length=3., cmap='coolwarm',
         c='#aaaaaa', show=False,
     )
     plt.tight_layout(pad=1.1)
