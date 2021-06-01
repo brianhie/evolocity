@@ -8,7 +8,7 @@ Evolocity constructs ordered protein sequence landscapes by using the local evol
    :width: 648
    :alt: 'Evolocity overview'
 
-Evolocity uses different languge model likelihoods to estimate directionality between two biological sequences.
+Evolocity uses the change in languge model likelihoods to estimate directionality between two biological sequences.
 Then, over an entire sequence similarity network, this procedure is used to direct network edges.
 Finally, network diffusion analysis can identify roots, order sequences in pseudotime, and identify mutations driving the velocity.
 

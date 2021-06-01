@@ -2,7 +2,7 @@
 
 # Evolocity
 
-Evolocity constructs ordered protein sequence landscapes by using the local evolutionary predictions enabled by language models to enable global evolutionary insight. Evolocity is described in the paper "Evolutionary velocity with protein language models" by Brian Hie, Kevin Yang, and Peter Kim. This repository also contains the analysis code and links to the data for reproducing the results in the paper.
+Evolocity constructs landscapes of protein evolution by using the local evolutionary predictions enabled by language models to predict the directionality of evolution. Evolocity is described in the paper "Evolutionary velocity with protein language models" by Brian Hie, Kevin Yang, and Peter Kim. This repository also contains the analysis code and links to the data for reproducing the results in the paper.
 
 Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA velocity by [Bergen et al.](https://www.nature.com/articles/s41587-020-0591-3) and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), a convenient way to store and organize biological data.
 
