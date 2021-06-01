@@ -23,11 +23,7 @@ You should be able to install evolocity using `pip`:
 python -m pip install evolocity
 ```
 
-## Tutorials
-
-Tutorials are available in the [documentation]() and also on Google Colab for [influenza A nucleoprotein](https://colab.research.google.com/drive/143vxIqgIO1bWbC1FJ0q_Ja8eZN603uwM?usp=sharing) and [cytochrome c]().
-
-## API example
+## API example and tutorials
 
 Below is a quick Python example of using evolocity to load and analyze sequences in a FASTA file.
 ```python
@@ -53,6 +49,8 @@ evo.pl.velocity_embedding_stream(adata)
 
 More detailed documentation is provided [here](DOC_URL).
 
+**Tutorials** are also available in the [documentation](DOC_URL) and also on Google Colab for [influenza A nucleoprotein](https://colab.research.google.com/drive/143vxIqgIO1bWbC1FJ0q_Ja8eZN603uwM?usp=sharing) and [cytochrome c](https://colab.research.google.com/drive/1Eav24ijOnT5JWRNWan4iuhnMfu_WpZE4?usp=sharing).
+
 ## Testing
 
 Unit tests require using [pytest](https://docs.pytest.org/en/latest/) and can be run with the command
@@ -73,7 +71,7 @@ wget DATA_URL
 tar xvf data.tar.gz
 ln -s data/target/ target
 ```
-within the same directory as this repository. Be sure to move the `target/` directory one level up.
+within the same directory as this repository. Be sure to move the `target/` directory one level up or create a symlink to it (as done above).
 
 ### Dependencies
 

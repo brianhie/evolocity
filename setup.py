@@ -12,6 +12,7 @@ setup(
     author="Brian Hie",
     author_email="brianhie@stanford.edu",
     description="Evolutionary velocity with protein language models",
+    long_description=Path("docs/README.rst").read_text("utf-8"),
     license="MIT",
     url="https://github.com/brianhie/evolocity",
     download_url="https://github.com/brianhie/evolocity",
