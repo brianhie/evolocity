@@ -8,9 +8,9 @@ Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for
 
 - [Documentation](#documentation)
 - [Installation](#installation)
-- [Tutorials](#tutorials)
-- [API example usage](#api-example)
+- [API example and tutorials](#api-example-and-tutorials)
 - [Testing](#testing)
+- [Experiments](#experiments)
 
 ## Documentation
 
