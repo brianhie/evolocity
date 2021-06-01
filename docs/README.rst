@@ -5,7 +5,7 @@ Evolocity
 Evolocity constructs ordered protein sequence landscapes by using the local evolutionary predictions enabled by language models to enable global evolutionary insight.
 
 .. image:: ../cyc_stream.PNG
-   :width: 550
+   :width: 450
    :alt: 'Evolocity overview'
 
 Evolocity uses the change in languge model likelihoods to estimate directionality between two biological sequences.

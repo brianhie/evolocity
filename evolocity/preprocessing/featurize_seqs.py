@@ -219,7 +219,7 @@ def featurize_fasta(
     in the `adata.X` matrix.
 
     Assumes metadata is storred in FASTA record as `key=value`
-    pairs.
+    pairs that are separated by vertical bar "|" characters.
 
     Arguments
     ---------
