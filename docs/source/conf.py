@@ -256,6 +256,7 @@ from jinja2.defaults import DEFAULT_FILTERS
 
 DEFAULT_FILTERS.update(modurl=modurl, api_image=api_image)
 
+
 # -- Override some classnames in autodoc --------------------------------------------
 
 import sphinx_autodoc_typehints

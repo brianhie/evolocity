@@ -24,9 +24,4 @@ Using fast neighbor search via `hnswlib <https://github.com/nmslib/hnswlib>`_ fu
 
     pip install pybind11 hnswlib
 
-
-.. _PyPI: https://pypi.org/project/scvelo
-
-.. _Scanpy: http://scanpy.readthedocs.io
-
-.. _anndata: https://anndata.readthedocs.io
+.. _PyPI: https://pypi.org/project/evolocity

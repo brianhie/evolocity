@@ -148,7 +148,7 @@ def residue_scores(
 
     Requires running ``evo.tl.onehot_msa`` first.
 
-    Arguments:
+    Arguments
     ---------
     adata: :class:`~anndata.Anndata`
         Annoated data matrix.
