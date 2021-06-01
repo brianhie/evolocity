@@ -8,10 +8,9 @@ PyPI, Virtualenv, or Anaconda
 
 Install evolocity from PyPI_ using::
 
-    pip install -U evolocity
+  python -m pip install evolocity
 
-where ``-U`` is short for ``--upgrade``.
-If you get a ``Permission denied`` error, use ``pip install -U evolocity --user`` instead.
+If you get a ``Permission denied`` error, use ``python -m pip install evolocity --user`` instead.
 
 Dependencies
 ^^^^^^^^^^^^
