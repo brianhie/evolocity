@@ -120,7 +120,7 @@ html_static_path = ['_static']
 
 
 def setup(app):
-    app.add_stylesheet('custom.css')
+    pass
 
 
 # -- Options for other output ------------------------------------------
