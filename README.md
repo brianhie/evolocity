@@ -14,7 +14,7 @@ Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for
 
 ## Documentation
 
-In-depth API documentation is in progress.
+For in-depth API documentation, go to https://evolocity.readthedocs.io.
 
 ## Installation
 
@@ -47,9 +47,9 @@ evo.pl.velocity_embedding_grid(adata)
 evo.pl.velocity_embedding_stream(adata)
 ```
 
-More detailed documentation is provided [here](DOC_URL).
+More detailed documentation is provided [here](https://evolocity.readthedocs.io).
 
-**Tutorials** are also available in the [documentation](DOC_URL) and also on Google Colab for [influenza A nucleoprotein](https://colab.research.google.com/drive/143vxIqgIO1bWbC1FJ0q_Ja8eZN603uwM?usp=sharing) and [cytochrome c](https://colab.research.google.com/drive/1Eav24ijOnT5JWRNWan4iuhnMfu_WpZE4?usp=sharing).
+**Tutorials** are also available in the [documentation](https://evolocity.readthedocs.io) and also on Google Colab for [influenza A nucleoprotein](https://colab.research.google.com/drive/143vxIqgIO1bWbC1FJ0q_Ja8eZN603uwM?usp=sharing) and [cytochrome c](https://colab.research.google.com/drive/1Eav24ijOnT5JWRNWan4iuhnMfu_WpZE4?usp=sharing).
 
 ## Testing
 
@@ -61,7 +61,7 @@ from the top-level directory.
 
 ## Experiments
 
-Below are scripts for reproducing the experiments in our paper. To apply evolocity to your own sequence data, we also encourage you to check out the tutorials in the [documentation](DOC_URL).
+Below are scripts for reproducing the experiments in our paper. To apply evolocity to your own sequence data, we also encourage you to check out the tutorials in the [documentation](https://evolocity.readthedocs.io).
 
 ### Data
 
