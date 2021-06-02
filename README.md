@@ -93,7 +93,7 @@ which will create new log files and figures in a new `figures/` directory.
 
 ### Scripts for other analyses
 
-Phylogenetic tree reconstruction of NP and ancient proteins can be done with the command
+Phylogenetic tree reconstruction of NP and ancient proteins can be done with the commands below (you will first need to install [PhyML](https://github.com/stephaneguindon/phyml) and [FastTree](http://www.microbesonline.org/fasttree/#Install)):
 ```bash
 bash bin/phylo_np.sh > phylo_np.log 2>&1
 bash bin/phylo_eno.sh > phylo_eno.log 2>&1
