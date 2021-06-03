@@ -2,7 +2,7 @@
 Evolocity
 =========
 
-Evolocity implements evolutionary velocity (evo-velocity), which constructs ordered protein sequence landscapes by using the local evolutionary predictions enabled by language models to enable global evolutionary insight.
+Evolocity implements evolutionary velocity (evo-velocity), which models a protein sequence landscape as an "evolutionary vector field" by using the local evolutionary predictions enabled by language models to enable global evolutionary insight.
 
 .. image:: ../cyc_stream.PNG
    :width: 450
