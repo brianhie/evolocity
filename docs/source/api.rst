@@ -11,7 +11,6 @@ Import evolocity as::
 After reading the data (``evo.pp.featurize_fasta``) or loading an in-built dataset (``evo.datasets.*``),
 the typical workflow consists of subsequent calls of
 preprocessing (``evo.pp.*``), analysis tools (``evo.tl.*``), and plotting (``evo.pl.*``).
-Some utilities (``evo.utils.*``) are also provided to facilitate data analysis.
 
 
 Preprocessing (pp)
