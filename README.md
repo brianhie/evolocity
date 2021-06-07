@@ -61,7 +61,7 @@ from the top-level directory.
 
 ## Experiments
 
-Below are scripts for reproducing the experiments in our paper. To apply evolocity to your own sequence data, we also encourage you to check out the tutorials in the [documentation](https://evolocity.readthedocs.io).
+Below are scripts for reproducing the experiments in our paper. To apply evolocity to your own sequence data, we also encourage you to check out the tutorials in the [documentation](https://evolocity.readthedocs.io). Our experiments were run with Python version 3.7 on Ubuntu 20.04.
 
 ### Data
 
@@ -81,15 +81,13 @@ conda env create --file environment-epi.yml
 ```
 ESM-1b and TAPE need to be installed separately as described in [https://github.com/facebookresearch/esm](https://github.com/facebookresearch/esm) and [https://github.com/songlab-cal/tape](https://github.com/songlab-cal/tape), respectively (PyTorch may need to be reupdated after TAPE installation).
 
-Our experiments were run with Python version 3.7 on Ubuntu 20.04.
-
 ### Evolocity analysis
 
 Our main evolocity analyses can be reproduced using the command
 ```bash
 bash bin/main.sh
 ```
-which will create new log files and figures in a new `figures/` directory.
+which will create new log files and figures in a new `figures/` directory. Analyses should fit within 16 GB of CPU RAM and 8 GB of GPU RAM, and should finish within a few hours.
 
 ### Scripts for other analyses
 
