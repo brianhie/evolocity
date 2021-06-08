@@ -4,7 +4,7 @@
 
 Evolocity is a Python package that implements evolutionary velocity, which constructs landscapes of protein evolution by using the local evolutionary predictions enabled by language models to predict the directionality of evolution and is described in the paper ["Evolutionary velocity with protein language models"](https://www.biorxiv.org/content/10.1101/2021.06.07.447389v1) by Brian Hie, Kevin Yang, and Peter Kim. This repository also contains the analysis code and links to the data for reproducing the results in the paper.
 
-Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA velocity by [Bergen et al.](https://www.nature.com/articles/s41587-020-0591-3) and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), a convenient way to store and organize biological data.
+Evolocity is a fork of the [scVelo](https://github.com/theislab/scvelo) tool for RNA velocity by [Bergen et al.](https://www.nature.com/articles/s41587-020-0591-3) and relies on many aspects of the [Scanpy](https://scanpy.readthedocs.io/en/stable/) library for high-dimensional biological data analysis. Like Scanpy and scVelo, evolocity makes use of [anndata](https://anndata.readthedocs.io/en/latest/), a convenient way to store and organize biological data. Our main implementation is based on the [ESM-1b language model](https://github.com/facebookresearch/esm) by [Rives et al.](https://www.pnas.org/content/118/15/e2016239118).
 
 - [Documentation](#documentation)
 - [Installation](#installation)
