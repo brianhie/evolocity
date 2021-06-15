@@ -28,7 +28,8 @@ def predict_sequence_prob_fb(
                 if torch.cuda.is_available():
                     toks = toks.to(device="cuda", non_blocking=True)
                 out = model(toks, repr_layers=repr_layers, return_contacts=False)
-                lsoftmax = torch.nn.LogSoftmax(dim=1)
+                lsoftmax = torch.nn.LogSoftmax(dim=2)
+                #logits = out["logits"].to(device="cpu").numpy()
                 logits = lsoftmax(out["logits"]).to(device="cpu").numpy()
 
         output.append(logits[0])
