@@ -79,7 +79,7 @@ Before running the scripts below, we encourage you to use the [conda](https://do
 ```bash
 conda env create --file environment-epi.yml
 ```
-ESM-1b and TAPE need to be installed separately as described in [https://github.com/facebookresearch/esm](https://github.com/facebookresearch/esm) and [https://github.com/songlab-cal/tape](https://github.com/songlab-cal/tape), respectively (PyTorch may need to be reupdated after TAPE installation).
+To run the TAPE baseline, TAPE needs to be installed separately as described in [https://github.com/songlab-cal/tape](https://github.com/songlab-cal/tape). PyTorch will need to be reupdated after TAPE installation.
 
 ### Evolocity analysis
 
