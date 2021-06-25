@@ -87,7 +87,7 @@ Our main evolocity analyses can be reproduced using the command
 ```bash
 bash bin/main.sh
 ```
-which will create new log files and figures in a new `figures/` directory. Analyses should fit within 50 GB of CPU RAM and 8 GB of GPU RAM, and should finish within a few hours.
+which will create new log files and figures in a new `figures/` directory. Analyses should fit within 60 GB of CPU RAM and 8 GB of GPU RAM, and should finish within a few hours.
 
 ### Scripts for other analyses
 
