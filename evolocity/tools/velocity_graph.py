@@ -15,6 +15,20 @@ from scipy.sparse import coo_matrix
 import numpy as np
 from tqdm import tqdm
 
+# Choices of scoring functions.
+SCORE_CHOICES = {
+    'lm',
+    'unit',
+    'random',
+}
+
+# Choices of substitution matrices.
+SUBMAT_CHOICES = {
+    'blosum62',
+    'jtt',
+    'wag',
+}
+
 def get_iterative_indices(
         indices,
         index,
@@ -145,13 +159,10 @@ def likelihood_muts(
         pos1=sub1, pos2=sub2, seq_cache=seq_cache, verbose=verbose,
     )
 
-def likelihood_blosum62(
-        seq1, seq2, vocabulary, model,
+def likelihood_submat(
+        seq1, seq2, matrix, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    from Bio.SubsMat import MatrixInfo as matlist
-    matrix = matlist.blosum62
-
     a_seq1, a_seq2, _, _, _ = align_seqs(seq1, seq2)
 
     scores = []
@@ -165,6 +176,49 @@ def likelihood_blosum62(
 
     return np.mean(scores)
 
+def likelihood_blosum62(
+        seq1, seq2, vocabulary, model,
+        seq_cache={}, verbose=False, natural_aas=None,
+):
+    from Bio.SubsMat import MatrixInfo as matlist
+    matrix = matlist.blosum62
+    return likelihood_submat(
+        seq1, seq2, matrix, vocabulary, model,
+        seq_cache, verbose, natural_aas,
+    )
+
+def likelihood_jtt(
+        seq1, seq2, vocabulary, model,
+        seq_cache={}, verbose=False, natural_aas=None,
+):
+    from Bio.SubsMat import read_text_matrix
+    with open('data/substitution_matrices/JTT.txt') as f:
+        matrix = read_text_matrix(f)
+    return likelihood_submat(
+        seq1, seq2, matrix, vocabulary, model,
+        seq_cache, verbose, natural_aas,
+    )
+
+def likelihood_wag(
+        seq1, seq2, vocabulary, model,
+        seq_cache={}, verbose=False, natural_aas=None,
+):
+    from Bio.SubsMat import read_text_matrix
+    with open('data/substitution_matrices/WAG.txt') as f:
+        matrix = read_text_matrix(f)
+    return likelihood_submat(
+        seq1, seq2, matrix, vocabulary, model,
+        seq_cache, verbose, natural_aas,
+    )
+
+def likelihood_unit(*args, **kwargs):
+    # For control experiment, return unit velocities.
+    return 1.
+    
+def likelihood_random(*args, **kwargs):
+    # For control experiment, return Gaussian noise.
+    return np.random.rand()
+    
 def vals_to_csr(vals, rows, cols, shape, split_negative=False):
     graph = coo_matrix((vals, (rows, cols)), shape=shape)
 
@@ -244,7 +298,7 @@ class VelocityGraph:
         else:
             iterator = self.seqs
 
-        if self.score == 'blosum62':
+        if self.score in SUBMAT_CHOICES:
             return
 
         for seq in iterator:
@@ -273,6 +327,7 @@ class VelocityGraph:
         else:
             iterator = range(n_obs)
 
+        # Iterate over edges and compute velocity score for each edge.
         for i in iterator:
             neighs_idx = get_iterative_indices(
                 self.indices, i, self.n_recurse_neighbors, self.max_neighs
@@ -282,6 +337,14 @@ class VelocityGraph:
                 score_fn = likelihood_muts
             elif self.score == 'blosum62':
                 score_fn = likelihood_blosum62
+            elif self.score == 'jtt':
+                score_fn = likelihood_jtt
+            elif self.score == 'wag':
+                score_fn = likelihood_wag
+            elif self.score == 'unit':
+                score_fn = likelihood_unit
+            elif self.score == 'random':
+                score_fn = likelihood_random
             else:
                 raise ValueError('Invalid score {}'.format(self.score))
 
@@ -382,7 +445,7 @@ def velocity_graph(
         raise ValueError('Number of sequences should correspond to '
                          'number of observations.')
 
-    valid_scores = { 'lm', 'blosum62' }
+    valid_scores = SCORE_CHOICES | SUBMAT_CHOICES
     if score not in valid_scores:
         raise ValueError('Score must be one of {}'
                          .format(', '.join(valid_scores)))

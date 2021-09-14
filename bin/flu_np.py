@@ -32,6 +32,8 @@ def parse_args():
                         help='Analyze embeddings')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
+    parser.add_argument('--velocity-score', type=str, default='lm',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -318,6 +320,8 @@ def analyze_edges(adata, model, vocabulary, namespace='np'):
                 of.write('\t'.join([ str(field) for field in fields ]) + '\n')
 
 def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
+    if args.velocity_score != 'lm':
+        namespace += f'_{args.velocity_score}'
 
     ###############
     ## Load data ##
@@ -437,8 +441,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
         evo.tl.velocity_graph(adata, model_name=args.model_name,
-                              score=('lm' if '_blosum' not in namespace else
-                                     'blosum62'))
+                              score=args.velocity_score)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -715,12 +718,5 @@ if __name__ == '__main__':
         tprint('NP analysis:')
         epi_gong2013(args, model, seqs, vocabulary, namespace=namespace)
 
-        #tprint('NP with one-hot features analysis:')
-        #epi_gong2013(args, model, seqs, vocabulary, namespace='np_onehot')
-        #
-        #tprint('NP with BLOSUM scores analysis:')
-        #epi_gong2013(args, model, seqs, vocabulary, namespace='np_blosum62')
-        #
-        #tprint('NP with one-hot/BLOSUM scores analysis:')
-        #epi_gong2013(args, model, seqs, vocabulary,
-        #             namespace='np_onehot_blosum62')
+        tprint('NP with one-hot features analysis:')
+        epi_gong2013(args, model, seqs, vocabulary, namespace='np_onehot')
