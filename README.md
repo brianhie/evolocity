@@ -89,6 +89,10 @@ bash bin/main.sh
 ```
 which will create new log files and figures in a new `figures/` directory. Analyses should fit within 60 GB of CPU RAM and 8 GB of GPU RAM, and should finish within a few hours.
 
+More extensive benchmarking experiments can be run with the command
+```bash
+bash bin/benchmark.sh
+```
 ### Scripts for other analyses
 
 Phylogenetic tree reconstruction of NP and ancient proteins can be done with the commands below (you will first need to install [PhyML](https://github.com/stephaneguindon/phyml) and [FastTree](http://www.microbesonline.org/fasttree/#Install)):

@@ -217,7 +217,7 @@ def likelihood_unit(*args, **kwargs):
     
 def likelihood_random(*args, **kwargs):
     # For control experiment, return Gaussian noise.
-    return np.random.rand()
+    return np.random.normal(loc=5, scale=10)
     
 def vals_to_csr(vals, rows, cols, shape, split_negative=False):
     graph = coo_matrix((vals, (rows, cols)), shape=shape)
@@ -298,7 +298,7 @@ class VelocityGraph:
         else:
             iterator = self.seqs
 
-        if self.score in SUBMAT_CHOICES:
+        if self.score != 'lm':
             return
 
         for seq in iterator:

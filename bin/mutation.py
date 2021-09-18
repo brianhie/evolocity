@@ -5,90 +5,18 @@ def err_model(name):
 
 def get_model(args, seq_len, vocab_size,
               inference_batch_size=1500):
-    if args.model_name == 'hmm':
-        from hmmlearn.hmm import MultinomialHMM
-        model = MultinomialHMM(
-            n_components=args.dim,
-            startprob_prior=1.0,
-            transmat_prior=1.0,
-            algorithm='viterbi',
-            random_state=1,
-            tol=0.01,
-            verbose=True,
-            params='ste',
-            init_params='ste'
-        )
-    elif args.model_name == 'dnn':
-        from language_model import DNNLanguageModel
-        model = DNNLanguageModel(
-            seq_len,
-            vocab_size,
-            embedding_dim=20,
-            hidden_dim=args.dim,
-            n_hidden=2,
-            n_epochs=args.n_epochs,
-            batch_size=args.batch_size,
-            inference_batch_size=inference_batch_size,
-            cache_dir='target/{}'.format(args.namespace),
-            seed=args.seed,
-            verbose=True,
-        )
-    elif args.model_name == 'lstm':
-        from language_model import LSTMLanguageModel
-        model = LSTMLanguageModel(
-            seq_len,
-            vocab_size,
-            embedding_dim=20,
-            hidden_dim=args.dim,
-            n_hidden=2,
-            n_epochs=args.n_epochs,
-            batch_size=batch_size,
-            inference_batch_size=inference_batch_size,
-            cache_dir='target/{}'.format(args.namespace),
-            seed=args.seed,
-            verbose=True,
-        )
-    elif args.model_name == 'bilstm':
-        from language_model import BiLSTMLanguageModel
-        model = BiLSTMLanguageModel(
-            seq_len,
-            vocab_size,
-            embedding_dim=20,
-            hidden_dim=args.dim,
-            n_hidden=2,
-            n_epochs=args.n_epochs,
-            batch_size=args.batch_size,
-            inference_batch_size=inference_batch_size,
-            cache_dir='target/{}'.format(args.namespace),
-            seed=args.seed,
-            verbose=True,
-        )
-    elif args.model_name == 'attention':
-        from language_model import AttentionLanguageModel
-        model = AttentionLanguageModel(
-            seq_len,
-            vocab_size,
-            embedding_dim=20,
-            hidden_dim=args.dim,
-            n_hidden=2,
-            n_epochs=args.n_epochs,
-            batch_size=args.batch_size,
-            inference_batch_size=inference_batch_size,
-            cache_dir='target/{}'.format(args.namespace),
-            seed=args.seed,
-            verbose=True,
-        )
-    elif args.model_name == 'esm1':
-        from fb_model import FBModel
-        model = FBModel(
-            'esm1_t34_670M_UR50S',
-            repr_layer=[-1],
-        )
-    elif args.model_name == 'esm1b':
+    if args.model_name == 'esm1b':
         from fb_model import FBModel
         model = FBModel(
             'esm1b_t33_650M_UR50S',
             repr_layer=[-1],
+        )
+    elif args.model_name == 'esm1b-rand':
+        from fb_model import FBModel
+        model = FBModel(
+            'esm1b_t33_650M_UR50S',
+            repr_layer=[-1],
+            random_init=True,
         )
     elif args.model_name == 'tape':
         from tape_model import TAPEModel

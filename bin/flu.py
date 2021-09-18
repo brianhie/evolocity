@@ -36,6 +36,8 @@ def parse_args():
                         help='Analyze combinatorial fitness')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
+    parser.add_argument('--velocity-score', type=str, default='lm',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -248,6 +250,8 @@ def analyze_embedding(args, model, seqs, vocabulary):
     seq_clusters(adata)
 
 def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
+    if args.velocity_score != 'lm':
+        namespace += f'_{args.velocity_score}'
 
     ############################
     ## Visualize HA landscape ##
@@ -279,7 +283,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    plot_umap(adata, namespace=namespace)
+    #plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -299,7 +303,8 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        evo.tl.velocity_graph(adata, model_name=args.model_name)
+        evo.tl.velocity_graph(adata, model_name=args.model_name,
+                              score=args.velocity_score)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -488,10 +493,8 @@ if __name__ == '__main__':
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
         namespace = 'h1'
-        if args.model_name == 'tape':
-            namespace += '_tape'
         evo_ha(args, model, seqs, vocabulary, namespace=namespace)
 
-        if args.model_name != 'tape':
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
             tprint('Restrict based on similarity to training:')
             evo_ha(args, model, seqs, vocabulary, namespace='h1_homologous')

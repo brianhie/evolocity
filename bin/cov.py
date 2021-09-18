@@ -24,6 +24,8 @@ def parse_args():
                         help='Model checkpoint')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
+    parser.add_argument('--velocity-score', type=str, default='lm',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -72,7 +74,7 @@ def process(fnames):
                 continue
             if str(record.seq).count('X') > 0:
                 continue
-            if not record.seq.startswith('M') or not record.seq.endswith('HYT'):
+            if not record.seq.startswith('M') or not record.seq.endswith('HYT*'):
                 continue
             if record.seq not in seqs:
                 seqs[record.seq] = []
@@ -97,7 +99,8 @@ def split_seqs(seqs, split_method='random'):
 
 def setup(args):
     fnames = [
-        'data/cov/spikeprot0527.fasta',
+        #'data/cov/spikeprot0527.fasta',
+        'data/cov/spikeprot0825.fa',
     ]
 
     import pickle
@@ -175,6 +178,9 @@ def seqs_to_anndata(seqs):
     return adata
 
 def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
+    if args.velocity_score != 'lm':
+        namespace += f'_{args.velocity_score}'
+
     ###############################
     ## Visualize Spike landscape ##
     ###############################
@@ -194,9 +200,9 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
 
         sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=0.4)
+        sc.tl.umap(adata, min_dist=0.3)
 
-        adata.write(adata_cache)
+        #adata.write(adata_cache)
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 4))
@@ -220,7 +226,8 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        evo.tl.velocity_graph(adata, model_name=args.model_name)
+        evo.tl.velocity_graph(adata, model_name=args.model_name,
+                              score=args.velocity_score)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -232,24 +239,24 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     wt_fname = 'data/cov/cov2_spike_wt.fasta'
     wt_seq = str(SeqIO.read(wt_fname, 'fasta').seq)
 
-    evo.tl.onehot_msa(
-        adata,
-        reference=list(adata.obs['seq']).index(wt_seq),
-        dirname=f'target/evolocity_alignments/{namespace}',
-        n_threads=40,
-    )
-    evo.tl.residue_scores(adata)
-    evo.pl.residue_scores(
-        adata,
-        percentile_keep=0,
-        save=f'_{namespace}_residue_scores.png',
-    )
-    evo.pl.residue_categories(
-        adata,
-        positions=[ 17, 153, 416, 451, 477, 483, 500, 613, 680, 949, ],
-        namespace=namespace,
-        reference=list(adata.obs['seq']).index(wt_seq),
-    )
+    #evo.tl.onehot_msa(
+    #    adata,
+    #    reference=list(adata.obs['seq']).index(wt_seq),
+    #    dirname=f'target/evolocity_alignments/{namespace}',
+    #    n_threads=40,
+    #)
+    #evo.tl.residue_scores(adata)
+    #evo.pl.residue_scores(
+    #    adata,
+    #    percentile_keep=0,
+    #    save=f'_{namespace}_residue_scores.png',
+    #)
+    #evo.pl.residue_categories(
+    #    adata,
+    #    positions=[ 17, 153, 416, 451, 477, 483, 500, 613, 680, 949, ],
+    #    namespace=namespace,
+    #    reference=list(adata.obs['seq']).index(wt_seq),
+    #)
 
     evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
@@ -364,7 +371,5 @@ if __name__ == '__main__':
         if args.checkpoint is None and not args.train:
             raise ValueError('Model must be trained or loaded '
                              'from checkpoint.')
-        namespace = args.namespace
-        if args.model_name == 'tape':
-            namespace += '_tape'
-        spike_evolocity(args, model, seqs, vocabulary, namespace=namespace)
+        spike_evolocity(args, model, seqs, vocabulary,
+                        namespace=args.namespace)

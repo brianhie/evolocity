@@ -19,13 +19,20 @@ def get_model(model_name):
             'esm1b_t33_650M_UR50S',
             repr_layer=[-1],
         )
+    elif model_name == 'esm1b-rand':
+        from ..tools.fb_model import FBModel
+        model = FBModel(
+            'esm1b_t33_650M_UR50S',
+            repr_layer=[-1],
+            random_init=True,
+        )
     elif model_name == 'tape':
         from ..tools.tape_model import TAPEModel
         model = TAPEModel(
             'bert-base',
         )
     else:
-        raise ValueError('Invalid model {}'.format(model_nam))
+        raise ValueError('Invalid model {}'.format(model_name))
 
     return model
 

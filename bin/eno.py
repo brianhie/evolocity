@@ -32,6 +32,8 @@ def parse_args():
                         help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
+    parser.add_argument('--velocity-score', type=str, default='lm',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -244,6 +246,8 @@ def enolase_ancestral(args, model, seqs, vocabulary, namespace='eno'):
     plot_ancestral(df, meta_key='name', name_key='tax_type', namespace=namespace)
 
 def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
+    if args.velocity_score != 'lm':
+        namespace += f'_{args.velocity_score}'
 
     #########################
     ## Visualize landscape ##
@@ -269,11 +273,14 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    plot_umap(adata, namespace=namespace)
+    #plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
     #####################################
+
+    if args.velocity_score in { 'random', 'unit' }:
+        sc.pp.neighbors(adata, n_neighbors=15, use_rep='X')
 
     cache_prefix = f'target/ev_cache/{namespace}_knn50'
     try:
@@ -289,7 +296,8 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        evo.tl.velocity_graph(adata, model_name=args.model_name)
+        evo.tl.velocity_graph(adata, model_name=args.model_name,
+                              score=args.velocity_score)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -385,8 +393,6 @@ if __name__ == '__main__':
     args = parse_args()
 
     namespace = args.namespace
-    if args.model_name == 'tape':
-        namespace += '_tape'
 
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
@@ -430,6 +436,6 @@ if __name__ == '__main__':
         tprint('All enolase sequences:')
         evo_enolase(args, model, seqs, vocabulary, namespace=namespace)
 
-        if args.model_name != 'tape':
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
             tprint('Restrict based on similarity to training')
             evo_enolase(args, model, seqs, vocabulary, namespace='eno_homologous')

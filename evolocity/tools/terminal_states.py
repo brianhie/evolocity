@@ -55,6 +55,7 @@ def terminal_states(
     self_transitions=False,
     eps=1e-3,
     random_state=0,
+    exp_scale=50,
     copy=False,
     **kwargs,
 ):
@@ -127,9 +128,17 @@ def terminal_states(
         _adata = adata if groups is None else adata[node_subset]
         connectivities = get_connectivities(_adata, "distances")
 
+        T_velo = data.uns[f'{vkey}_graph'] + data.uns[f'{vkey}_graph_neg']
+        T_velo = np.expm1(T_velo * exp_scale)
+        T_velo.data += 1
+        T_velo = T_velo.T
+        eigvecs_roots = eigs(T_velo, eps=eps, perc=[2, 98], random_state=random_state)[1]
+        roots_velo = csr_matrix.dot(connectivities, eigvecs_roots).sum(1)
+
         T = transition_matrix(_adata, vkey=vkey, backward=True, **kwargs)
         eigvecs_roots = eigs(T, eps=eps, perc=[2, 98], random_state=random_state)[1]
         roots = csr_matrix.dot(connectivities, eigvecs_roots).sum(1)
+        roots += roots_velo
         roots = scale(np.clip(roots, 0, np.percentile(roots, 98)))
         write_to_obs(adata, "root_nodes", roots, node_subset)
 

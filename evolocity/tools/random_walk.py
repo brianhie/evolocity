@@ -5,6 +5,7 @@ from .transition_matrix import transition_matrix
 from .utils import groups_to_bool, strings_to_categoricals
 
 import numpy as np
+import scipy.special
 
 
 def random_walk(
@@ -100,11 +101,11 @@ def random_walk(
         paths[:, 0] = root_node_group
 
         for t in range(walk_length):
-            paths[:, t + 1] = [
-                np.random.choice(n_nodes, p=T[paths[w, t], :].toarray().ravel())
-                #np.random.choice(np.argwhere(T[paths[w, t], :].toarray().ravel() > 0.).ravel())
-                for w in range(n_walks)
-            ]
+            path = []
+            for w in range(n_walks):
+                prob = scipy.special.softmax(T[paths[w, t], :].toarray().ravel())
+                path.append(np.random.choice(n_nodes, p=prob))
+            paths[:, t + 1] = path
 
         group_map = np.argwhere(node_subset).ravel()
         paths = np.vstack([

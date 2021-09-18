@@ -20,6 +20,8 @@ def parse_args():
                         help='Analyze ancestral sequences')
     parser.add_argument('--evolocity', action='store_true',
                         help='Analyze evolocity')
+    parser.add_argument('--velocity-score', type=str, default='lm',
+                        help='Analyze evolocity')
     args = parser.parse_args()
     return args
 
@@ -207,6 +209,9 @@ def gag_siv_cpz(args, model, seqs, vocabulary, namespace='glo'):
     plot_ancestral(df, meta_key='name', name_key='host', namespace=namespace)
 
 def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
+    if args.velocity_score != 'lm':
+        namespace += f'_{args.velocity_score}'
+
     #############################
     ## Visualize Gag landscape ##
     #############################
@@ -240,7 +245,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    plot_umap(adata)
+    #plot_umap(adata)
 
     cache_prefix = f'target/ev_cache/{namespace}_knn40'
     try:
@@ -256,7 +261,8 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         )
         adata.layers["velocity"] = np.zeros(adata.X.shape)
     except:
-        evo.tl.velocity_graph(adata, model_name=args.model_name)
+        evo.tl.velocity_graph(adata, model_name=args.model_name,
+                              score=args.velocity_score)
         from scipy.sparse import save_npz
         save_npz('{}_vgraph.npz'.format(cache_prefix),
                  adata.uns["velocity_graph"],)
@@ -378,8 +384,6 @@ if __name__ == '__main__':
     args = parse_args()
 
     namespace = args.namespace
-    if args.model_name == 'tape':
-        namespace += '_tape'
 
     AAs = [
         'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H',
@@ -423,6 +427,6 @@ if __name__ == '__main__':
 
         evo_gag(args, model, seqs, vocabulary, namespace=namespace)
 
-        if args.model_name != 'tape':
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
             tprint('Restrict based on similarity to training:')
             evo_gag(args, model, seqs, vocabulary, namespace='gag_homologous')

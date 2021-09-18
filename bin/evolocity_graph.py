@@ -1240,7 +1240,7 @@ def training_distances(
             minhash = MinHash(num_perm=128)
             for d in ngrams(seq, 5):
                 minhash.update(''.join(d).encode('utf-8'))
-            lsh.insert(seq, minhash)
+            lsh.add(seq, minhash)
         lsh.index()
 
         # Query data structure for (approximately) closest seqs.
@@ -1249,7 +1249,7 @@ def training_distances(
             for d in ngrams(seq, 5):
                 minhash.update(''.join(d).encode('utf-8'))
             result = lsh.query(minhash, 1)[0]
-            ratio = fuzz.ratio(str(seq), result)[1]
+            ratio = fuzz.ratio(str(seq), result)
             for meta in seqs[seq]:
                 meta[key] = float(ratio)
 
