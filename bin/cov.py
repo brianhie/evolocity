@@ -178,6 +178,8 @@ def seqs_to_anndata(seqs):
     return adata
 
 def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
+    if args.model_name != 'esm1b':
+        namespace += f'_{args.model_name}'
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
 

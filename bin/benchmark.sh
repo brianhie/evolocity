@@ -6,7 +6,7 @@ declare -a scores=("blosum62" "jtt" "wag" "unit")
 #         > np_"$score"_evolocity.log 2>&1
 #    
 #    nice -n10 python bin/flu.py esm1b --evolocity --velocity-score $score \
-#         > h1_"$score"_evolocity.log 2>&1
+#         > ha_"$score"_evolocity.log 2>&1
 #
 #    nice -n10 python bin/gag.py esm1b --evolocity --velocity-score $score \
 #         > gag_"$score"_evolocity.log 2>&1
@@ -34,7 +34,7 @@ nice -n10 python bin/flu_np.py esm1b-rand --evolocity \
      > np_random_evolocity.log 2>&1
 
 nice -n10 python bin/flu.py esm1b-rand --evolocity \
-     > h1_random_evolocity.log 2>&1
+     > ha_random_evolocity.log 2>&1
 
 nice -n10 python bin/gag.py esm1b-rand --evolocity \
      > gag_random_evolocity.log 2>&1

@@ -246,6 +246,8 @@ def serpin_ancestral(args, model, seqs, vocabulary, namespace='ser'):
     plot_ancestral(df, meta_key='name', name_key='tax_type', namespace=namespace)
 
 def evo_serpins(args, model, seqs, vocabulary, namespace='ser'):
+    if args.model_name != 'esm1b':
+        namespace += f'_{args.model_name}'
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
 

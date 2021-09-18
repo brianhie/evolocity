@@ -209,6 +209,8 @@ def gag_siv_cpz(args, model, seqs, vocabulary, namespace='glo'):
     plot_ancestral(df, meta_key='name', name_key='host', namespace=namespace)
 
 def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
+    if args.model_name != 'esm1b':
+        namespace += f'_{args.model_name}'
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
 

@@ -250,6 +250,8 @@ def analyze_embedding(args, model, seqs, vocabulary):
     seq_clusters(adata)
 
 def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
+    if args.model_name != 'esm1b':
+        namespace += f'_{args.model_name}'
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
 
