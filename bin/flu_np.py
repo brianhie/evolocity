@@ -402,15 +402,15 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
         adata.write(adata_cache)
 
-    #if '_onehot' in namespace:
-    #    evo.tl.onehot_msa(
-    #        adata,
-    #        dirname=f'target/evolocity_alignments/{namespace}',
-    #        n_threads=40,
-    #    )
-    #    sc.pp.neighbors(adata, n_neighbors=40, metric='manhattan',
-    #                    use_rep='X_onehot')
-    #    sc.tl.umap(adata)
+    if '_onehot' in namespace:
+        evo.tl.onehot_msa(
+            adata,
+            dirname=f'target/evolocity_alignments/{namespace}',
+            n_threads=40,
+        )
+        sc.pp.neighbors(adata, n_neighbors=40, metric='manhattan',
+                        use_rep='X_onehot')
+        sc.tl.umap(adata)
 
     keep_subtypes = {
         'H1N1', 'H2N2', 'H3N2', 'H5N1', 'H7N9',
@@ -722,5 +722,6 @@ if __name__ == '__main__':
         tprint('NP analysis:')
         epi_gong2013(args, model, seqs, vocabulary, namespace=namespace)
 
-        #tprint('NP with one-hot features analysis:')
-        #epi_gong2013(args, model, seqs, vocabulary, namespace='np_onehot')
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
+            tprint('NP with one-hot features analysis:')
+            epi_gong2013(args, model, seqs, vocabulary, namespace='np_onehot')

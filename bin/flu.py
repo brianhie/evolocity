@@ -281,7 +281,17 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         adata = adata[adata.obs['homology'] > 80.]
         sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist=1.)
+        sc.tl.umap(adata, min_dist)
+
+    if '_onehot' in namespace:
+        evo.tl.onehot_msa(
+            adata,
+            dirname=f'target/evolocity_alignments/{namespace}',
+            n_threads=40,
+        )
+        sc.pp.neighbors(adata, n_neighbors=50, metric='manhattan',
+                        use_rep='X_onehot')
+        sc.tl.umap(adata)
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
@@ -500,3 +510,6 @@ if __name__ == '__main__':
         if args.model_name == 'esm1b' and args.velocity_score == 'lm':
             tprint('Restrict based on similarity to training:')
             evo_ha(args, model, seqs, vocabulary, namespace='h1_homologous')
+
+            tprint('One hot featurization:')
+            evo_ha(args, model, seqs, vocabulary, namespace='h1_onehot')
