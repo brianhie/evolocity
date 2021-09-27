@@ -491,4 +491,4 @@ if __name__ == '__main__':
             evo_globin(args, model, seqs, vocabulary, namespace='glo_homologous')
 
             tprint('One hot featurization:')
-            evo_glo(args, model, seqs, vocabulary, namespace='glo_onehot')
+            evo_globin(args, model, seqs, vocabulary, namespace='glo_onehot')

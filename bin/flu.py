@@ -281,7 +281,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         adata = adata[adata.obs['homology'] > 80.]
         sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
-        sc.tl.umap(adata, min_dist)
+        sc.tl.umap(adata, min_dist=1.)
 
     if '_onehot' in namespace:
         evo.tl.onehot_msa(

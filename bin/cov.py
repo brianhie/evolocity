@@ -204,11 +204,23 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=0.3)
 
-        #adata.write(adata_cache)
+        adata.write(adata_cache)
+
+    adata.obs['seq'] = [ seq.rstrip('*') for seq in adata.obs['seq'] ]
+
+    if '_onehot' in namespace:
+        evo.tl.onehot_msa(
+            adata,
+            dirname=f'target/evolocity_alignments/{namespace}',
+            n_threads=40,
+        )
+        sc.pp.neighbors(adata, n_neighbors=30, metric='manhattan',
+                        use_rep='X_onehot')
+        sc.tl.umap(adata)
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 4))
-    plot_umap(adata, namespace=namespace)
+    #plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -375,3 +387,7 @@ if __name__ == '__main__':
                              'from checkpoint.')
         spike_evolocity(args, model, seqs, vocabulary,
                         namespace=args.namespace)
+
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
+            tprint('One hot featurization:')
+            spike_evolocity(args, model, seqs, vocabulary, namespace='cov_onehot')
