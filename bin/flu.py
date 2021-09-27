@@ -295,7 +295,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    #plot_umap(adata, namespace=namespace)
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##

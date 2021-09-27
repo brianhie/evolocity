@@ -257,7 +257,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    #plot_umap(adata)
+    plot_umap(adata)
 
     cache_prefix = f'target/ev_cache/{namespace}_knn40'
     try:

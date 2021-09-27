@@ -305,7 +305,7 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    #plot_umap(adata, namespace=namespace)
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##

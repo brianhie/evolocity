@@ -338,31 +338,31 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     ## See how local likelihoods change ##
     ######################################
 
-    #data = []
-    #for idx, (name, seq) in enumerate(nodes):
-    #    if idx > 0:
-    #        seq_prev = nodes[idx - 1][1]
-    #        score_full = likelihood_full(seq_prev, seq,
-    #                                     args, vocabulary, model,)
-    #        score_muts = likelihood_muts(seq_prev, seq,
-    #                                     args, vocabulary, model,)
-    #        score_self = likelihood_self(seq_prev, seq,
-    #                                     args, vocabulary, model,)
-    #        data.append([ name, seq,
-    #                      score_full, score_muts, score_self ])
-    #        tprint('{}: {}, {}, {}'.format(
-    #            name, score_full, score_muts, score_self
-    #        ))
-    #
-    #df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
-    #                                  'self_score' ])
-    #gong_x = list(range(len(df) + 1))
-    #gong_y = [ 0 ] + list(np.cumsum(df['muts']))
-    #tprint('Sum of full scores: {}'.format(sum(df.full)))
-    #tprint('Sum of local scores: {}'.format(sum(df.muts)))
-    #tprint('Sum of self scores: {}'.format(sum(df.self_score)))
-    #tprint('Gong et al. Spearman r = {}, P = {}'
-    #       .format(*ss.spearmanr(gong_x, gong_y)))
+    data = []
+    for idx, (name, seq) in enumerate(nodes):
+        if idx > 0:
+            seq_prev = nodes[idx - 1][1]
+            score_full = likelihood_full(seq_prev, seq,
+                                         args, vocabulary, model,)
+            score_muts = likelihood_muts(seq_prev, seq,
+                                         args, vocabulary, model,)
+            score_self = likelihood_self(seq_prev, seq,
+                                         args, vocabulary, model,)
+            data.append([ name, seq,
+                          score_full, score_muts, score_self ])
+            tprint('{}: {}, {}, {}'.format(
+                name, score_full, score_muts, score_self
+            ))
+    
+    df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
+                                      'self_score' ])
+    gong_x = list(range(len(df) + 1))
+    gong_y = [ 0 ] + list(np.cumsum(df['muts']))
+    tprint('Sum of full scores: {}'.format(sum(df.full)))
+    tprint('Sum of local scores: {}'.format(sum(df.muts)))
+    tprint('Sum of self scores: {}'.format(sum(df.self_score)))
+    tprint('Gong et al. Spearman r = {}, P = {}'
+           .format(*ss.spearmanr(gong_x, gong_y)))
 
     ############################
     ## Visualize NP landscape ##
@@ -422,7 +422,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 5))
-    #plot_umap(adata, namespace=namespace)
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -457,58 +457,58 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
 
     rw_root = list(adata.obs['seq']).index(nodes[0][1])
 
-    #if namespace == 'np':
-        #evo.tl.random_walk(
-        #    adata,
-        #    root_node=rw_root,
-        #    walk_length=len(nodes) - 1,
-        #    n_walks=30000,
-        #    groupby='subtype',
-        #    groups='H3N2',
-        #    scale=2.,
-        #)
-        #
-        #terminal_clusters = { '1', '3', '8', '9' }
-        #paths = adata.uns['rw_paths']
-        #
-        #plt.figure(figsize=(8, 3))
-        #plt.scatter(gong_x, gong_y, s=50, c=gong_x, cmap='Oranges',
-        #            edgecolors='black', linewidths=0.5, zorder=10)
-        #plt.plot(gong_x, gong_y, c='black', zorder=9)
-        #for p in range(paths.shape[0]):
-        #    if adata.obs['louvain'][paths[p][-1]] in terminal_clusters:
-        #        walk_v = []
-        #        for idx, seq in enumerate(paths[p]):
-        #            if idx == 0:
-        #                walk_v.append(0)
-        #                continue
-        #            seq_prev = paths[p][idx - 1]
-        #            walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])
-        #        plt.plot(gong_x, np.cumsum(walk_v),
-        #                 c='#000080', alpha=0.1, zorder=5)
-        #plt.ylim([ -2, 14 ])
-        #plt.axhline(c='black', linestyle='--')
-        #plt.savefig(f'figures/{namespace}_gong_path.svg')
-        #plt.close()
+    if namespace == 'np':
+        evo.tl.random_walk(
+            adata,
+            root_node=rw_root,
+            walk_length=len(nodes) - 1,
+            n_walks=30000,
+            groupby='subtype',
+            groups='H3N2',
+            scale=2.,
+        )
+        
+        terminal_clusters = { '1', '3', '8', '9' }
+        paths = adata.uns['rw_paths']
+        
+        plt.figure(figsize=(8, 3))
+        plt.scatter(gong_x, gong_y, s=50, c=gong_x, cmap='Oranges',
+                    edgecolors='black', linewidths=0.5, zorder=10)
+        plt.plot(gong_x, gong_y, c='black', zorder=9)
+        for p in range(paths.shape[0]):
+            if adata.obs['louvain'][paths[p][-1]] in terminal_clusters:
+                walk_v = []
+                for idx, seq in enumerate(paths[p]):
+                    if idx == 0:
+                        walk_v.append(0)
+                        continue
+                    seq_prev = paths[p][idx - 1]
+                    walk_v.append(adata.uns['velocity_graph'][seq_prev, seq])
+                plt.plot(gong_x, np.cumsum(walk_v),
+                         c='000080', alpha=0.1, zorder=5)
+        plt.ylim([ -2, 14 ])
+        plt.axhline(c='black', linestyle='--')
+        plt.savefig(f'figures/{namespace}_gong_path.svg')
+        plt.close()
 
-        #evo.tl.onehot_msa(
-        #    adata,
-        #    reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
-        #    dirname=f'target/evolocity_alignments/{namespace}',
-        #    seq_id_fields=[ 'subtype', 'year' ],
-        #    n_threads=40,
-        #)
-        #evo.tl.residue_scores(adata)
-        #evo.pl.residue_scores(
-        #    adata,
-        #    save=f'_{namespace}_residue_scores.png',
-        #)
-        #evo.pl.residue_categories(
-        #    adata,
-        #    namespace=namespace,
-        #    n_plot=10,
-        #    reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
-        #)
+        evo.tl.onehot_msa(
+            adata,
+            reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
+            dirname=f'target/evolocity_alignments/{namespace}',
+            seq_id_fields=[ 'subtype', 'year' ],
+            n_threads=40,
+        )
+        evo.tl.residue_scores(adata)
+        evo.pl.residue_scores(
+            adata,
+            save=f'_{namespace}_residue_scores.png',
+        )
+        evo.pl.residue_categories(
+            adata,
+            namespace=namespace,
+            n_plot=10,
+            reference=list(adata.obs['gene_id']).index('H1N1_1934_human_>J02147'),
+        )
 
     evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
@@ -533,18 +533,18 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     plt.savefig(f'figures/evolocity__{namespace}_year_velogrid.png', dpi=500)
     plt.close()
 
-    #if namespace == 'np':
-    #    plt.figure()
-    #    ax = evo.pl.velocity_embedding_grid(
-    #        adata, basis='umap', min_mass=3., smooth=1.,
-    #        arrow_size=1., arrow_length=3., alpha=1.,
-    #        color='pos373', show=False,
-    #    )
-    #    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    #    plt.tight_layout(pad=1.1)
-    #    plt.subplots_adjust(right=0.85)
-    #    plt.savefig(f'figures/evolocity__{namespace}_pos373_velogrid.png', dpi=500)
-    #    plt.close()
+    if namespace == 'np':
+        plt.figure()
+        ax = evo.pl.velocity_embedding_grid(
+            adata, basis='umap', min_mass=3., smooth=1.,
+            arrow_size=1., arrow_length=3., alpha=1.,
+            color='pos373', show=False,
+        )
+        sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, 'aaaaaa')
+        plt.tight_layout(pad=1.1)
+        plt.subplots_adjust(right=0.85)
+        plt.savefig(f'figures/evolocity__{namespace}_pos373_velogrid.png', dpi=500)
+        plt.close()
 
     # Streamplot visualization.
     plt.figure()
@@ -569,47 +569,47 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     draw_gong_path(ax, adata)
     plt.savefig(f'figures/evolocity__{namespace}_subtype_velostream.png', dpi=500)
     plt.close()
-    #if namespace == 'np':
-    #    plt.figure()
-    #    ax = evo.pl.velocity_embedding_stream(
-    #        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
-    #        color='pos104', show=False, legend_loc=False,
-    #        palette=[ '#888888', '#1f77b4', '#888888',
-    #                  '#888888', '#d62728', '#888888',
-    #                  '#2ca02c', '#9467bd', ],
-    #    )
-    #    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    #    plt.tight_layout(pad=1.1)
-    #    plt.subplots_adjust(right=0.85)
-    #    plt.savefig(f'figures/evolocity__{namespace}_pos104_velostream.png',
-    #                dpi=500)
-    #    plt.close()
-    #    plt.figure()
-    #    ax = evo.pl.velocity_embedding_stream(
-    #        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
-    #        color='pos238', show=False, legend_loc=False,
-    #        palette=[ '#888888', '#1f77b4', '#d62728',
-    #                  '#2ca02c', '#9467bd', ],
-    #    )
-    #    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    #    plt.tight_layout(pad=1.1)
-    #    plt.subplots_adjust(right=0.85)
-    #    plt.savefig(f'figures/evolocity__{namespace}_pos238_velostream.png',
-    #                dpi=500)
-    #    plt.close()
-    #    plt.figure()
-    #    ax = evo.pl.velocity_embedding_stream(
-    #        adata, basis='umap', min_mass=4., smooth=1., density=1.2,
-    #        color='pos455', show=False, legend_loc=False,
-    #        palette=[ '#888888', '#1f77b4', '#ff7f0e',
-    #                  '#d62728', '#9467bd', ],
-    #    )
-    #    sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, '#aaaaaa')
-    #    plt.tight_layout(pad=1.1)
-    #    plt.subplots_adjust(right=0.85)
-    #    plt.savefig(f'figures/evolocity__{namespace}_pos455_velostream.png',
-    #                dpi=500)
-    #    plt.close()
+    if namespace == 'np':
+        plt.figure()
+        ax = evo.pl.velocity_embedding_stream(
+            adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+            color='pos104', show=False, legend_loc=False,
+            palette=[ '888888', '1f77b4', '888888',
+                      '888888', 'd62728', '888888',
+                      '2ca02c', '9467bd', ],
+        )
+        sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, 'aaaaaa')
+        plt.tight_layout(pad=1.1)
+        plt.subplots_adjust(right=0.85)
+        plt.savefig(f'figures/evolocity__{namespace}_pos104_velostream.png',
+                    dpi=500)
+        plt.close()
+        plt.figure()
+        ax = evo.pl.velocity_embedding_stream(
+            adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+            color='pos238', show=False, legend_loc=False,
+            palette=[ '888888', '1f77b4', 'd62728',
+                      '2ca02c', '9467bd', ],
+        )
+        sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, 'aaaaaa')
+        plt.tight_layout(pad=1.1)
+        plt.subplots_adjust(right=0.85)
+        plt.savefig(f'figures/evolocity__{namespace}_pos238_velostream.png',
+                    dpi=500)
+        plt.close()
+        plt.figure()
+        ax = evo.pl.velocity_embedding_stream(
+            adata, basis='umap', min_mass=4., smooth=1., density=1.2,
+            color='pos455', show=False, legend_loc=False,
+            palette=[ '888888', '1f77b4', 'ff7f0e',
+                      'd62728', '9467bd', ],
+        )
+        sc.pl._utils.plot_edges(ax, adata, 'umap', 0.1, 'aaaaaa')
+        plt.tight_layout(pad=1.1)
+        plt.subplots_adjust(right=0.85)
+        plt.savefig(f'figures/evolocity__{namespace}_pos455_velostream.png',
+                    dpi=500)
+        plt.close()
 
     plt.figure()
     ax = evo.pl.velocity_contour(
@@ -622,10 +622,6 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     draw_gong_path(ax, adata)
     plt.savefig(f'figures/evolocity__{namespace}_contour.png', dpi=500)
     plt.close()
-
-    #roots = np.array(adata.obs['root_nodes'])
-    #roots[roots < 0.98] = 0
-    #adata.obs['root_nodes'] = roots
 
     sc.pl.umap(adata, color=[ 'root_nodes', 'end_points' ],
                color_map=plt.cm.get_cmap('magma').reversed(),

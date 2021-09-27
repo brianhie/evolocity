@@ -220,7 +220,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 4))
-    #plot_umap(adata, namespace=namespace)
+    plot_umap(adata, namespace=namespace)
 
     #####################################
     ## Compute evolocity and visualize ##
@@ -253,24 +253,25 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     wt_fname = 'data/cov/cov2_spike_wt.fasta'
     wt_seq = str(SeqIO.read(wt_fname, 'fasta').seq)
 
-    #evo.tl.onehot_msa(
-    #    adata,
-    #    reference=list(adata.obs['seq']).index(wt_seq),
-    #    dirname=f'target/evolocity_alignments/{namespace}',
-    #    n_threads=40,
-    #)
-    #evo.tl.residue_scores(adata)
-    #evo.pl.residue_scores(
-    #    adata,
-    #    percentile_keep=0,
-    #    save=f'_{namespace}_residue_scores.png',
-    #)
-    #evo.pl.residue_categories(
-    #    adata,
-    #    positions=[ 17, 153, 416, 451, 477, 483, 500, 613, 680, 949, ],
-    #    namespace=namespace,
-    #    reference=list(adata.obs['seq']).index(wt_seq),
-    #)
+    if args.model_name == 'esm1b' and args.velocity_score == 'lm':
+        evo.tl.onehot_msa(
+            adata,
+            reference=list(adata.obs['seq']).index(wt_seq),
+            dirname=f'target/evolocity_alignments/{namespace}',
+            n_threads=40,
+        )
+        evo.tl.residue_scores(adata)
+        evo.pl.residue_scores(
+            adata,
+            percentile_keep=0,
+            save=f'_{namespace}_residue_scores.png',
+        )
+        evo.pl.residue_categories(
+            adata,
+            positions=[ 17, 153, 416, 451, 477, 483, 500, 613, 680, 949, ],
+            namespace=namespace,
+            reference=list(adata.obs['seq']).index(wt_seq),
+        )
 
     evo.tl.velocity_embedding(adata, basis='umap', scale=1.,
                               self_transitions=True,
