@@ -25,7 +25,7 @@ python bin/ser.py tape --evolocity > ser_tape_evolocity.log 2>&1
 ## Different velocity functions benchmark ##
 ############################################
 
-declare -a scores=("blosum62" "jtt" "wag" "unit")
+declare -a scores=("blosum62" "jtt" "wag" "edgerand" "unit")
 
 for score in ${scores[@]}
 do

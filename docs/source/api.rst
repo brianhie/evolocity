@@ -63,7 +63,7 @@ Tools (tl)
 Plotting (pl)
 -------------
 
-Also see `scanpy's plotting API <https://scanpy.readthedocs.io/en/stable/api/scanpy.plotting.html>`_ for additional visualization functionality, including UMAP scatter plots.
+Also see `scanpy's plotting API <https://scanpy.readthedocs.io/en/docsearch/api/scanpy.plotting.html>`_ for additional visualization functionality, including UMAP scatter plots.
 
 **Velocity embeddings**
 

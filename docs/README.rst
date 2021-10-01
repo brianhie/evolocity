@@ -2,7 +2,7 @@
 Evolocity
 =========
 
-Evolocity implements evolutionary velocity (evo-velocity), which models a protein sequence landscape as an "evolutionary vector field" by using the local evolutionary predictions enabled by language models to enable global evolutionary insight.
+Evolocity implements evolutionary velocity (evo-velocity), which models a protein sequence landscape as an evolutionary "vector field" by using the local evolutionary predictions enabled by language models to enable global evolutionary insight.
 
 .. image:: ../cyc_stream.PNG
    :width: 450
@@ -13,7 +13,7 @@ Then, over an entire sequence similarity network, this procedure is used to dire
 Finally, network diffusion analysis can identify roots, order sequences in pseudotime, and identify mutations driving the velocity.
 
 Evolocity is a fork of the `scVelo <https://github.com/theislab/scvelo>`_ tool for RNA velocity and relies on many aspects of the `Scanpy <https://scanpy.readthedocs.io/en/stable/>`_ library for high-dimensional biological data analysis.
-Like Scanpy and scVelo, evolocity makes use of `anndata <https://anndata.readthedocs.io/en/latest/>`_, an extremely convenient way to store and organizing biological data.
+Like Scanpy and scVelo, evolocity makes use of `anndata <https://anndata.readthedocs.io/en/latest/>`_, an extremely convenient way to store and organize biological data.
 
 
 Quick Start

@@ -69,6 +69,7 @@ if __name__ == '__main__':
         'jtt',
         'wag',
         'esm1b-rand',
+        'edgerand',
         'unit',
     ]
 

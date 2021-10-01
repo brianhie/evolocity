@@ -338,31 +338,32 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     ## See how local likelihoods change ##
     ######################################
 
-    data = []
-    for idx, (name, seq) in enumerate(nodes):
-        if idx > 0:
-            seq_prev = nodes[idx - 1][1]
-            score_full = likelihood_full(seq_prev, seq,
-                                         args, vocabulary, model,)
-            score_muts = likelihood_muts(seq_prev, seq,
-                                         args, vocabulary, model,)
-            score_self = likelihood_self(seq_prev, seq,
-                                         args, vocabulary, model,)
-            data.append([ name, seq,
-                          score_full, score_muts, score_self ])
-            tprint('{}: {}, {}, {}'.format(
-                name, score_full, score_muts, score_self
-            ))
-    
-    df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
-                                      'self_score' ])
-    gong_x = list(range(len(df) + 1))
-    gong_y = [ 0 ] + list(np.cumsum(df['muts']))
-    tprint('Sum of full scores: {}'.format(sum(df.full)))
-    tprint('Sum of local scores: {}'.format(sum(df.muts)))
-    tprint('Sum of self scores: {}'.format(sum(df.self_score)))
-    tprint('Gong et al. Spearman r = {}, P = {}'
-           .format(*ss.spearmanr(gong_x, gong_y)))
+    if namespace == 'np':
+        data = []
+        for idx, (name, seq) in enumerate(nodes):
+            if idx > 0:
+                seq_prev = nodes[idx - 1][1]
+                score_full = likelihood_full(seq_prev, seq,
+                                             args, vocabulary, model,)
+                score_muts = likelihood_muts(seq_prev, seq,
+                                             args, vocabulary, model,)
+                score_self = likelihood_self(seq_prev, seq,
+                                             args, vocabulary, model,)
+                data.append([ name, seq,
+                              score_full, score_muts, score_self ])
+                tprint('{}: {}, {}, {}'.format(
+                    name, score_full, score_muts, score_self
+                ))
+
+        df = pd.DataFrame(data, columns=[ 'name', 'seq', 'full', 'muts',
+                                          'self_score' ])
+        gong_x = list(range(len(df) + 1))
+        gong_y = [ 0 ] + list(np.cumsum(df['muts']))
+        tprint('Sum of full scores: {}'.format(sum(df.full)))
+        tprint('Sum of local scores: {}'.format(sum(df.muts)))
+        tprint('Sum of self scores: {}'.format(sum(df.self_score)))
+        tprint('Gong et al. Spearman r = {}, P = {}'
+               .format(*ss.spearmanr(gong_x, gong_y)))
 
     ############################
     ## Visualize NP landscape ##

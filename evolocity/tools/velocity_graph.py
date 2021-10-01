@@ -20,6 +20,7 @@ SCORE_CHOICES = {
     'lm',
     'unit',
     'random',
+    'edgerand',
 }
 
 # Choices of substitution matrices.
@@ -298,7 +299,7 @@ class VelocityGraph:
         else:
             iterator = self.seqs
 
-        if self.score != 'lm':
+        if self.score != 'lm' and self.score != 'edgerand':
             return
 
         for seq in iterator:
@@ -306,7 +307,7 @@ class VelocityGraph:
                 seq, vocabulary, model, verbose=self.verbose
             )
 
-            if self.score == 'lm':
+            if self.score == 'lm' or self.score == 'edgerand':
                 self.seq_probs[seq] = np.array([
                     y_pred[i + 1, (
                         vocabulary[seq[i]]
@@ -345,6 +346,14 @@ class VelocityGraph:
                 score_fn = likelihood_unit
             elif self.score == 'random':
                 score_fn = likelihood_random
+            elif self.score == 'edgerand':
+                # Compute velocity with random edges.
+                score_fn = likelihood_muts
+                neighs_idx = np.random.choice(
+                    len(self.seqs),
+                    size=len(neighs_idx),
+                    replace=False
+                )
             else:
                 raise ValueError('Invalid score {}'.format(self.score))
 
