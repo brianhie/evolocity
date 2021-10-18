@@ -750,6 +750,7 @@ if __name__ == '__main__':
         tprint('NP analysis:')
         epi_gong2013(args, model, seqs, vocabulary, namespace=namespace)
 
-        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm' and \
+           args.downsample + args.wdownsample == 200:
             tprint('NP with one-hot features analysis:')
             epi_gong2013(args, model, seqs, vocabulary, namespace='np_onehot')

@@ -305,7 +305,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         n_sample = round(len(adata) * (args.downsample / 100.))
         rand_idx = np.random.choice(len(adata), size=n_sample, replace=False)
         adata = adata[rand_idx]
-        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
 
@@ -316,7 +316,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         weights /= sum(weights)
         rand_idx = np.random.choice(len(adata), size=n_sample, replace=False, p=weights)
         adata = adata[rand_idx]
-        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.pp.neighbors(adata, n_neighbors=50, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
 
@@ -534,7 +534,8 @@ if __name__ == '__main__':
         namespace = 'h1'
         evo_ha(args, model, seqs, vocabulary, namespace=namespace)
 
-        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm' and \
+           args.downsample + args.wdownsample == 200:
             tprint('Restrict based on similarity to training:')
             evo_ha(args, model, seqs, vocabulary, namespace='h1_homologous')
 

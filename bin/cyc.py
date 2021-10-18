@@ -34,6 +34,10 @@ def parse_args():
                         help='Analyze evolocity')
     parser.add_argument('--velocity-score', type=str, default='lm',
                         help='Analyze evolocity')
+    parser.add_argument('--downsample', type=float, default=100.,
+                        help='Percentage to uniformly downsample.')
+    parser.add_argument('--wdownsample', type=float, default=100.,
+                        help='Percentage to weightedly downsampling.')
     args = parser.parse_args()
     return args
 
@@ -239,6 +243,10 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         namespace += f'_{args.model_name}'
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
+    if args.downsample < 100:
+        namespace += f'_downsample{args.downsample}'
+    elif args.wdownsample < 100:
+        namespace += f'_wdownsample{args.downsample}'
 
     ######################################
     ## Visualize Cytochrome C landscape ##
@@ -271,6 +279,34 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         sc.pp.neighbors(adata, n_neighbors=30, metric='manhattan',
                         use_rep='X_onehot')
         sc.tl.umap(adata)
+
+    if args.downsample < 100:
+        n_sample = round(len(adata) * (args.downsample / 100.))
+        rand_idx = np.random.choice(len(adata), size=n_sample, replace=False)
+        adata = adata[rand_idx]
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
+
+    elif args.wdownsample < 100:
+        n_sample = round(len(adata) * (args.downsample / 100.))
+        subtype_weights = {
+            'eukaryota': 1,
+            'viridiplantae': 2,
+            'fungi': 2,
+            'arthropoda': 3,
+            'chordata': 3,
+            'mammalia': 3,
+        }
+        weights = np.array([
+            subtype_weights[subtype] for subtype in adata.obs['tax_group']
+        ])
+        weights /= sum(weights)
+        rand_idx = np.random.choice(len(adata), size=n_sample, replace=False, p=weights)
+        adata = adata[rand_idx]
+        sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(6, 4))
@@ -453,7 +489,8 @@ if __name__ == '__main__':
         tprint('All cytochrome c sequencecs:')
         evo_cyc(args, model, seqs, vocabulary, namespace=namespace)
 
-        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm' and \
+           args.downsample + args.wdownsample == 200:
             tprint('Restrict based on similarity to training:')
             evo_cyc(args, model, seqs, vocabulary, namespace='cyc_homologous')
 

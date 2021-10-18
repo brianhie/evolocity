@@ -22,6 +22,10 @@ def parse_args():
                         help='Analyze evolocity')
     parser.add_argument('--velocity-score', type=str, default='lm',
                         help='Analyze evolocity')
+    parser.add_argument('--downsample', type=float, default=100.,
+                        help='Percentage to uniformly downsample.')
+    parser.add_argument('--wdownsample', type=float, default=100.,
+                        help='Percentage to weightedly downsampling.')
     args = parser.parse_args()
     return args
 
@@ -213,6 +217,10 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         namespace += f'_{args.model_name}'
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
+    if args.downsample < 100:
+        namespace += f'_downsample{args.downsample}'
+    elif args.wdownsample < 100:
+        namespace += f'_wdownsample{args.downsample}'
 
     #############################
     ## Visualize Gag landscape ##
@@ -254,6 +262,32 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
             'A' if 'A' in subtype else 'Other'
         ) for subtype in adata.obs['subtype']
     ]
+
+    if args.downsample < 100:
+        n_sample = round(len(adata) * (args.downsample / 100.))
+        rand_idx = np.random.choice(len(adata), size=n_sample, replace=False)
+        adata = adata[rand_idx]
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
+
+    elif args.wdownsample < 100:
+        n_sample = round(len(adata) * (args.downsample / 100.))
+        # Upweight sequences more recent in time.
+        subtype_weights = {
+            'A': 1, 'AE': 2,
+            'B': 1, 'C': 1, 'BC': 2,
+            'D': 1, 'E': 1,
+        }
+        weights = np.array([
+            subtype_weights[subtype] for subtype in adata.obs['simple_subtype']
+        ])
+        weights /= sum(weights)
+        rand_idx = np.random.choice(len(adata), size=n_sample, replace=False, p=weights)
+        adata = adata[rand_idx]
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
@@ -439,7 +473,8 @@ if __name__ == '__main__':
 
         evo_gag(args, model, seqs, vocabulary, namespace=namespace)
 
-        if args.model_name == 'esm1b' and args.velocity_score == 'lm':
+        if args.model_name == 'esm1b' and args.velocity_score == 'lm' and \
+           args.downsample + args.wdownsample == 200:
             tprint('Restrict based on similarity to training:')
             evo_gag(args, model, seqs, vocabulary, namespace='gag_homologous')
 
