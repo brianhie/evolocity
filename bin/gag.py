@@ -142,11 +142,11 @@ def interpret_clusters(adata):
     tprint('Purity, Louvain and subtype: {}'
            .format(np.mean(largest_pct_subtype)))
 
-def plot_umap(adata):
-    sc.pl.umap(adata, color='subtype', save='_gag_subtype.png')
-    sc.pl.umap(adata, color='year', save='_gag_year.png')
-    sc.pl.umap(adata, color='homology', save='_gag_homology.png')
-    sc.pl.umap(adata, color='louvain', save='_gag_louvain.png')
+def plot_umap(adata, namespace='gag'):
+    sc.pl.umap(adata, color='subtype', save=f'_{namespace}_subtype.png')
+    sc.pl.umap(adata, color='year', save=f'_{namespace}_year.png')
+    sc.pl.umap(adata, color='homology', save=f'_{namespace}_homology.png')
+    sc.pl.umap(adata, color='louvain', save=f'_{namespace}_louvain.png')
 
 def seqs_to_anndata(seqs):
     keys = set([ key for seq in seqs for meta in seqs[seq] for key in meta ])
@@ -291,7 +291,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)
-    plot_umap(adata)
+    plot_umap(adata, namespace=namespace)
 
     cache_prefix = f'target/ev_cache/{namespace}_knn40'
     try:
