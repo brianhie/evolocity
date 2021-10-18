@@ -20,8 +20,6 @@ do
     CUDA_VISIBLE_DEVICES=3 python bin/glo.py esm1b --evolocity --downsample $percentage \
          > glo_esm1b_downsample"$percentage".log 2>&1 &
     
-    wait
- 
     CUDA_VISIBLE_DEVICES=0 python bin/pgk.py esm1b --evolocity --downsample $percentage \
          > pgk_esm1b_downsample"$percentage".log 2>&1 &
     
@@ -54,8 +52,6 @@ do
     CUDA_VISIBLE_DEVICES=3 python bin/glo.py esm1b --evolocity --wdownsample $percentage \
          > glo_esm1b_wdownsample"$percentage".log 2>&1 &
     
-    wait
- 
     CUDA_VISIBLE_DEVICES=0 python bin/pgk.py esm1b --evolocity --wdownsample $percentage \
          > pgk_esm1b_wdownsample"$percentage".log 2>&1 &
     

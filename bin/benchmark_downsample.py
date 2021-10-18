@@ -4,30 +4,38 @@ import pandas as pd
 import scipy.stats as ss
 from sklearn.metrics import roc_auc_score as auroc
 
-def benchmark_temporal(protein, setting, label):
+def benchmark_temporal(protein, setting, percentage, label):
     namespace = protein
-    if setting != 'base':
-        namespace += f'_{setting}'
+    if percentage != 100.:
+        namespace += f'_{setting}{percentage}'
 
     adata_cache = f'target/ev_cache/{protein}_adata.h5ad'
     adata = anndata.read_h5ad(adata_cache)
-    if 'homologous' in namespace:
-        adata = adata[adata.obs['homology'] > 80.]
+
+    if percentage != 100.:
+        with open(f'target/ev_cache/{namespace}_rand_idx.txt') as f:
+            rand_idx = [ int(x) for x in f.read().rstrip().split() ]
+        adata = adata[rand_idx]
+    
     with open(f'target/ev_cache/{namespace}_pseudotime.txt') as f:
         adata.obs['pseudotime'] = np.loadtxt(f)
     return ss.spearmanr(adata.obs[label], adata.obs['pseudotime'],
                         nan_policy='omit')[0]
     
 
-def benchmark_class(protein, setting, labels):
+def benchmark_class(protein, setting, percentage, labels):
     namespace = protein
-    if setting != 'base':
-        namespace += f'_{setting}'
+    if percentage != 100.:
+        namespace += f'_{setting}{percentage}'
 
     adata_cache = f'target/ev_cache/{protein}_adata.h5ad'
     adata = anndata.read_h5ad(adata_cache)
-    if 'homologous' in namespace:
-        adata = adata[adata.obs['homology'] > 80.]
+
+    if percentage != 100.:
+        with open(f'target/ev_cache/{namespace}_rand_idx.txt') as f:
+            rand_idx = [ int(x) for x in f.read().rstrip().split() ]
+        adata = adata[rand_idx]
+    
     with open(f'target/ev_cache/{namespace}_pseudotime.txt') as f:
         adata.obs['pseudotime'] = np.loadtxt(f)
 
@@ -50,28 +58,30 @@ def benchmark_class(protein, setting, labels):
 if __name__ == '__main__':
     proteins = [
         'np',
-        'h1',
-        'gag',
-        'cov',
-        'glo',
+        #'h1',
+        #'gag',
+        #'cov',
+        #'glo',
         'cyc',
-        'eno',
-        'pgk',
-        'ser',
+        #'eno',
+        #'pgk',
+        #'ser',
     ]
 
     settings = [
-        'base', # ESM-1b for features and velocities.
-        'homologous',
-        'tape',
-        'onehot',
-        'blosum62',
-        'jtt',
-        'wag',
-        'esm1b-rand',
-        'edgerand',
-        'unit',
+        'downsample',
+        #'wdownsample', # Weighted downsample.
     ]
+
+    percentages = [
+        10.,
+        25.,
+        50.,
+        75.,
+        100.,
+    ]
+
+    # Below configuration should be same as benchmark.py.
 
     temporal_benchmarks = {
         'np': 'year',
@@ -107,30 +117,33 @@ if __name__ == '__main__':
     data = []
     for protein in proteins:
         for setting in settings:
-            if setting == 'homologous' and protein in { 'np', 'cov' }:
-                continue
-            print(protein, setting)
-            if protein in temporal_benchmarks:
-                value = benchmark_temporal(
-                    protein,
-                    setting,
-                    temporal_benchmarks[protein],
-                )
-                data.append([
-                    protein, setting, 'spearmanr', value
-                ])
-            if protein in class_benchmarks:
-                value = benchmark_class(
-                    protein,
-                    setting,
-                    class_benchmarks[protein]
-                )
-                data.append([
-                    protein, setting, 'auroc', value
-                ])
+            for percentage in percentages:
+                print(protein, setting, percentage)
+                if protein in temporal_benchmarks:
+                    value = benchmark_temporal(
+                        protein,
+                        setting,
+                        percentage,
+                        temporal_benchmarks[protein],
+                    )
+                    data.append([
+                        protein, setting, percentage, 'spearmanr', value
+                    ])
+                if protein in class_benchmarks:
+                    value = benchmark_class(
+                        protein,
+                        setting,
+                        percentage,
+                        class_benchmarks[protein]
+                    )
+                    data.append([
+                        protein, setting, percentage, 'auroc', value
+                    ])
+                if not setting:
+                    setting = 'esm1b'
 
     df = pd.DataFrame(data, columns=[
-        'protein', 'setting', 'score_type', 'value',
+        'protein', 'setting', 'percentage', 'score_type', 'value',
     ])
 
-    df.to_csv('benchmark_results.txt', sep='\t')
+    df.to_csv('benchmark_downsample_results.txt', sep='\t')

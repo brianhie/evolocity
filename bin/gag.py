@@ -283,11 +283,17 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
             subtype_weights[subtype] for subtype in adata.obs['simple_subtype']
         ])
         weights /= sum(weights)
-        rand_idx = np.random.choice(len(adata), size=n_sample, replace=False, p=weights)
+        rand_idx = np.random.choice(
+            len(adata), size=n_sample, replace=False, p=weights
+        )
         adata = adata[rand_idx]
         sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
+
+    if args.downsample < 100 or args.wdownsample < 100:
+        with open(f'target/ev_cache/{namespace}_rand_idx.txt', 'w') as of:
+            of.write('\n'.join([ str(x) for x in rand_idx ]) + '\n')
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500)

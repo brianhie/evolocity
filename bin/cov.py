@@ -239,11 +239,17 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         # Upweight sequences more recent in time.
         weights = np.array(ss.rankdata(adata.obs['timestamp']))
         weights /= sum(weights)
-        rand_idx = np.random.choice(len(adata), size=n_sample, replace=False, p=weights)
+        rand_idx = np.random.choice(
+            len(adata), size=n_sample, replace=False, p=weights
+        )
         adata = adata[rand_idx]
         sc.pp.neighbors(adata, n_neighbors=30, use_rep='X')
         sc.tl.louvain(adata, resolution=1.)
         sc.tl.umap(adata, min_dist=1.)
+
+    if args.downsample < 100 or args.wdownsample < 100:
+        with open(f'target/ev_cache/{namespace}_rand_idx.txt', 'w') as of:
+            of.write('\n'.join([ str(x) for x in rand_idx ]) + '\n')
 
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 4))
