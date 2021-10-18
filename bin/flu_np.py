@@ -34,6 +34,10 @@ def parse_args():
                         help='Analyze evolocity')
     parser.add_argument('--velocity-score', type=str, default='lm',
                         help='Analyze evolocity')
+    parser.add_argument('--downsample', type=float, default=100.,
+                        help='Percentage to uniformly downsample.')
+    parser.add_argument('--wdownsample', type=float, default=100.,
+                        help='Percentage to weightedly downsampling.')
     args = parser.parse_args()
     return args
 
@@ -324,6 +328,10 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         namespace += f'_{args.model_name}'
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
+    if args.downsample < 100:
+        namespace += f'_downsample{args.downsample}'
+    elif args.wdownsample < 100:
+        namespace += f'_wdownsample{args.downsample}'
 
     ###############
     ## Load data ##
@@ -421,6 +429,25 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         for subtype in adata.obs['subtype']
     ]
 
+    if args.downsample < 100:
+        n_sample = round(len(adata) * (args.downsample / 100.))
+        rand_idx = np.random.choice(len(adata), size=n_sample, replace=False)
+        adata = adata[rand_idx]
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
+
+    elif args.wdownsample < 100:
+        n_sample = round(len(adata) * (args.downsample / 100.))
+        # Upweight sequences more recent in time.
+        weights = np.array(ss.rankdata(adata.obs['year']))
+        weights /= sum(weights)
+        rand_idx = np.random.choice(len(adata), size=n_sample, replace=False, p=weights)
+        adata = adata[rand_idx]
+        sc.pp.neighbors(adata, n_neighbors=40, use_rep='X')
+        sc.tl.louvain(adata, resolution=1.)
+        sc.tl.umap(adata, min_dist=1.)
+
     tprint('Analyzing {} sequences...'.format(adata.X.shape[0]))
     evo.set_figure_params(dpi_save=500, figsize=(5, 5))
     plot_umap(adata, namespace=namespace)
@@ -456,9 +483,11 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     # Edge score stratification analysis.
     #analyze_edges(adata, model, vocabulary, namespace=namespace)
 
-    rw_root = list(adata.obs['seq']).index(nodes[0][1])
-
     if namespace == 'np':
+
+        # Random walk analysis
+
+        rw_root = list(adata.obs['seq']).index(nodes[0][1])
         evo.tl.random_walk(
             adata,
             root_node=rw_root,
@@ -491,6 +520,8 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         plt.axhline(c='black', linestyle='--')
         plt.savefig(f'figures/{namespace}_gong_path.svg')
         plt.close()
+
+        # One-hot feature interpretation analysis.
 
         evo.tl.onehot_msa(
             adata,
