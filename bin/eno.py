@@ -257,7 +257,7 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
     if args.downsample < 100:
         namespace += f'_downsample{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.downsample}'
+        namespace += f'_wdownsample{args.wdownsample}'
 
     #########################
     ## Visualize landscape ##
@@ -300,7 +300,7 @@ def evo_enolase(args, model, seqs, vocabulary, namespace='eno'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
-        n_sample = round(len(adata) * (args.downsample / 100.))
+        n_sample = round(len(adata) * (args.wdownsample / 100.))
         subtype_weights = {
             'archaea': 1.,
             'bacteria': 2.,

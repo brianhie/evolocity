@@ -246,7 +246,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     if args.downsample < 100:
         namespace += f'_downsample{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.downsample}'
+        namespace += f'_wdownsample{args.wdownsample}'
 
     ######################################
     ## Visualize Cytochrome C landscape ##
@@ -289,7 +289,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
-        n_sample = round(len(adata) * (args.downsample / 100.))
+        n_sample = round(len(adata) * (args.wdownsample / 100.))
         subtype_weights = {
             'eukaryota': 1,
             'viridiplantae': 2,
@@ -382,23 +382,24 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     plt.savefig(f'figures/evolocity__{namespace}_taxonomy_velostream.png', dpi=500)
     plt.close()
 
-    ax = evo.pl.draw_path(
-        adata,
-        source_idx=list(adata.obs['gene_id']).index('CYC_HUMAN'),
-        target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
-    )
-    ax = evo.pl.draw_path(
-        adata,
-        source_idx=list(adata.obs['gene_id']).index('CYC_APIME'),
-        target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
-        ax=ax,
-    )
-    ax = evo.pl.draw_path(
-        adata,
-        source_idx=list(adata.obs['gene_id']).index('CYC_MAIZE'),
-        target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
-        ax=ax,
-    )
+    if namespace == 'cyc':
+        ax = evo.pl.draw_path(
+            adata,
+            source_idx=list(adata.obs['gene_id']).index('CYC_HUMAN'),
+            target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
+        )
+        ax = evo.pl.draw_path(
+            adata,
+            source_idx=list(adata.obs['gene_id']).index('CYC_APIME'),
+            target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
+            ax=ax,
+        )
+        ax = evo.pl.draw_path(
+            adata,
+            source_idx=list(adata.obs['gene_id']).index('CYC_MAIZE'),
+            target_idx=list(adata.obs['gene_id']).index('CYC1_YEAST'),
+            ax=ax,
+        )
 
     evo.pl.velocity_contour(
         adata, basis='umap', min_mass=1., smooth=0.6, levels=100,

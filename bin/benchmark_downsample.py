@@ -58,14 +58,14 @@ def benchmark_class(protein, setting, percentage, labels):
 if __name__ == '__main__':
     proteins = [
         'np',
-        #'h1',
-        #'gag',
-        #'cov',
-        #'glo',
+        'h1',
+        'gag',
+        'cov',
+        'glo',
         'cyc',
-        #'eno',
-        #'pgk',
-        #'ser',
+        'eno',
+        'pgk',
+        'ser',
     ]
 
     settings = [

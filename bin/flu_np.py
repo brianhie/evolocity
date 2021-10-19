@@ -331,7 +331,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     if args.downsample < 100:
         namespace += f'_downsample{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.downsample}'
+        namespace += f'_wdownsample{args.wdownsample}'
 
     ###############
     ## Load data ##
@@ -438,7 +438,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
-        n_sample = round(len(adata) * (args.downsample / 100.))
+        n_sample = round(len(adata) * (args.wdownsample / 100.))
         # Upweight sequences more recent in time.
         weights = np.array(ss.rankdata(adata.obs['year']))
         weights /= sum(weights)

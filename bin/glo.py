@@ -277,7 +277,7 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
     if args.downsample < 100:
         namespace += f'_downsample{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.downsample}'
+        namespace += f'_wdownsample{args.wdownsample}'
 
     #########################
     ## Visualize landscape ##
@@ -320,7 +320,7 @@ def evo_globin(args, model, seqs, vocabulary, namespace='glo'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
-        n_sample = round(len(adata) * (args.downsample / 100.))
+        n_sample = round(len(adata) * (args.wdownsample / 100.))
         subtype_weights = {
             'neuroglobin': 2.,
             'cytoglobin': 1.,

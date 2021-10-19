@@ -189,7 +189,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     if args.downsample < 100:
         namespace += f'_downsample{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.downsample}'
+        namespace += f'_wdownsample{args.wdownsample}'
 
     ###############################
     ## Visualize Spike landscape ##
@@ -235,7 +235,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
-        n_sample = round(len(adata) * (args.downsample / 100.))
+        n_sample = round(len(adata) * (args.wdownsample / 100.))
         # Upweight sequences more recent in time.
         weights = np.array(ss.rankdata(adata.obs['timestamp']))
         weights /= sum(weights)
@@ -286,7 +286,7 @@ def spike_evolocity(args, model, seqs, vocabulary, namespace='cov'):
     wt_fname = 'data/cov/cov2_spike_wt.fasta'
     wt_seq = str(SeqIO.read(wt_fname, 'fasta').seq)
 
-    if args.model_name == 'esm1b' and args.velocity_score == 'lm':
+    if namespace == 'cov':
         evo.tl.onehot_msa(
             adata,
             reference=list(adata.obs['seq']).index(wt_seq),

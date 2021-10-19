@@ -261,7 +261,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
     if args.downsample < 100:
         namespace += f'_downsample{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.downsample}'
+        namespace += f'_wdownsample{args.wdownsample}'
 
     ############################
     ## Visualize HA landscape ##
@@ -310,7 +310,7 @@ def evo_ha(args, model, seqs, vocabulary, namespace='h1'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
-        n_sample = round(len(adata) * (args.downsample / 100.))
+        n_sample = round(len(adata) * (args.wdownsample / 100.))
         # Upweight sequences more recent in time.
         weights = np.array(ss.rankdata(adata.obs['Collection Date']))
         weights /= sum(weights)

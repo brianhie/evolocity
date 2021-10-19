@@ -220,7 +220,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
     if args.downsample < 100:
         namespace += f'_downsample{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.downsample}'
+        namespace += f'_wdownsample{args.wdownsample}'
 
     #############################
     ## Visualize Gag landscape ##
@@ -272,7 +272,7 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
-        n_sample = round(len(adata) * (args.downsample / 100.))
+        n_sample = round(len(adata) * (args.wdownsample / 100.))
         # Upweight sequences more recent in time.
         subtype_weights = {
             'A': 1, 'AE': 2,
