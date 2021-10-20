@@ -297,7 +297,7 @@ def evo_pgk(args, model, seqs, vocabulary, namespace='pgk'):
             'archaea': 1.,
             'bacteria': 2.,
             'eukaryota': 3.,
-            'other': 0,
+            'other': 0.,
         }
         weights = np.array([
             subtype_weights[subtype] for subtype in adata.obs['tax_kingdom']

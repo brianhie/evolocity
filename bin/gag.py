@@ -275,9 +275,10 @@ def evo_gag(args, model, seqs, vocabulary, namespace='gag'):
         n_sample = round(len(adata) * (args.wdownsample / 100.))
         # Upweight sequences more recent in time.
         subtype_weights = {
-            'A': 1, 'AE': 2,
-            'B': 1, 'C': 1, 'BC': 2,
-            'D': 1, 'E': 1,
+            'A': 1., 'AE': 2.,
+            'B': 1., 'C': 1., 'BC': 2.,
+            'D': 1., 'E': 1.,
+            'Other': 0.,
         }
         weights = np.array([
             subtype_weights[subtype] for subtype in adata.obs['simple_subtype']

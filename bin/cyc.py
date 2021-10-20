@@ -291,12 +291,12 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     elif args.wdownsample < 100:
         n_sample = round(len(adata) * (args.wdownsample / 100.))
         subtype_weights = {
-            'eukaryota': 1,
-            'viridiplantae': 2,
-            'fungi': 2,
-            'arthropoda': 3,
-            'chordata': 3,
-            'mammalia': 3,
+            'eukaryota': 1.,
+            'viridiplantae': 2.,
+            'fungi': 2.,
+            'arthropoda': 3.,
+            'chordata': 3.,
+            'mammalia': 3.,
         }
         weights = np.array([
             subtype_weights[subtype] for subtype in adata.obs['tax_group']

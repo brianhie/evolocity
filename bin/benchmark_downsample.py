@@ -1,7 +1,10 @@
 import anndata
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import random
 import scipy.stats as ss
+import seaborn as sns
 from sklearn.metrics import roc_auc_score as auroc
 
 def benchmark_temporal(protein, setting, percentage, label):
@@ -20,7 +23,7 @@ def benchmark_temporal(protein, setting, percentage, label):
     with open(f'target/ev_cache/{namespace}_pseudotime.txt') as f:
         adata.obs['pseudotime'] = np.loadtxt(f)
     return ss.spearmanr(adata.obs[label], adata.obs['pseudotime'],
-                        nan_policy='omit')[0]
+                        nan_policy='omit')[0], len(adata)
     
 
 def benchmark_class(protein, setting, percentage, labels):
@@ -50,9 +53,10 @@ def benchmark_class(protein, setting, percentage, labels):
         pseudotimes.append(ptime)
 
     if len(set(classes)) > 2:
-        return ss.spearmanr(classes, pseudotimes, nan_policy='omit')[0]
+        return (ss.spearmanr(classes, pseudotimes, nan_policy='omit')[0],
+                'spearmanr', len(adata))
 
-    return auroc(classes, pseudotimes)
+    return auroc(classes, pseudotimes), 'auroc', len(adata)
     
 
 if __name__ == '__main__':
@@ -60,7 +64,7 @@ if __name__ == '__main__':
         'np',
         'h1',
         'gag',
-        'cov',
+        #'cov',
         'glo',
         'cyc',
         'eno',
@@ -70,7 +74,7 @@ if __name__ == '__main__':
 
     settings = [
         'downsample',
-        #'wdownsample', # Weighted downsample.
+        'wdownsample', # Weighted downsample.
     ]
 
     percentages = [
@@ -120,30 +124,83 @@ if __name__ == '__main__':
             for percentage in percentages:
                 print(protein, setting, percentage)
                 if protein in temporal_benchmarks:
-                    value = benchmark_temporal(
+                    value, n_samples = benchmark_temporal(
                         protein,
                         setting,
                         percentage,
                         temporal_benchmarks[protein],
                     )
                     data.append([
-                        protein, setting, percentage, 'spearmanr', value
+                        protein,
+                        setting,
+                        percentage,
+                        n_samples,
+                        'spearmanr',
+                        value,
                     ])
                 if protein in class_benchmarks:
-                    value = benchmark_class(
+                    value, score_type, n_samples = benchmark_class(
                         protein,
                         setting,
                         percentage,
                         class_benchmarks[protein]
                     )
                     data.append([
-                        protein, setting, percentage, 'auroc', value
+                        protein,
+                        setting,
+                        percentage,
+                        n_samples,
+                        score_type,
+                        value,
                     ])
                 if not setting:
                     setting = 'esm1b'
 
     df = pd.DataFrame(data, columns=[
-        'protein', 'setting', 'percentage', 'score_type', 'value',
+        'protein',
+        'setting',
+        'percentage',
+        'n_samples',
+        'score_type',
+        'value',
     ])
 
     df.to_csv('benchmark_downsample_results.txt', sep='\t')
+
+    for setting in settings:
+        # Seed the jitter.
+        np.random.seed(1)
+        random.seed(1)
+
+        df_setting = df[df['setting'] == setting]
+        df_setting['value'] = [
+            value * 2 - 1 if score_type == 'auroc' else value
+            for value, score_type in
+            zip(df_setting['value'], df_setting['score_type'])
+        ]
+    
+        plt.figure(figsize=(5, 6))
+        sns.stripplot(
+            x='percentage',
+            y='value',
+            hue='protein',
+            data=df_setting,
+        )
+        sns.boxplot(
+            showmeans=True,
+            meanline=True,
+            meanprops={'color': 'k', 'ls': '-', 'lw': 2},
+            medianprops={'visible': False},
+            whiskerprops={'visible': False},
+            zorder=10,
+            x='percentage',
+            y='value',
+            data=df_setting,
+            showfliers=False,
+            showbox=False,
+            showcaps=False,
+        )
+        plt.axhline(0., color='#888888', linestyle='--')
+        plt.ylim([ -1.09, 1.09 ])
+        plt.savefig(f'figures/benchmark_{setting}.svg')
+        plt.close()
