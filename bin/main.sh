@@ -1,6 +1,6 @@
-###################################################
-## Base model (ESM-1b velocities and embeddings) ##
-###################################################
+###################
+## Main analyses ##
+###################
 
 python bin/flu_np.py esm1b --evolocity > np_esm1b_evolocity.log 2>&1
 
@@ -22,11 +22,14 @@ python bin/eno.py esm1b --evolocity > eno_esm1b_evolocity.log 2>&1
 
 python bin/ser.py esm1b --evolocity > ser_esm1b_evolocity.log 2>&1
 
-###################################################
-## Benchmarking code (different velocity scores) ##
-###################################################
+#######################
+## Benchmarking code ##
+#######################
 
 bash bin/benchmark.sh # Requires days of compute!
 
 python bin/benchmark.py
 
+bash bin/benchmark_downsample.sh # Requires days of compute!
+
+python bin/benchmark_downsample.py
