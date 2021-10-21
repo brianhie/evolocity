@@ -64,7 +64,7 @@ if __name__ == '__main__':
         'np',
         'h1',
         'gag',
-        #'cov',
+        'cov',
         'glo',
         'cyc',
         'eno',
@@ -78,11 +78,11 @@ if __name__ == '__main__':
     ]
 
     percentages = [
-        10.,
-        25.,
-        50.,
-        75.,
         100.,
+        75.,
+        50.,
+        25.,
+        10.,
     ]
 
     # Below configuration should be same as benchmark.py.
@@ -185,6 +185,8 @@ if __name__ == '__main__':
             y='value',
             hue='protein',
             data=df_setting,
+            size=10,
+            order=percentages,
         )
         sns.boxplot(
             showmeans=True,
@@ -199,6 +201,7 @@ if __name__ == '__main__':
             showfliers=False,
             showbox=False,
             showcaps=False,
+            order=percentages,
         )
         plt.axhline(0., color='#888888', linestyle='--')
         plt.ylim([ -1.09, 1.09 ])

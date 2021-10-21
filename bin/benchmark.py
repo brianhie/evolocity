@@ -154,6 +154,7 @@ if __name__ == '__main__':
         hue='protein',
         data=df,
         order=settings,
+        size=10,
     )
     sns.boxplot(
         showmeans=True,
