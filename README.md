@@ -67,7 +67,7 @@ Below are scripts for reproducing the experiments in our paper. To apply evoloci
 
 You can download the [relevant datasets](https://zenodo.org/record/4891758/files/data.tar.gz) using the commands
 ```bash
-wget https://zenodo.org/record/4891758/files/data.tar.gz
+wget https://zenodo.org/record/5590361/files/data.tar.gz
 tar xvf data.tar.gz
 ln -s data/target/ target
 ```

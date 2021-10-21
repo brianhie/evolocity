@@ -103,7 +103,6 @@ def split_seqs(seqs, split_method='random'):
 
 def setup(args):
     fnames = [
-        #'data/cov/spikeprot0527.fasta',
         'data/cov/spikeprot0825.fa',
     ]
 
