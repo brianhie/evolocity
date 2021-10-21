@@ -164,6 +164,8 @@ def likelihood_submat(
         seq1, seq2, matrix, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
+    # Generic substitution matrix scoring, see below.
+
     a_seq1, a_seq2, _, _, _ = align_seqs(seq1, seq2)
 
     scores = []
@@ -181,6 +183,7 @@ def likelihood_blosum62(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
+    # Score based on BLOSUM62 substitution matrix.
     from Bio.SubsMat import MatrixInfo as matlist
     matrix = matlist.blosum62
     return likelihood_submat(
@@ -192,6 +195,7 @@ def likelihood_jtt(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
+    # Score based on JTT substitution matrix.
     from Bio.SubsMat import read_text_matrix
     with open('data/substitution_matrices/JTT.txt') as f:
         matrix = read_text_matrix(f)
@@ -204,6 +208,7 @@ def likelihood_wag(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
+    # Score based on WAG substitution matrix.
     from Bio.SubsMat import read_text_matrix
     with open('data/substitution_matrices/WAG.txt') as f:
         matrix = read_text_matrix(f)
@@ -293,6 +298,7 @@ class VelocityGraph:
         self.verbose = verbose
 
 
+    # Method that computes pseudolikelihood scores for each node.
     def compute_likelihoods(self, vocabulary, model):
         if self.verbose:
             iterator = tqdm(self.seqs)
@@ -319,6 +325,7 @@ class VelocityGraph:
                 raise ValueError('Invalid score {}'.format(self.score))
 
 
+    # Method that calculates velocity score for each edge.
     def compute_gradients(self, vocabulary, model):
         n_obs = self.adata.X.shape[0]
         vals, rows, cols, uncertainties = [], [], [], []
@@ -347,7 +354,7 @@ class VelocityGraph:
             elif self.score == 'random':
                 score_fn = likelihood_random
             elif self.score == 'edgerand':
-                # Compute velocity with random edges.
+                # Randomly permute edges, used for control experiment.
                 score_fn = likelihood_muts
                 neighs_idx = np.random.choice(
                     len(self.seqs),
@@ -480,12 +487,14 @@ def velocity_graph(
         verbose=verbose,
     )
 
+    # Compute pseudolikelihoods for each amino acid in each sequence.
     if verbose:
         logg.msg('Computing likelihoods...')
     vgraph.compute_likelihoods(vocabulary, model)
     if verbose:
         print('')
 
+    # Used cached pseudolikelihoods to compute velocity.
     if verbose:
         logg.msg('Computing velocity graph...')
     vgraph.compute_gradients(vocabulary, model)
