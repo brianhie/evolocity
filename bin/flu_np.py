@@ -329,9 +329,9 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
     if args.downsample < 100:
-        namespace += f'_downsample{args.downsample}'
+        namespace += f'_downsample{args.seed}-{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.wdownsample}'
+        namespace += f'_wdownsample{args.seed}-{args.wdownsample}'
 
     ###############
     ## Load data ##
@@ -430,6 +430,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
     ]
 
     if args.downsample < 100:
+        np.random.seed(args.seed)
         n_sample = round(len(adata) * (args.downsample / 100.))
         rand_idx = np.random.choice(len(adata), size=n_sample, replace=False)
         adata = adata[rand_idx]
@@ -438,6 +439,7 @@ def epi_gong2013(args, model, seqs, vocabulary, namespace='np'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
+        np.random.seed(args.seed)
         n_sample = round(len(adata) * (args.wdownsample / 100.))
         # Upweight sequences more recent in time.
         weights = np.array(ss.rankdata(adata.obs['year']))

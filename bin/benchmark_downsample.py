@@ -7,8 +7,10 @@ import scipy.stats as ss
 import seaborn as sns
 from sklearn.metrics import roc_auc_score as auroc
 
-def benchmark_temporal(protein, setting, percentage, label):
+def benchmark_temporal(protein, setting, percentage, seed, label):
     namespace = protein
+    if seed != '':
+        setting += str(seed) + '-'
     if percentage != 100.:
         namespace += f'_{setting}{percentage}'
 
@@ -19,15 +21,18 @@ def benchmark_temporal(protein, setting, percentage, label):
         with open(f'target/ev_cache/{namespace}_rand_idx.txt') as f:
             rand_idx = [ int(x) for x in f.read().rstrip().split() ]
         adata = adata[rand_idx]
-    
+        print(rand_idx[0])
+
     with open(f'target/ev_cache/{namespace}_pseudotime.txt') as f:
         adata.obs['pseudotime'] = np.loadtxt(f)
     return ss.spearmanr(adata.obs[label], adata.obs['pseudotime'],
                         nan_policy='omit')[0], len(adata)
     
 
-def benchmark_class(protein, setting, percentage, labels):
+def benchmark_class(protein, setting, percentage, seed, labels):
     namespace = protein
+    if seed != '':
+        setting += str(seed) + '-'
     if percentage != 100.:
         namespace += f'_{setting}{percentage}'
 
@@ -85,6 +90,12 @@ if __name__ == '__main__':
         10.,
     ]
 
+    seeds = [
+        '',
+        0,
+        1,
+    ]
+
     # Below configuration should be same as benchmark.py.
 
     temporal_benchmarks = {
@@ -122,44 +133,50 @@ if __name__ == '__main__':
     for protein in proteins:
         for setting in settings:
             for percentage in percentages:
-                print(protein, setting, percentage)
-                if protein in temporal_benchmarks:
-                    value, n_samples = benchmark_temporal(
-                        protein,
-                        setting,
-                        percentage,
-                        temporal_benchmarks[protein],
-                    )
-                    data.append([
-                        protein,
-                        setting,
-                        percentage,
-                        n_samples,
-                        'spearmanr',
-                        value,
-                    ])
-                if protein in class_benchmarks:
-                    value, score_type, n_samples = benchmark_class(
-                        protein,
-                        setting,
-                        percentage,
-                        class_benchmarks[protein]
-                    )
-                    data.append([
-                        protein,
-                        setting,
-                        percentage,
-                        n_samples,
-                        score_type,
-                        value,
-                    ])
-                if not setting:
-                    setting = 'esm1b'
+                for seed in seeds:
+                    print(protein, setting, percentage, seed)
+                    if protein in temporal_benchmarks:
+                        value, n_samples = benchmark_temporal(
+                            protein,
+                            setting,
+                            percentage,
+                            seed,
+                            temporal_benchmarks[protein],
+                        )
+                        data.append([
+                            protein,
+                            setting,
+                            percentage,
+                            seed if seed else 2,
+                            n_samples,
+                            'spearmanr',
+                            value,
+                        ])
+                    if protein in class_benchmarks:
+                        value, score_type, n_samples = benchmark_class(
+                            protein,
+                            setting,
+                            percentage,
+                            seed,
+                            class_benchmarks[protein]
+                        )
+                        data.append([
+                            protein,
+                            setting,
+                            percentage,
+                            seed if seed else 2,
+                            n_samples,
+                            score_type,
+                            value,
+                        ])
+                    if percentage == 100:
+                        break
 
     df = pd.DataFrame(data, columns=[
         'protein',
         'setting',
         'percentage',
+        'seed',
         'n_samples',
         'score_type',
         'value',
@@ -184,9 +201,19 @@ if __name__ == '__main__':
             x='percentage',
             y='value',
             hue='protein',
-            data=df_setting,
-            size=10,
+            data=df_setting[df_setting['score_type'] == 'spearmanr'],
             order=percentages,
+            size=6,
+        )
+        sns.stripplot(
+            x='percentage',
+            y='value',
+            hue='protein',
+            data=df_setting[df_setting['score_type'] == 'auroc'],
+            order=percentages,
+            marker='X',
+            palette='husl',
+            size=6,
         )
         sns.boxplot(
             showmeans=True,

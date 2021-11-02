@@ -122,10 +122,6 @@ if __name__ == '__main__':
                 data.append([
                     protein, setting, 'spearmanr', value
                 ])
-                if protein in { 'np', 'cov' } and setting == 'base':
-                    data.append([
-                        protein, 'homologous', 'spearmanr', value
-                    ])
             if protein in class_benchmarks:
                 value, score_type = benchmark_class(
                     protein,
@@ -147,14 +143,27 @@ if __name__ == '__main__':
         for value, score_type in zip(df['value'], df['score_type'])
     ]
 
+    df = df[df['setting'] != 'homologous']
+    settings = [ setting for setting in settings if setting != 'homologous' ]
+
     plt.figure(figsize=(5, 6))
     sns.stripplot(
         x='setting',
         y='value',
         hue='protein',
-        data=df,
+        data=df[df['score_type'] == 'spearmanr'],
         order=settings,
-        size=10,
+        size=6,
+    )
+    sns.stripplot(
+        x='setting',
+        y='value',
+        hue='protein',
+        data=df[df['score_type'] == 'auroc'],
+        order=settings,
+        marker='X',
+        palette='husl',
+        size=6,
     )
     sns.boxplot(
         showmeans=True,

@@ -244,9 +244,9 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
     if args.velocity_score != 'lm':
         namespace += f'_{args.velocity_score}'
     if args.downsample < 100:
-        namespace += f'_downsample{args.downsample}'
+        namespace += f'_downsample{args.seed}-{args.downsample}'
     elif args.wdownsample < 100:
-        namespace += f'_wdownsample{args.wdownsample}'
+        namespace += f'_wdownsample{args.seed}-{args.wdownsample}'
 
     ######################################
     ## Visualize Cytochrome C landscape ##
@@ -281,6 +281,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         sc.tl.umap(adata)
 
     if args.downsample < 100:
+        np.random.seed(args.seed)
         n_sample = round(len(adata) * (args.downsample / 100.))
         rand_idx = np.random.choice(len(adata), size=n_sample, replace=False)
         adata = adata[rand_idx]
@@ -289,6 +290,7 @@ def evo_cyc(args, model, seqs, vocabulary, namespace='cyc'):
         sc.tl.umap(adata, min_dist=1.)
 
     elif args.wdownsample < 100:
+        np.random.seed(args.seed)
         n_sample = round(len(adata) * (args.wdownsample / 100.))
         subtype_weights = {
             'eukaryota': 1.,
