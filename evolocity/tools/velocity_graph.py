@@ -30,6 +30,7 @@ SUBMAT_CHOICES = {
     'wag',
 }
 
+# Return (recursive) nearest neighbors.
 def get_iterative_indices(
         indices,
         index,
@@ -49,6 +50,7 @@ def get_iterative_indices(
         indices = np.random.choice(indices, max_neighs, replace=False)
     return indices
 
+# Compute nearest neighbors.
 def get_indices(dist, n_neighbors=None, mode_neighbors='distances'):
     D = dist.copy()
     D.data += 1e-6
@@ -79,6 +81,7 @@ def get_indices(dist, n_neighbors=None, mode_neighbors='distances'):
         indices = get_indices_from_csr(conn)
     return indices, D
 
+# Compute likelihoods across entire sequence with masked language model.
 def predict_sequence_prob(seq_of_interest, vocabulary, model,
                           verbose=False):
     if 'esm' in model.name_:
@@ -95,6 +98,7 @@ def predict_sequence_prob(seq_of_interest, vocabulary, model,
     else:
         raise ValueError('Invalid model name {}'.format(model.name_))
 
+# Compute likelihood-based velocity score.
 def likelihood_compare(seq1, seq2, vocabulary, model,
                        pos1=None, pos2=None, seq_cache={}, verbose=False):
     likelihoods = []
@@ -123,12 +127,14 @@ def likelihood_compare(seq1, seq2, vocabulary, model,
 
     return likelihoods[1] - likelihoods[0]
 
+# Pairwise alignment between two sequences.
 def align_seqs(seq1, seq2):
     # Align, prefer matches to gaps.
     return pairwise2.align.globalms(
         seq1, seq2, 5, -4, -4, -.1, one_alignment_only=True
     )[0]
 
+# Align sequences, identify differences, and compute velocity score.
 def likelihood_muts(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
@@ -160,11 +166,13 @@ def likelihood_muts(
         pos1=sub1, pos2=sub2, seq_cache=seq_cache, verbose=verbose,
     )
 
+# Velocity scores for substitution matrix.
 def likelihood_submat(
         seq1, seq2, matrix, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    # Generic substitution matrix scoring, see below.
+    # Generic substitution matrix scoring, see below
+    # for concrete wrappers.
 
     a_seq1, a_seq2, _, _, _ = align_seqs(seq1, seq2)
 
@@ -179,11 +187,11 @@ def likelihood_submat(
 
     return np.mean(scores)
 
+# Score based on BLOSUM62 substitution matrix.
 def likelihood_blosum62(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    # Score based on BLOSUM62 substitution matrix.
     from Bio.SubsMat import MatrixInfo as matlist
     matrix = matlist.blosum62
     return likelihood_submat(
@@ -191,11 +199,11 @@ def likelihood_blosum62(
         seq_cache, verbose, natural_aas,
     )
 
+# Score based on JTT substitution matrix.
 def likelihood_jtt(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    # Score based on JTT substitution matrix.
     from Bio.SubsMat import read_text_matrix
     with open('data/substitution_matrices/JTT.txt') as f:
         matrix = read_text_matrix(f)
@@ -204,11 +212,11 @@ def likelihood_jtt(
         seq_cache, verbose, natural_aas,
     )
 
+# Score based on WAG substitution matrix.
 def likelihood_wag(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    # Score based on WAG substitution matrix.
     from Bio.SubsMat import read_text_matrix
     with open('data/substitution_matrices/WAG.txt') as f:
         matrix = read_text_matrix(f)
@@ -217,14 +225,15 @@ def likelihood_wag(
         seq_cache, verbose, natural_aas,
     )
 
+# For control experiment, return unit velocities.
 def likelihood_unit(*args, **kwargs):
-    # For control experiment, return unit velocities.
     return 1.
     
+# For control experiment, return Gaussian noise.
 def likelihood_random(*args, **kwargs):
-    # For control experiment, return Gaussian noise.
     return np.random.normal(loc=5, scale=10)
-    
+
+# Turn adjacency graph into CSR sparse matrix.
 def vals_to_csr(vals, rows, cols, shape, split_negative=False):
     graph = coo_matrix((vals, (rows, cols)), shape=shape)
 
@@ -242,6 +251,7 @@ def vals_to_csr(vals, rows, cols, shape, split_negative=False):
     else:
         return graph.tocsr()
 
+# Class for computing velocity scores.
 class VelocityGraph:
     def __init__(
             self,

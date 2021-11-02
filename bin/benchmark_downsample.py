@@ -9,10 +9,8 @@ from sklearn.metrics import roc_auc_score as auroc
 
 def benchmark_temporal(protein, setting, percentage, seed, label):
     namespace = protein
-    if seed != '':
-        setting += str(seed) + '-'
     if percentage != 100.:
-        namespace += f'_{setting}{percentage}'
+        namespace += f'_{setting}{seed}-{percentage}'
 
     adata_cache = f'target/ev_cache/{protein}_adata.h5ad'
     adata = anndata.read_h5ad(adata_cache)
@@ -31,10 +29,8 @@ def benchmark_temporal(protein, setting, percentage, seed, label):
 
 def benchmark_class(protein, setting, percentage, seed, labels):
     namespace = protein
-    if seed != '':
-        setting += str(seed) + '-'
     if percentage != 100.:
-        namespace += f'_{setting}{percentage}'
+        namespace += f'_{setting}{seed}-{percentage}'
 
     adata_cache = f'target/ev_cache/{protein}_adata.h5ad'
     adata = anndata.read_h5ad(adata_cache)
@@ -91,9 +87,9 @@ if __name__ == '__main__':
     ]
 
     seeds = [
-        '',
         0,
         1,
+        2,
     ]
 
     # Below configuration should be same as benchmark.py.
