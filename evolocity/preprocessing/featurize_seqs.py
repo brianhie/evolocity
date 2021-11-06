@@ -19,6 +19,12 @@ def get_model(model_name):
             'esm1b_t33_650M_UR50S',
             repr_layer=[-1],
         )
+    elif model_name.startswith('esm1v'):
+        from fb_model import FBModel
+        model = FBModel(
+            'esm1v_t33_650M_UR90S_{}'.format(model_name[-1]),
+            repr_layer=[-1],
+        )
     elif model_name == 'esm1b-rand':
         from ..tools.fb_model import FBModel
         model = FBModel(

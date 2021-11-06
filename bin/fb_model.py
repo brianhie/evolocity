@@ -30,3 +30,9 @@ class FBModel(object):
             (i + model.num_layers + 1) % (model.num_layers + 1)
             for i in [ -1 ]
         ]
+
+        self.vocabulary_ = {
+            tok: self.alphabet_.tok_to_idx[tok]
+            for tok in self.alphabet_.tok_to_idx
+            if '<' not in tok and tok != '.' and tok != '-'
+        }
