@@ -54,7 +54,7 @@ if __name__ == '__main__':
         'np',
         'h1',
         'gag',
-        #'cov',
+        'cov',
         'glo',
         'cyc',
         'eno',
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         'esm1v2',
         'esm1v3',
         'esm1v4',
-        #'esm1v5',
+        'esm1v5',
     ]
 
     # Below configuration should be same as benchmark.py.
