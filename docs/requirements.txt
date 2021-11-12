@@ -1,0 +1,5 @@
+nbconvert==6.1.0
+nbsphinx==0.8.6
+sphinx==3.5.4
+sphinx_autodoc_typehints==1.12.0
+stanford_theme==1.0
