@@ -1,5 +1,5 @@
 biopython==1.76
-louvain==0.6.1
+louvain==0.7.0
 matplotlib==3.1.1
 nbconvert==6.1.0
 nbsphinx==0.8.6
