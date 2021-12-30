@@ -2,6 +2,7 @@ from .. import logging as logg
 from .utils import mkdir_p
 
 from anndata import AnnData
+from collections import Counter
 import math
 import numpy as np
 import os

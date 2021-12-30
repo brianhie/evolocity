@@ -1,5 +1,6 @@
-import os
+import errno
 import numpy as np
+import os
 import pandas as pd
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
