@@ -13,6 +13,7 @@ ZIFA*
 build/
 data
 dist/
+figures*
 plots*
 target*
 temp*
