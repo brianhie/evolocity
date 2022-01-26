@@ -110,9 +110,9 @@ todo_include_todos = False
 
 # -- Options for HTML output ----------------------------------------------
 
-import stanford_theme
+import sphinx-theme
 html_theme = 'stanford_theme'
-html_theme_path = [stanford_theme.get_html_theme_path()]
+html_theme_path = [sphinx_theme.get_html_theme_path(html_theme)]
 html_theme_options = dict(navigation_depth=1, titles_only=True)
 github_repo = 'evolocity'
 github_nb_repo = 'evovdss'
