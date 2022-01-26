@@ -223,6 +223,7 @@ def featurize_fasta(
     model_name='esm1b',
     mkey='model',
     embed_batch_size=3000,
+    fasta_metadata_record=False,
     use_cache=True,
     cache_namespace=None,
 ):
@@ -232,8 +233,8 @@ def featurize_fasta(
     :class:`~anndata.Anndata` object with sequence embeddings
     in the `adata.X` matrix.
 
-    Assumes metadata is storred in FASTA record as `key=value`
-    pairs that are separated by vertical bar "|" characters.
+    An optional argument (`fasta_metadata_record`) allows for
+    loading metadata directly from the FASTA file.
 
     Arguments
     ---------
@@ -245,6 +246,10 @@ def featurize_fasta(
         Name at which language model is stored.
     embed_batch_size: `int` (default: `3000`)
         Batch size to embed sequences. Lower to fit into GPU memory.
+    fasta_metadata_record: `bool` (default: `False`)
+        If `True`, assumes metadata is storred in FASTA record as `key=value`
+        pairs that are separated by vertical bar "|" characters.
+        Otherwise, does not attempt to load metadata from the FASTA.
     use_cache: `bool` (default: `False`)
         Cache embeddings to disk for faster future loading.
     cache_namespace: `str` (default: `'protein'`)
@@ -269,10 +274,10 @@ def featurize_fasta(
     with open(fname, 'r') as f:
         for record in SeqIO.parse(f, 'fasta'):
             fields = record.id.split('|')
-            meta = {
-                field.split('=')[0]: field.split('=')[1]
-                for field in fields
-            }
+            meta = {}
+            if fasta_metadata_record:
+                for field in fields:
+                    meta[field.split('=')[0]] = field.split('=')[1]
             seq = str(record.seq)
             if seq not in seqs:
                 seqs[seq] = []
