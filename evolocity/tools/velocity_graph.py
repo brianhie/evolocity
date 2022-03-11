@@ -95,6 +95,11 @@ def predict_sequence_prob(seq_of_interest, vocabulary, model,
         return predict_sequence_prob_tape(
             seq_of_interest, model
         )
+    elif model.name_ == 'protbert':
+        from .protbert_semantics import predict_sequence_prob_protbert
+        return predict_sequence_prob_protbert(
+            seq_of_interest, model
+        )
     else:
         raise ValueError('Invalid model name {}'.format(model.name_))
 
