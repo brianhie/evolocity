@@ -2,7 +2,7 @@ import torch
 from transformers import BertForMaskedLM, BertTokenizer
 
 class ProtBertModel(object):
-    def __init__(self, model_path='/cluster/scratch/gianhi/trained_model/'):
+    def __init__(self, model_path='trained_model/'):#/cluster/scratch/gianhi/trained_model/
         self.name_ = 'protbert'
 
         model = BertForMaskedLM.from_pretrained(model_path)
