@@ -57,6 +57,20 @@ def test_pipeline_tape():
     assert('seq' in adata.obs)
     assert(adata.uns['model'].name_ == 'tape')
 
+def test_pipeline_protbert():
+    adata = evo.pp.featurize_seqs(test_seqs)
+    evo.pp.neighbors(adata)
+    sc.tl.umap(adata)
+
+    evo.tl.velocity_graph(adata, model_name='protbert')
+    evo.tl.velocity_embedding(adata, basis='umap')
+
+    evo.pl.velocity_embedding(adata, basis='umap', scale=1.)
+
+    assert (adata.X.shape[0] == len(test_seqs))
+    assert ('seq' in adata.obs)
+    assert (adata.uns['model'].name_ == 'tape')
+
 def test_pipeline_dataset():
     adata = evo.datasets.cytochrome_c()
     adata = evo.datasets.nucleoprotein()

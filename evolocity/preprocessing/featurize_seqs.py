@@ -38,6 +38,9 @@ def get_model(model_name):
         model = TAPEModel(
             'bert-base',
         )
+    elif model_name == 'protbert':
+        from ..tools.protbert import ProtBertModel
+        model = ProtBertModel()
     else:
         raise ValueError('Invalid model {}'.format(model_name))
 
