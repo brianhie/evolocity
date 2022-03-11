@@ -12,9 +12,9 @@ class ProtBertModel(object):
         self.model_ = model
 
         self.tokenizer_ = BertTokenizer.from_pretrained("Rostlab/prot_bert", do_lower_case=False)
-        self.alphabet_ = list(self.tokenizer_.vocab.keys())
+        self.alphabet_ = self.tokenizer_.vocab
         #self.alphabet_['J'] = self.alphabet_['<unk>']
-        self.unk_idx_ = self.alphabet_.index('[UNK]')
+        self.unk_idx_ = self.alphabet_.index['[UNK]']
 
         self.vocabulary_ = {
             tok: self.alphabet_[tok]
