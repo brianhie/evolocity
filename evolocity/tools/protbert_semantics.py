@@ -6,7 +6,7 @@ def predict_sequence_prob_protbert(seq, model):
     token_ids = torch.tensor([ tokenizer.encode(seq) ])
     if torch.cuda.is_available():
         token_ids = token_ids.cuda()
-    output = model(token_ids)
+    output = model.model_(token_ids)
     output = torch.nn.LogSoftmax(dim=2)(output[0])
     sequence_output = output.cpu().detach().numpy()
 
