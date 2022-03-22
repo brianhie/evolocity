@@ -49,7 +49,7 @@ dependencies:
     - deprecated==1.2.10
     - docx==0.2.4
     - fa2==0.3.5
-    - fair-esm==0.3.1
+    - fair-esm==0.4.0
     - feedparser==6.0.2
     - filelock==3.0.12
     - future==0.18.2
