@@ -415,6 +415,7 @@ def velocity_graph(
         include_set=None,
         copy=False,
         verbose=True,
+        model_path=None
 ):
     """Computes velocity scores at each edge in the graph.
 
@@ -486,6 +487,7 @@ def velocity_graph(
             adata,
             model_name=model_name,
             mkey=mkey,
+            model_path=model_path
         )
     model = adata.uns[mkey]
     vocabulary = model.vocabulary_

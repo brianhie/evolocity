@@ -7,7 +7,7 @@ import math
 import numpy as np
 import os
 
-def get_model(model_name):
+def get_model(model_name, model_path = None):
     if model_name == 'esm1':
         from ..tools.fb_model import FBModel
         model = FBModel(
@@ -39,8 +39,11 @@ def get_model(model_name):
             'bert-base',
         )
     elif model_name == 'protbert':
+        if model_path == None:
+            raise ValueError('Please provide a path!')
+
         from ..tools.protbert import ProtBertModel
-        model = ProtBertModel()
+        model = ProtBertModel(model_path)
     else:
         raise ValueError('Invalid model {}'.format(model_name))
 

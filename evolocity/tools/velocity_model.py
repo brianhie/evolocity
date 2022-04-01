@@ -5,10 +5,11 @@ def velocity_model(
     model_name='esm1b',
     mkey='model',
     copy=False,
+    model_path=None
 ):
     adata = adata.copy() if copy else adata
 
-    model = get_model(model_name)
+    model = get_model(model_name, model_path=model_path)
 
     adata.uns[mkey] = model
 
