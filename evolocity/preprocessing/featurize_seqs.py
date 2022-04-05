@@ -65,6 +65,15 @@ def embed_seqs(
         X_embed = np.array([
             embedded[seq][0]['embedding'] for seq in seqs_fb
         ])
+    elif 'protbert' in model.name_:
+            from ..tools.protbert_semantics import embed_seqs_protbert
+            seqs_fb = sorted([seq for seq in seqs])
+            embedded = embed_seqs_protbert(
+                seqs_fb, model.model_, model.tokenizer_,
+            )
+            X_embed = np.array([
+                embedded[seq][0]['embedding'] for seq in seqs_fb
+            ])
     else:
         raise ValueError('Model {} not supported for sequence embedding'
                          .format(model.name_))
@@ -172,6 +181,7 @@ def featurize_seqs(
     embed_batch_size=3000,
     use_cache=False,
     cache_namespace='protein',
+    model_path=None
 ):
     """Embeds a list of sequences.
 
@@ -204,7 +214,7 @@ def featurize_seqs(
     model: `.uns`
         language model
     """
-    model = get_model(model_name)
+    model = get_model(model_name, model_path=model_path)
 
     seqs = {
         str(seq): [ {} ] for seq in seqs

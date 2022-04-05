@@ -13,8 +13,8 @@ test_seqs = [
     'GIRLLQEE',
 ]
 
-adata = evo.pp.featurize_seqs(test_seqs)
+adata = evo.pp.featurize_seqs(test_seqs, model_name='protbert', model_path='/Users/gianhiltbrunner/Desktop/prot_bert_untuned')
 evo.pp.neighbors(adata)
 sc.tl.umap(adata)
 
-evo.tl.velocity_graph(adata, model_name='protbert')
+evo.tl.velocity_graph(adata, model_name='protbert', model_path='/Users/gianhiltbrunner/Desktop/prot_bert_untuned')
