@@ -5,7 +5,7 @@ def predict_sequence_prob_protbert(seq, model):
 
     seq = " ".join(seq)
 
-    token_ids = torch.tensor([ tokenizer.encode(seq) ])
+    token_ids = torch.tensor([tokenizer.encode(seq)])
     if torch.cuda.is_available():
         token_ids = token_ids.cuda()
     output = model.model_(token_ids)
@@ -15,8 +15,13 @@ def predict_sequence_prob_protbert(seq, model):
     return sequence_output[0]
 
 def get_protbert_embedding(seq, tokenizer, model):
-    encoded_input = tokenizer(seq, return_tensors='pt')
-    output = model(**encoded_input)
+    seq = " ".join(seq)
+
+    token_ids = torch.tensor([tokenizer.encode(seq)])
+    if torch.cuda.is_available():
+        token_ids = token_ids.cuda()
+    output = model(token_ids)
+
     return output.logits.reshape((output.logits.shape[1], output.logits.shape[2])).detach().numpy()
 
 
