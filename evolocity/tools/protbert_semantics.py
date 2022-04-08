@@ -22,7 +22,7 @@ def get_protbert_embedding(seq, tokenizer, model):
         token_ids = token_ids.cuda()
     output = model(token_ids)
 
-    return output.logits.reshape((output.logits.shape[1], output.logits.shape[2])).detach().numpy()
+    return output.logits.reshape((output.logits.shape[1], output.logits.shape[2])).cpu().detach().numpy()
 
 
 def embed_seqs_protbert(
