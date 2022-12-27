@@ -21,7 +21,6 @@ def test_einsum():
     assert np.allclose(prod_sum_var(Ms, Mu), np.sum(Ms * Mu, 1))
     assert np.allclose(norm(Ms), np.linalg.norm(Ms, axis=1))
 
-
 def test_pipeline():
     adata = evo.pp.featurize_seqs(test_seqs)
     evo.pp.neighbors(adata)
@@ -39,6 +38,8 @@ def test_pipeline():
     evo.tl.terminal_states(adata)
     evo.tl.velocity_pseudotime(adata)
 
+    evo.tl.random_walk(adata)
+    
     assert(adata.X.shape[0] == len(test_seqs))
     assert('seq' in adata.obs)
     assert('seqs_msa' in adata.obs)
