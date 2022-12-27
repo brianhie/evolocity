@@ -84,21 +84,27 @@ def random_walk(
         categories = adata.obs[groupby].cat.categories
     for cat in categories:
         groups = cat if cat is not None else groups
-        node_subset = groups_to_bool(adata, groups=groups, groupby=groupby)
-        _adata = adata if groups is None else adata[node_subset]
+        if groups is None:
+            node_subset = np.array([ True ] * len(adata))
+            _adata = adata
+        else:
+            node_subset = groups_to_bool(adata, groups=groups, groupby=groupby)
+            _adata = adata[node_subset]
 
         if not node_subset[root_node]:
             logg.warn(
                 "Root node not in grouped subset, skipping."
             )
             continue
-        root_node_group = sum(node_subset[:root_node])
+
+        # Re-index into _adata.
+        root_node_index_in_group = sum(node_subset[:root_node])
 
         T = transition_matrix(_adata, vkey=vkey, backward=(not forward_walk), **kwargs)
         n_nodes = _adata.X.shape[0]
         assert(T.shape[0] == T.shape[1] == n_nodes)
-        paths = np.zeros((n_walks, walk_length + 1))
-        paths[:, 0] = root_node_group
+        paths = np.zeros((n_walks, walk_length + 1), dtype=int)
+        paths[:, 0] = root_node_index_in_group
 
         for t in range(walk_length):
             path = []
