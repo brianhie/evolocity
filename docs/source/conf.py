@@ -61,6 +61,7 @@ extensions = [
     'sphinx_autodoc_typehints',
     'nbsphinx',
     'edit_on_github',
+    'ipython_genutils',
 ]
 
 
