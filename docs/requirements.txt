@@ -1,5 +1,6 @@
 biopython==1.76
 louvain==0.7.0
+jinja2==3.0.0
 matplotlib==3.1.1
 nbconvert==6.1.0
 nbsphinx==0.8.6
