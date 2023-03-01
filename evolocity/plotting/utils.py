@@ -111,7 +111,7 @@ def get_ax(ax, show=None, figsize=None, dpi=None, projection=None):
     figsize, _ = get_figure_params(figsize)
     if ax is None:
         projection = "3d" if projection == "3d" else None
-        ax = pl.figure(None, figsize, dpi=dpi).gca(projection=projection)
+        ax = pl.figure(None, figsize, dpi=dpi).add_subplot(projection=projection)
     elif isinstance(ax, SubplotSpec):
         geo = ax.get_geometry()
         if show is None:
