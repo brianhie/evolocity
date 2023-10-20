@@ -57,7 +57,7 @@ def embed_seqs(
             use_cache=False, verbose=verbose,
         )
         X_embed = np.array([
-            embedded[seq][0]['embedding'] for seq in seqs_fb
+            embedded[seq][0]['embedding'].mean(0) for seq in seqs_fb
         ])
     else:
         raise ValueError('Model {} not supported for sequence embedding'
@@ -122,7 +122,7 @@ def populate_embedding(
             X_embed = []
         for seq in sorted_seqs_batch:
             for meta in seqs[seq]:
-                meta['embedding'] = seqs_batch[seq][0]['embedding'].mean(0)
+                meta['embedding'] = seqs_batch[seq][0]['embedding']
             if use_cache:
                 X_embed.append(seqs[seq][0]['embedding'].ravel())
         del seqs_batch
