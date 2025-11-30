@@ -1,10 +1,9 @@
 from Bio import Align, AlignIO, SeqIO, Nexus, Seq
-from Bio.Alphabet import IUPAC, Gapped
 import sys
 
 seq_set = set()
 
-records = AlignIO.read(sys.argv[1], 'fasta', alphabet=Gapped(IUPAC.protein))
+records = AlignIO.read(sys.argv[1], 'fasta')
 new_records = []
 for idx in range(len(records)):
     seq = str(records[idx].seq).replace('J', 'L').replace('B', 'N').replace('Z', 'Q')
@@ -15,7 +14,7 @@ for idx in range(len(records)):
     record.id = record.id[:99].replace('-', '_')
     record.seq = Seq.Seq(seq)
     new_records.append(record)
-new_records = Align.MultipleSeqAlignment(new_records, alphabet=Gapped(IUPAC.protein))
+new_records = Align.MultipleSeqAlignment(new_records)
 
 with open(sys.argv[2], 'w') as of:
     AlignIO.write(new_records, of, 'nexus')
