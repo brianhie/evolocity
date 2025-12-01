@@ -149,7 +149,7 @@ def velocity_embedding(
         T.eliminate_zeros()
 
         densify = adata.n_obs < 1e4
-        TA = T.A if densify else None
+        TA = T.toarray() if densify else None
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")

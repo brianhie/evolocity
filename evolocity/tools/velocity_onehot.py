@@ -123,7 +123,7 @@ def onehot_msa(
     from sklearn.preprocessing import OneHotEncoder
     enc = OneHotEncoder(
         categories=[ keys ] * align_matrix.shape[1],
-        sparse=False,
+        sparse_output=False,
     )
     X_onehot = enc.fit_transform(align_matrix)
     assert(X_onehot.shape[1] == len(keys) * n_residues)

@@ -394,7 +394,7 @@ class VelocityGraph:
             vals, rows, cols, shape=(n_obs, n_obs), split_negative=True
         )
 
-        confidence = self.graph.max(1).A.flatten()
+        confidence = self.graph.max(1).toarray().flatten()
         self.self_prob = np.clip(np.percentile(confidence, 98) - confidence, 0, 1)
 
 def velocity_graph(

@@ -169,7 +169,6 @@ def neighbors(
                 random_state=random_state,
                 metric=metric,
                 metric_kwds=metric_kwds,
-                write_knn_indices=True,
             )
         logg.switch_verbosity("on", module="scanpy")
 
@@ -221,7 +220,7 @@ class FastNeighbors:
         ef_c, ef = max(ef_construction, self.n_neighbors), max(self.n_neighbors, ef)
         metric = "l2" if metric == "euclidean" else metric
 
-        X = X.A if issparse(X) else X
+        X = X.toarray() if issparse(X) else X
         ns, dim = X.shape
 
         knn = hnswlib.Index(space=metric, dim=dim)
