@@ -1,6 +1,6 @@
 """evolocity - Evolutionary velocity with protein language models"""
 
-__version__ = '1.0.1'
+__version__ = '1.1'
 
 from . import pp
 from . import tl
