@@ -75,11 +75,10 @@ within the same directory as this repository. Be sure to move the `target/` dire
 
 ### Dependencies
 
-Before running the scripts below, we encourage you to use the [conda](https://docs.conda.io/en/latest/) environment in [environment-epi.yml](environment-epi.yml) using
+Before running the scripts below, we encourage you to use the [conda](https://docs.conda.io/en/latest/) environment in [environment-evolocity.yml](environment-evolocity.yml) using
 ```bash
-conda env create --file environment-epi.yml
+conda env create --file environment-evolocity.yml
 ```
-To run the TAPE baseline, TAPE needs to be installed separately as described in [https://github.com/songlab-cal/tape](https://github.com/songlab-cal/tape). PyTorch will need to be reupdated after TAPE installation.
 
 ### Evolocity analysis
 

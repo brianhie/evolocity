@@ -28,7 +28,7 @@ from collections import abc
 
 def make_dense(X):
     if issparse(X):
-        XA = X.A if X.ndim == 2 else X.A1
+        XA = X.toarray() if X.ndim == 2 else X.toarray().ravel()
     else:
         XA = X.A1 if isinstance(X, np.matrix) else X
     return np.array(XA)
@@ -47,7 +47,7 @@ def is_view(adata):
 
 
 def is_categorical(data, c=None):
-    from pandas.api.types import is_categorical as cat
+    from pandas.api.types import is_categorical_dtype as cat
 
     if c is None:
         return cat(data)  # if data is categorical/array
@@ -654,7 +654,7 @@ def interpret_colorkey(adata, c=None, layer=None, perc=None, use_raw=None):
                 if adata.raw is None and use_raw:
                     raise ValueError("AnnData object does not have `raw` counts.")
                 c = adata.raw.obs_vector(c) if use_raw else adata.obs_vector(c)
-            c = c.A.flatten() if issparse(c) else c
+            c = c.toarray().flatten() if issparse(c) else c
         elif c in adata.var.keys():  # color by observation key
             c = adata.var[c]
         elif np.any([var_key in c for var_key in adata.var.keys()]):

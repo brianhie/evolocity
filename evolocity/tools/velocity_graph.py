@@ -10,7 +10,7 @@ from .utils import scale
 from .velocity_model import velocity_model
 
 from Bio import pairwise2
-from Bio.SubsMat import MatrixInfo as matlist
+from Bio.Align import substitution_matrices
 from scipy.sparse import coo_matrix
 import numpy as np
 from tqdm import tqdm
@@ -192,8 +192,8 @@ def likelihood_blosum62(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    from Bio.SubsMat import MatrixInfo as matlist
-    matrix = matlist.blosum62
+    from Bio.Align import substitution_matrices
+    matrix = substitution_matrices.load('BLOSUM62')
     return likelihood_submat(
         seq1, seq2, matrix, vocabulary, model,
         seq_cache, verbose, natural_aas,
@@ -204,9 +204,9 @@ def likelihood_jtt(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    from Bio.SubsMat import read_text_matrix
+    from Bio.Align import substitution_matrices
     with open('data/substitution_matrices/JTT.txt') as f:
-        matrix = read_text_matrix(f)
+        matrix = substitution_matrices.read(f)
     return likelihood_submat(
         seq1, seq2, matrix, vocabulary, model,
         seq_cache, verbose, natural_aas,
@@ -217,9 +217,9 @@ def likelihood_wag(
         seq1, seq2, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    from Bio.SubsMat import read_text_matrix
+    from Bio.Align import substitution_matrices
     with open('data/substitution_matrices/WAG.txt') as f:
-        matrix = read_text_matrix(f)
+        matrix = substitution_matrices.read(f)
     return likelihood_submat(
         seq1, seq2, matrix, vocabulary, model,
         seq_cache, verbose, natural_aas,
@@ -394,7 +394,7 @@ class VelocityGraph:
             vals, rows, cols, shape=(n_obs, n_obs), split_negative=True
         )
 
-        confidence = self.graph.max(1).A.flatten()
+        confidence = self.graph.max(1).toarray().flatten()
         self.self_prob = np.clip(np.percentile(confidence, 98) - confidence, 0, 1)
 
 def velocity_graph(

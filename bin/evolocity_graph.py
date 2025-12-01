@@ -1,5 +1,5 @@
 from Bio import pairwise2, SeqIO
-from Bio.SubsMat import MatrixInfo as matlist
+from Bio.Align import substitution_matrices
 from scanpy.tools._dpt import DPT
 from scipy.sparse import coo_matrix, issparse, spdiags, linalg
 import scvelo as scv
@@ -152,8 +152,8 @@ def likelihood_blosum62(
         seq1, seq2, args, vocabulary, model,
         seq_cache={}, verbose=False, natural_aas=None,
 ):
-    from Bio.SubsMat import MatrixInfo as matlist
-    matrix = matlist.blosum62
+    from Bio.Align import substitution_matrices
+    matrix = substitution_matrices.load('BLOSUM62')
 
     # Align, prefer matches to gaps.
     alignment = pairwise2.align.globalms(

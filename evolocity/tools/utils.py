@@ -25,7 +25,7 @@ def mean(x, axis=0):
 
 
 def make_dense(X):
-    XA = X.A if issparse(X) and X.ndim == 2 else X.A1 if issparse(X) else X
+    XA = X.toarray() if issparse(X) and X.ndim == 2 else X.toarray().ravel() if issparse(X) else X
     if XA.ndim == 2:
         XA = XA[0] if XA.shape[0] == 1 else XA[:, 0] if XA.shape[1] == 1 else XA
     return np.array(XA)
@@ -427,9 +427,9 @@ def vcorrcoef(X, y, mode="pearsons", axis=-1):
         Which correlation metric to use.
     """
     if issparse(X):
-        X = np.array(X.A)
+        X = np.array(X.toarray())
     if issparse(y):
-        y = np.array(y.A)
+        y = np.array(y.toarray())
     if axis == 0:
         if X.ndim > 1:
             X = np.array(X.T)
