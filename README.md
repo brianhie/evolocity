@@ -18,9 +18,9 @@ For in-depth API documentation, go to https://evolocity.readthedocs.io.
 
 ## Installation
 
-You should be able to install evolocity from this GitHub repo using `pip`:
+You should be able to install evolocity using `pip`:
 ```bash
-pip install git+https://github.com/brianhie/evolocity.git
+pip install evolocity
 ```
 
 ## API example and tutorials
